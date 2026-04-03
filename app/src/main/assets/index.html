@@ -64,8 +64,8 @@ a{color:var(--accent2);text-decoration:none}
 .preview-container{position:relative}
 .preview-phone{width:240px;height:480px;border-radius:24px;overflow:hidden;position:relative;box-shadow:0 0 0 2px var(--border),0 20px 60px rgba(0,0,0,.5)}
 .preview-screen{width:100%;height:100%;position:relative;overflow:hidden}
-.preview-camera{position:absolute;left:0;top:0;width:74px;height:100%;background:rgba(255,255,255,.03);border-right:1px dashed rgba(255,255,255,.1);z-index:10;display:flex;align-items:flex-start;justify-content:center}
-.preview-camera::after{content:'📷';font-size:14px;margin-top:8px;opacity:.3}
+.preview-camera{position:absolute;left:0;top:0;width:74px;height:100%;background:repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(255,255,255,.04) 4px,rgba(255,255,255,.04) 5px);border-right:1px dashed rgba(255,255,255,.15);z-index:10;display:flex;align-items:flex-start;justify-content:center;pointer-events:none}
+.preview-camera::after{content:'📷';font-size:11px;margin-top:6px;opacity:.25}
 .preview-camera.hidden{display:none}
 .preview-content{position:absolute;top:0;left:0;width:100%;height:100%}
 
@@ -557,7 +557,7 @@ function updatePreview() {
 
   const dims = device === 'p2' ? { w: 976, h: 596 } : { w: 904, h: 572 };
   const marginRatio = device === 'p2' ? 0.287 : 0.308;
-  const camPx = Math.round(240 * marginRatio);
+  const camPx = showCam ? 60 : 0;
 
   camera.style.width = camPx + 'px';
   camera.className = 'preview-camera' + (showCam ? '' : ' hidden');
@@ -573,7 +573,8 @@ function updatePreview() {
 function renderPreviewHTML(marginRatio, showCam) {
   if (!currentTpl) return '';
   const c = configValues;
-  const ml = Math.round(240 * marginRatio);
+  // Preview: content fills full 240px width, camera is just an overlay hint
+  const ml = showCam ? 20 : 0; // small offset for visual awareness only
   const sw = 240 - ml - 10;
 
   if (currentTpl.id === 'clock') {
