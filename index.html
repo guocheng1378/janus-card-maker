@@ -9,11 +9,6 @@
 </head>
 <body>
 
-<div id="cdnFallback">
-  <p style="font-size:18px">⚠️ 需要网络连接加载 JSZip 库</p>
-  <p style="font-size:14px;color:#888;margin-top:8px">请检查 lib/jszip.min.js 是否存在</p>
-</div>
-
 <input type="file" id="fileImagePick" accept="image/*" style="display:none">
 <input type="file" id="fileVideoPick" accept="video/*" style="display:none">
 
@@ -129,23 +124,11 @@
 <script src="js/templates.js"></script>
 <script src="js/preview.js"></script>
 <script src="js/editor.js"></script>
+<script src="lib/jszip.min.js"></script>
 <script src="js/export.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
 
-<!-- JSZip (local fallback) -->
-<script>
-  if (typeof JSZip === 'undefined') {
-    var s = document.createElement('script');
-    s.src = 'lib/jszip.min.js';
-    document.head.appendChild(s);
-  }
-</script>
-<script>
-  if (typeof JSZip === 'undefined') {
-    document.getElementById('cdnFallback').style.display = 'flex';
-  }
-</script>
 
 </body>
 </html>

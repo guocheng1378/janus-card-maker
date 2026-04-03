@@ -1,23 +1,35 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Janus 卡片制作器</title>
 <style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
+[data-theme=dark]{
   --bg:#08080d;--surface:#111118;--surface2:#1a1a24;--surface3:#222230;
   --border:#2a2a3a;--border2:#3a3a50;
   --text:#e8e8f0;--text2:#8888a0;--text3:#5a5a70;
   --accent:#6c5ce7;--accent2:#a29bfe;--accent-glow:rgba(108,92,231,.15);
   --green:#00b894;--green2:#00d9a7;
   --red:#e17055;--orange:#fdcb6e;
-  --radius:14px;--radius-sm:10px;
   --shadow:0 8px 32px rgba(0,0,0,.4);
+}
+[data-theme=light]{
+  --bg:#f0f2f5;--surface:#ffffff;--surface2:#f5f6f8;--surface3:#ebedf0;
+  --border:#dcdfe5;--border2:#c8ccd4;
+  --text:#1a1a2e;--text2:#6b7280;--text3:#9ca3af;
+  --accent:#6c5ce7;--accent2:#5a4bd1;--accent-glow:rgba(108,92,231,.1);
+  --green:#00b894;--green2:#00a884;
+  --red:#e17055;--orange:#f0932b;
+  --shadow:0 4px 16px rgba(0,0,0,.08);
+}
+:root{
+  --radius:14px;--radius-sm:10px;
   --transition:all .25s cubic-bezier(.4,0,.2,1);
 }
+
 html,body{height:100%;overflow:hidden}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif;background:var(--bg);color:var(--text)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif;background:var(--bg);color:var(--text);transition:background .3s,color .3s}
 
 /* ─── Layout ─── */
 .app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
@@ -190,7 +202,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
 .preview-phone-wrap{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px}
 .preview-phone{
   width:420px;height:252px;border-radius:20px;overflow:hidden;position:relative;
-  background:#000;border:2px solid var(--border);
+  background:#111;border:2px solid var(--border);
   box-shadow:0 20px 60px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.05);
 }
 .preview-screen{width:100%;height:100%;position:relative;overflow:hidden}
@@ -269,9 +281,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
 .toast.success{background:var(--green);color:#fff}
 .toast.error{background:var(--red);color:#fff}
 
+
+/* ─── Theme Toggle ─── */
+.theme-toggle{
+  width:34px;height:34px;border-radius:50%;border:1px solid var(--border);
+  background:var(--surface2);color:var(--text);font-size:16px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:var(--transition);
+  flex-shrink:0;
+}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
+a.theme-toggle{text-decoration:none}
+
 /* ─── CDN Fallback ─── */
 #cdnFallback{
-  display:none;position:fixed;inset:0;background:#0a0a0f;color:#e8e8f0;
+  display:none;position:fixed;inset:0;background:var(--bg);color:var(--text);
   z-index:9999;align-items:center;justify-content:center;flex-direction:column;padding:32px;text-align:center;
 }
 
@@ -369,6 +392,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
           <div class="preview-actions">
             <button class="btn btn-secondary" onclick="renderPreview()"><span class="btn-icon">🔄</span> 生成预览</button>
             <button class="btn btn-export" onclick="JCM.handleExport()"><span class="btn-icon">📦</span> 导出 ZIP</button>
+            <button class="btn btn-secondary" onclick="JCM.handleExportPNG()"><span class="btn-icon">🖼</span> 导出 PNG</button>
           </div>
         </div>
       </div>
@@ -470,6 +494,12 @@ JCM.generateMAML = function (opts) {
   return lines.join('\n');
 };
 
+function alphaAttr(el) {
+  return (el.opacity !== undefined && el.opacity !== 100)
+    ? ' alpha="' + (el.opacity / 100).toFixed(2) + '"'
+    : '';
+}
+
 function renderEl(el, files) {
   var p = '    ';
   switch (el.type) {
@@ -479,12 +509,21 @@ function renderEl(el, files) {
       var ml = el.multiLine ? ' multiLine="true"' : '';
       var w = el.multiLine || (el.textAlign && el.textAlign !== 'left') ? ' w="' + (el.w || 200) + '"' : '';
       var b = el.bold ? ' bold="true"' : '';
-      return p + '<Text ' + t + ' x="' + el.x + '" y="' + el.y + '" size="' + el.size + '" color="' + el.color + '"' + w + a + ml + b + ' />';
+      var sh = '';
+      if (el.shadow === 'light') sh = ' shadow="1" shadowColor="#000000"';
+      else if (el.shadow === 'dark') sh = ' shadow="3" shadowColor="#000000"';
+      else if (el.shadow === 'glow') sh = ' shadow="4" shadowColor="' + (el.color || '#ffffff') + '"';
+      return p + '<Text ' + t + ' x="' + el.x + '" y="' + el.y + '" size="' + el.size + '" color="' + el.color + '"' + w + a + ml + b + alphaAttr(el) + sh + ' />';
     }
-    case 'rectangle':
-      return p + '<Rectangle x="' + el.x + '" y="' + el.y + '" w="' + el.w + '" h="' + el.h + '" fillColor="' + el.color + '"' + (el.radius ? ' cornerRadius="' + el.radius + '"' : '') + ' />';
-    case 'circle':
-      return p + '<Circle x="' + el.x + '" y="' + el.y + '" r="' + el.r + '" fillColor="' + el.color + '" />';
+    case 'rectangle': {
+      if (el.h <= 3 && el.radius >= 1) {
+        return p + '<Line x="' + el.x + '" y="' + el.y + '" w="' + el.w + '" h="' + el.h + '" fillColor="' + el.color + '" cornerRadius="' + el.radius + '"' + alphaAttr(el) + ' />';
+      }
+      return p + '<Rectangle x="' + el.x + '" y="' + el.y + '" w="' + el.w + '" h="' + el.h + '" fillColor="' + el.color + '"' + (el.radius ? ' cornerRadius="' + el.radius + '"' : '') + alphaAttr(el) + ' />';
+    }
+    case 'circle': {
+      return p + '<Circle x="' + el.x + '" y="' + el.y + '" r="' + el.r + '" fillColor="' + el.color + '"' + alphaAttr(el) + ' />';
+    }
     case 'image': {
       var folder = el.src && files[el.src] && files[el.src].mimeType.indexOf('video/') === 0 ? 'videos' : 'images';
       return p + '<Image src="' + folder + '/' + JCM.escXml(el.src || '') + '" x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 100) + '" h="' + (el.h || 100) + '" />';
@@ -661,12 +700,17 @@ JCM.TEMPLATES = [
         '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
         '  <Var name="m" type="number" expression="#month" />',
         '  <Var name="d" type="number" expression="#date" />',
-        '  <Var name="doy" type="number" expression="(ifelse((#m == 1), 0, ifelse((#m == 2), 31, ifelse((#m == 3), 59, ifelse((#m == 4), 90, ifelse((#m == 5), 120, ifelse((#m == 6), 151, ifelse((#m == 7), 181, ifelse((#m == 8), 212, ifelse((#m == 9), 243, ifelse((#m == 10), 273, ifelse((#m == 11), 304, 334))))))))))) + #d)" />',
+        '  <Var name="doy_base" type="number" expression="(ifelse((#m == 1), 0, ifelse((#m == 2), 31, ifelse((#m == 3), 59, ifelse((#m == 4), 90, ifelse((#m == 5), 120, ifelse((#m == 6), 151, ifelse((#m == 7), 181, ifelse((#m == 8), 212, ifelse((#m == 9), 243, ifelse((#m == 10), 273, ifelse((#m == 11), 304, 334)))))))))))" />',
+        '  <Var name="doy_leap" type="number" expression="ifelse((#year % 4 == 0), ifelse((#m >= 3), 1, 0), 0)" />',
+        '  <Var name="doy" type="number" expression="(#doy_base + #d + #doy_leap)" />',
         '  <Var name="target" type="number" expression="' + validTd + '" />',
         '  <Var name="tMonth" type="number" expression="floor(#target / 100)" />',
         '  <Var name="tDay" type="number" expression="(#target - #tMonth * 100)" />',
-        '  <Var name="tdoy" type="number" expression="(ifelse((#tMonth == 1), 0, ifelse((#tMonth == 2), 31, ifelse((#tMonth == 3), 59, ifelse((#tMonth == 4), 90, ifelse((#tMonth == 5), 120, ifelse((#tMonth == 6), 151, ifelse((#tMonth == 7), 181, ifelse((#tMonth == 8), 212, ifelse((#tMonth == 9), 243, ifelse((#tMonth == 10), 273, ifelse((#tMonth == 11), 304, 334))))))))))) + #tDay)" />',
-        '  <Var name="diff" type="number" expression="ifelse((#tdoy >= #doy), (#tdoy - #doy), (365 - #doy + #tdoy))" />',
+        '  <Var name="tdoy_base" type="number" expression="(ifelse((#tMonth == 1), 0, ifelse((#tMonth == 2), 31, ifelse((#tMonth == 3), 59, ifelse((#tMonth == 4), 90, ifelse((#tMonth == 5), 120, ifelse((#tMonth == 6), 151, ifelse((#tMonth == 7), 181, ifelse((#tMonth == 8), 212, ifelse((#tMonth == 9), 243, ifelse((#tMonth == 10), 273, ifelse((#tMonth == 11), 304, 334)))))))))))" />',
+        '  <Var name="tdoy_leap" type="number" expression="ifelse((#year % 4 == 0), ifelse((#tMonth >= 3), 1, 0), 0)" />',
+        '  <Var name="tdoy" type="number" expression="(#tdoy_base + #tDay + #tdoy_leap)" />',
+        '  <Var name="daysLeft" type="number" expression="(365 + ifelse((#year % 4 == 0), 1, 0) - #doy)" />',
+        '  <Var name="diff" type="number" expression="ifelse((#tdoy >= #doy), (#tdoy - #doy), (#daysLeft + #tdoy))" />',
         '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
         '  <Group x="#marginL" y="0">',
         '    <Text text="' + JCM.escXml(c.eventName) + '" x="0" y="50" size="18" color="' + c.textColor + '" alpha="0.6" />',
@@ -917,9 +961,16 @@ PreviewRenderer.prototype.calcCountdown = function (str) {
   var tMonth = Math.floor(Number(td) / 100), tDay = Number(td) % 100;
   if (tMonth < 1 || tMonth > 12 || tDay < 1 || tDay > 31) return 0;
   var now = new Date(), y = now.getFullYear();
-  var target = new Date(y, tMonth - 1, tDay);
-  var diff = Math.ceil((target.getTime() - now.getTime()) / 86400000);
-  if (diff < 0) { target = new Date(y + 1, tMonth - 1, tDay); diff = Math.ceil((target.getTime() - now.getTime()) / 86400000); }
+  // Helper: absolute day number from year 0 (handles leap years)
+  function absDay(year, month, day) {
+    var y = year, m = month;
+    if (m <= 2) { y--; m += 12; }
+    return 365*y + Math.floor(y/4) - Math.floor(y/100) + Math.floor(y/400) + Math.floor(306*(m+1)/10) + day - 654855;
+  }
+  var today = absDay(y, now.getMonth()+1, now.getDate());
+  var target = absDay(y, tMonth, tDay);
+  var diff = target - today;
+  if (diff <= 0) { diff = absDay(y+1, tMonth, tDay) - today; }
   return diff;
 };
 
@@ -1373,7 +1424,7 @@ JCM.importZip = function (file) {
           promises.push(entry.async('arraybuffer').then(function (buf) {
             var fname = path.replace(/^(images|videos)\//, '');
             var ext = fname.split('.').pop().toLowerCase();
-            var isVideo = ['mp4', 'webm', '3gp', 'mkv'].indexOf(ext) >= 0;
+            var isVideo = ['mp4', 'webm', '3gp', 'mkv', 'mov', 'avi', 'ts', 'flv'].indexOf(ext) >= 0;
             var mime = isVideo ? 'video/' + ext : 'image/' + (ext === 'jpg' ? 'jpeg' : ext);
             // Create data URL for preview
             var bytes = new Uint8Array(buf);
@@ -1476,6 +1527,15 @@ var _pendingReplace = -1;
 var SNAP_GRID = 10;
 var _previewTimer = null;
 var _clipboard = null; // Copy/paste buffer
+
+// ─── Debounce ─────────────────────────────────────────────────────
+function debounce(fn, ms) {
+  var timer;
+  return function () {
+    clearTimeout(timer);
+    timer = setTimeout(fn, ms);
+  };
+}
 
 // ─── Undo/Redo ────────────────────────────────────────────────────
 var _history = [];
@@ -1615,6 +1675,7 @@ function renderConfig() {
     var label = el.type === 'text' ? (el.text || '')
       : el.type === 'image' ? '🖼 ' + (el.fileName || '图片')
       : el.type === 'video' ? '🎬 ' + (el.fileName || '视频')
+      : (el.type === 'rectangle' && el.h <= 3 && el.radius >= 1) ? 'line'
       : el.type + ' #' + (i + 1);
     var inCam = JCM.isInCameraZone(el, device);
     html += '<div class="el-item' + (_selIdx === i ? ' active' : '') + '" data-sel="' + i + '">' +
@@ -1837,9 +1898,7 @@ function renderPreview() {
 
 function generateCustomMAML(device) {
   var lines = [
-    '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
     '  <Rectangle w="#view_width" h="#view_height" fillColor="' + _cfg.bgColor + '" />',
-    '  <Group x="#marginL" y="0">',
   ];
   _elements.forEach(function (el) {
     switch (el.type) {
@@ -1867,7 +1926,6 @@ function generateCustomMAML(device) {
         break;
     }
   });
-  lines.push('  </Group>');
   return lines.join('\n');
 }
 
@@ -2114,6 +2172,11 @@ function onPreviewMouseUp() {
 }
 
 // ─── Event Delegation ─────────────────────────────────────────────
+var _autoPreview = debounce(function () {
+  _dirty = true;
+  if (_step === 2) renderPreview();
+}, 300);
+
 function setupEvents() {
   // Template grid
   document.getElementById('tplGrid').addEventListener('click', function (e) {
@@ -2148,6 +2211,7 @@ function setupEvents() {
       else _elements[idx][prop] = t.value;
       _dirty = true;
     }
+    _autoPreview();
   });
 
   document.getElementById('cfgContent').addEventListener('change', function (e) {
@@ -2162,6 +2226,7 @@ function setupEvents() {
       _dirty = true;
       renderConfig();
     }
+    _autoPreview();
   });
 
   document.getElementById('cfgContent').addEventListener('click', function (e) {
@@ -2198,6 +2263,7 @@ function setupEvents() {
       var cidx = Number(swatch.dataset.cidx);
       var cprop = swatch.dataset.cprop;
       if (cidx >= 0 && cidx < _elements.length) {
+        captureState();
         _elements[cidx][cprop] = swatch.dataset.color;
         _dirty = true;
         renderConfig();
@@ -2273,7 +2339,30 @@ JCM._captureState = captureState;
 
 Object.defineProperty(JCM, 'elements', { get: function () { return _elements; } });
 
+// ─── Theme ────────────────────────────────────────────────────────
+JCM.toggleTheme = function () {
+  var html = document.documentElement;
+  var current = html.getAttribute('data-theme') || 'dark';
+  var next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  try { localStorage.setItem('jcm-theme', next); } catch(e) {}
+  var btn = document.getElementById('themeToggle');
+  if (btn) btn.textContent = next === 'dark' ? '🌙' : '☀️';
+};
+
+function initTheme() {
+  try {
+    var saved = localStorage.getItem('jcm-theme');
+    if (saved) {
+      document.documentElement.setAttribute('data-theme', saved);
+      var btn = document.getElementById('themeToggle');
+      if (btn) btn.textContent = saved === 'dark' ? '🌙' : '☀️';
+    }
+  } catch(e) {}
+}
+
 JCM.initUI = function () {
+  initTheme();
   renderTplGrid();
   setupEvents();
 };
