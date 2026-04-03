@@ -8,8 +8,8 @@
 // Inline JSZip v3.10.1 (minified core) — fallback if CDN fails
 // CDN loaded below, this is just a marker
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" onerror="document.getElementById('cdnFallback').style.display='block'"></script>
-<div id="cdnFallback" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#0a0a0f;color:#e8e8f0;z-index:9999;display:none;align-items:center;justify-content:center;flex-direction:column;padding:32px;text-align:center">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" onerror="var f=document.getElementById('cdnFallback');f.style.display='flex'"></script>
+<div id="cdnFallback" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#0a0a0f;color:#e8e8f0;z-index:9999;align-items:center;justify-content:center;flex-direction:column;padding:32px;text-align:center">
   <p style="font-size:18px">⚠️ 需要网络连接加载 JSZip 库</p>
   <p style="font-size:14px;color:#888;margin-top:8px">请连接网络后重启应用</p>
 </div>
@@ -290,7 +290,7 @@ const TEMPLATES = [
   <Var name="nowDay" type="number" expression="#date" />
   <Var name="nowCode" type="number" expression="(#nowMonth * 100 + #nowDay)" />
   <Var name="target" type="number" expression="${c.targetDate}" />
-  <Var name="diff" type="number" expression="ifelse((#nowCode <= #target), (#target - #nowCode), (365 - #nowCode + #target))" />
+  <Var name="diff" type="number" expression="ifelse((#nowCode }= #target), (365 - #nowCode + #target), (#target - #nowCode))" />
   <Rectangle w="#view_width" h="#view_height" fillColor="${c.bgColor}" />
   <Group x="#marginL" y="0">
     <Text text="${esc(c.eventName)}" x="0" y="50" size="18" color="${c.textColor}" alpha="0.6" />
@@ -672,6 +672,10 @@ function toggleCode() {
 // ─── Export ────────────────────────────────────────────────────────
 
 async function exportZip() {
+  if (typeof JSZip === 'undefined') {
+    toast('JSZip 未加载，请检查网络连接', true);
+    return;
+  }
   const maml = generateMAML();
   if (!maml) { toast('请先选择模板', true); return; }
 

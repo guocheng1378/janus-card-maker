@@ -14,6 +14,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.FileProvider
 import androidx.webkit.WebViewAssetLoader
 import java.io.File
 import java.io.FileOutputStream
@@ -58,6 +59,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(webView)
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         if (webView.canGoBack()) {
             webView.goBack()
@@ -71,6 +73,7 @@ class MainActivity : AppCompatActivity() {
         fun saveZip(base64Data: String, fileName: String) {
             try {
                 val bytes = Base64.decode(base64Data, Base64.DEFAULT)
+                var savedFile: File? = null
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     val contentValues = ContentValues().apply {
@@ -84,21 +87,45 @@ class MainActivity : AppCompatActivity() {
                             os.write(bytes)
                         }
                     }
+                    // For sharing, also save a copy to app-private dir
+                    savedFile = File(getExternalFilesDir("cards"), fileName).apply {
+                        parentFile?.mkdirs()
+                        writeBytes(bytes)
+                    }
                 } else {
-                    val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "JanusCards")
+                    val dir = File(
+                        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                        "JanusCards"
+                    )
                     dir.mkdirs()
-                    val file = File(dir, fileName)
-                    FileOutputStream(file).use { it.write(bytes) }
+                    savedFile = File(dir, fileName)
+                    FileOutputStream(savedFile).use { it.write(bytes) }
                 }
 
                 runOnUiThread {
-                    Toast.makeText(this@MainActivity, "已保存到 Downloads/JanusCards/$fileName", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        this@MainActivity,
+                        "已保存到 Downloads/JanusCards/$fileName",
+                        Toast.LENGTH_LONG
+                    ).show()
 
-                    val intent = Intent(Intent.ACTION_SEND).apply {
-                        type = "application/zip"
-                        putExtra(Intent.EXTRA_SUBJECT, fileName)
+                    savedFile?.let { file ->
+                        try {
+                            val uri = FileProvider.getUriForFile(
+                                this@MainActivity,
+                                "${packageName}.fileprovider",
+                                file
+                            )
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = "application/zip"
+                                putExtra(Intent.EXTRA_STREAM, uri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            startActivity(Intent.createChooser(intent, "分享卡片 ZIP"))
+                        } catch (e: Exception) {
+                            // FileProvider might fail on some devices, just show toast
+                        }
                     }
-                    startActivity(Intent.createChooser(intent, "分享卡片 ZIP"))
                 }
             } catch (e: Exception) {
                 runOnUiThread {
