@@ -847,14 +847,6 @@ function initTheme() {
   } catch(e) {}
 }
 
-// Apply theme immediately to prevent flash
-(function() {
-  try {
-    var saved = localStorage.getItem('jcm-theme');
-    if (saved) document.documentElement.setAttribute('data-theme', saved);
-  } catch(e) {}
-})();
-
 JCM.initUI = function () {
   initTheme();
   renderTplGrid();
