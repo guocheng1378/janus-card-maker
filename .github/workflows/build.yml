@@ -17,7 +17,7 @@ jobs:
           if [ "${{ github.event_name }}" = "release" ]; then
             echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
           else
-            echo "tag=$(git describe --tags --abbrev=0 2>/dev/null || echo dev)" >> $GITHUB_OUTPUT
+            echo "tag=$(git describe --tags --abbrev=0 2>/dev/null || echo v3.1.0)" >> $GITHUB_OUTPUT
           fi
 
       - name: Set up JDK 17
@@ -31,11 +31,16 @@ jobs:
         with:
           gradle-version: "8.5"
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
       - name: Bundle HTML (node build.js)
         run: node build.js
 
       - name: Build Debug APK
-        run: gradle assembleDebug
+        run: ./gradlew assembleDebug
 
       - name: Rename APK
         if: success()

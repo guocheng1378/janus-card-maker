@@ -11,8 +11,8 @@ android {
         applicationId = "com.janus.cardmaker"
         minSdk = 26
         targetSdk = 34
-        versionCode = 6
-        versionName = "3.0.0"
+        versionCode = 7
+        versionName = "3.1.0"
     }
 
     buildTypes {
