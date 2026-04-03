@@ -192,6 +192,98 @@ PreviewRenderer.prototype.renderCalendar = function (c) {
   );
 };
 
+// ─── 新增模板预览 ──────────────────────────────────────────────────
+
+PreviewRenderer.prototype.renderDualclock = function (c) {
+  var now = new Date();
+  var o1 = Number(c.offset1) || 0, o2 = Number(c.offset2) || 0;
+  var utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  var t1 = new Date(utc + o1 * 3600000);
+  var t2 = new Date(utc + o2 * 3600000);
+  var ts = Math.round(Number(c.timeSize) * this.scale);
+  var lx = this.camW + 10;
+  return this.bg(c.bgColor,
+    '<div style="position:absolute;left:' + lx + 'px;top:18px;font-size:' + Math.round(13 * this.scale) + 'px;color:' + c.dateColor + '">' + this.esc(c.city1) + '</div>' +
+    '<div style="position:absolute;left:' + lx + 'px;top:36px;font-size:' + ts + 'px;color:' + c.timeColor1 + ';font-weight:700">' + this.fmtTime(t1, 'HH:mm') + '</div>' +
+    '<div style="position:absolute;left:' + lx + 'px;top:' + Math.round(36 + ts + 4) + 'px;font-size:' + Math.round(12 * this.scale) + 'px;color:' + c.dateColor + ';opacity:0.6">' + this.fmtDate(t1, 'MM/dd EEEE') + '</div>' +
+    '<div style="position:absolute;left:' + lx + 'px;top:50%;width:' + (PREVIEW_W - this.camW - 20) + 'px;height:1px;background:' + c.dividerColor + '"></div>' +
+    '<div style="position:absolute;left:' + lx + 'px;top:54%;font-size:' + Math.round(13 * this.scale) + 'px;color:' + c.dateColor + '">' + this.esc(c.city2) + '</div>' +
+    '<div style="position:absolute;left:' + lx + 'px;top:calc(54% + 18px);font-size:' + ts + 'px;color:' + c.timeColor2 + ';font-weight:700">' + this.fmtTime(t2, 'HH:mm') + '</div>' +
+    '<div style="position:absolute;left:' + lx + 'px;top:calc(54% + ' + Math.round(18 + ts + 4) + 'px);font-size:' + Math.round(12 * this.scale) + 'px;color:' + c.dateColor + ';opacity:0.6">' + this.fmtDate(t2, 'MM/dd EEEE') + '</div>'
+  );
+};
+
+PreviewRenderer.prototype.renderDailyquote = function (c) {
+  var quotes = [c.quote1, c.quote2, c.quote3, c.quote4, c.quote5, c.quote6, c.quote7].filter(Boolean);
+  if (quotes.length === 0) quotes = ['每日一句'];
+  var dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+  var idx = dayOfYear % quotes.length;
+  var lines = String(quotes[idx]).split('\n');
+  var lx = this.camW + 10;
+  return this.bg(c.bgColor,
+    '<div style="position:absolute;left:' + lx + 'px;top:38px;width:20px;height:2px;background:' + c.accentColor + ';border-radius:1px"></div>' +
+    '<div style="position:absolute;left:' + lx + 'px;top:50px;right:10px;font-size:' + Math.round(Number(c.textSize) * this.scale) + 'px;color:' + c.textColor + ';line-height:1.5">' + lines.map(this.esc).join('<br>') + '</div>' +
+    '<div style="position:absolute;left:' + lx + 'px;bottom:16px;font-size:' + Math.round(12 * this.scale) + 'px;color:' + c.dayColor + ';opacity:0.5">' + this.fmtDate(new Date(), 'MM/dd EEEE') + '</div>'
+  );
+};
+
+PreviewRenderer.prototype.renderRing = function (c) {
+  var isBattery = c.source === 'battery';
+  var demoVal = Number(c.demoValue) || 65;
+  var ringR = Math.round(80 * this.scale);
+  var ringW = Math.round(Number(c.ringSize) * this.scale);
+  var innerR = ringR - ringW;
+  var cx = this.camW + (PREVIEW_W - this.camW) / 2;
+  var cy = 120 * this.scale;
+  var pct = demoVal;
+  var label = isBattery ? '电量' : '步数';
+  var unit = isBattery ? '%' : '步';
+  // SVG arc for progress
+  var angle = pct / 100 * 360;
+  var rad = (angle - 90) * Math.PI / 180;
+  var x2 = cx + ringR * Math.cos(rad);
+  var y2 = cy + ringR * Math.sin(rad);
+  var largeArc = angle > 180 ? 1 : 0;
+  var trackColor = c.trackColor;
+  var ringColor = c.ringColor;
+  return this.bg(c.bgColor,
+    '<svg style="position:absolute;inset:0;width:100%;height:100%" viewBox="0 0 ' + PREVIEW_W + ' ' + (252) + '">' +
+    '<circle cx="' + cx + '" cy="' + cy + '" r="' + ringR + '" fill="none" stroke="' + trackColor + '" stroke-width="' + ringW + '" />' +
+    '<circle cx="' + cx + '" cy="' + cy + '" r="' + ringR + '" fill="none" stroke="' + ringColor + '" stroke-width="' + ringW + '" ' +
+      'stroke-dasharray="' + (2 * Math.PI * ringR * pct / 100) + ' ' + (2 * Math.PI * ringR) + '" ' +
+      'stroke-linecap="round" transform="rotate(-90 ' + cx + ' ' + cy + ')" />' +
+    '</svg>' +
+    '<div style="position:absolute;left:' + (cx - 40) + 'px;top:' + (cy - Math.round(28 * this.scale)) + 'px;width:80px;text-align:center;font-size:' + Math.round(48 * this.scale) + 'px;color:' + c.textColor + ';font-weight:700">' + pct + '</div>' +
+    '<div style="position:absolute;left:' + (cx - 12) + 'px;top:' + (cy + Math.round(14 * this.scale)) + 'px;font-size:' + Math.round(14 * this.scale) + 'px;color:' + c.labelColor + ';opacity:0.6">' + unit + '</div>' +
+    '<div style="position:absolute;left:' + (cx - 24) + 'px;top:' + (cy + ringR + Math.round(16 * this.scale)) + 'px;width:48px;text-align:center;font-size:' + Math.round(13 * this.scale) + 'px;color:' + c.labelColor + ';opacity:0.5">' + label + '</div>'
+  );
+};
+
+PreviewRenderer.prototype.renderDashboard = function (c) {
+  var lx = this.camW + 10;
+  var sw = PREVIEW_W - this.camW - 20;
+  var halfW = sw / 2;
+  return this.bg(c.bgColor,
+    '<div style="position:absolute;left:' + lx + 'px;top:12px;font-size:' + Math.round(38 * this.scale) + 'px;color:' + c.timeColor + ';font-weight:700">' + this.fmtTime(new Date(), 'HH:mm') + '</div>' +
+    '<div style="position:absolute;left:' + lx + 'px;top:' + Math.round(12 + 38 * this.scale + 4) + 'px;font-size:' + Math.round(12 * this.scale) + 'px;color:' + c.dimColor + '">' + this.fmtDate(new Date(), 'MM/dd EEEE') + '</div>' +
+    '<div style="position:absolute;left:' + lx + 'px;top:' + Math.round(72 * this.scale) + 'px;width:' + sw + 'px;height:1px;background:#1a1f2e"></div>' +
+    '<div style="position:absolute;left:' + lx + 'px;top:' + Math.round(80 * this.scale) + 'px;font-size:' + Math.round(11 * this.scale) + 'px;color:' + c.dimColor + '">步数</div>' +
+    '<div style="position:absolute;left:' + lx + 'px;top:' + Math.round(94 * this.scale) + 'px;font-size:' + Math.round(22 * this.scale) + 'px;color:' + c.textColor + ';font-weight:700">6,542</div>' +
+    '<div style="position:absolute;left:' + (lx + halfW) + 'px;top:' + Math.round(80 * this.scale) + 'px;font-size:' + Math.round(11 * this.scale) + 'px;color:' + c.dimColor + '">电量</div>' +
+    '<div style="position:absolute;left:' + (lx + halfW) + 'px;top:' + Math.round(94 * this.scale) + 'px;font-size:' + Math.round(22 * this.scale) + 'px;color:' + c.textColor + ';font-weight:700">78%</div>' +
+    '<div style="position:absolute;left:' + lx + 'px;top:' + Math.round(132 * this.scale) + 'px;width:' + sw + 'px;height:1px;background:#1a1f2e"></div>' +
+    '<div style="position:absolute;left:' + lx + 'px;top:' + Math.round(142 * this.scale) + 'px;font-size:' + Math.round(14 * this.scale) + 'px;color:' + c.accentColor + '">晴</div>' +
+    '<div style="position:absolute;left:' + (lx + halfW) + 'px;top:' + Math.round(142 * this.scale) + 'px;font-size:' + Math.round(16 * this.scale) + 'px;color:' + c.textColor + '">23°</div>' +
+    '<div style="position:absolute;left:' + lx + 'px;top:' + Math.round(164 * this.scale) + 'px;font-size:' + Math.round(11 * this.scale) + 'px;color:' + c.dimColor + ';opacity:0.5">湿度 45%</div>'
+  );
+};
+
+PreviewRenderer.prototype.renderImage = function (c) {
+  return this.bg(c.bgColor,
+    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:50%;right:10px;transform:translateY(-50%);text-align:center;color:#555;font-size:' + Math.round(14 * this.scale) + 'px">点击配置上传图片</div>'
+  );
+};
+
 PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
   var self = this;
   return elements.map(function (el, i) {

@@ -360,6 +360,237 @@ JCM.TEMPLATES = [
     },
   },
 
+  // ─── 双时钟 ───
+  {
+    id: 'dualclock', icon: '🌏', name: '双时钟', desc: '同时显示两个时区的时间',
+    updater: 'DateTime.Minute',
+    config: [
+      { group: '基本', fields: [
+        { key: 'cardName', label: '卡片名称', type: 'text', default: '双时钟' },
+        { key: 'bgColor', label: '背景颜色', type: 'color', default: '#000000' },
+      ]},
+      { group: '城市 1', fields: [
+        { key: 'city1', label: '城市名', type: 'text', default: '北京' },
+        { key: 'offset1', label: '时区偏移 (小时)', type: 'range', min: -12, max: 12, default: 8 },
+        { key: 'timeColor1', label: '时间颜色', type: 'color', default: '#ffffff' },
+      ]},
+      { group: '城市 2', fields: [
+        { key: 'city2', label: '城市名', type: 'text', default: '纽约' },
+        { key: 'offset2', label: '时区偏移 (小时)', type: 'range', min: -12, max: 12, default: -5 },
+        { key: 'timeColor2', label: '时间颜色', type: 'color', default: '#6c5ce7' },
+      ]},
+      { group: '样式', fields: [
+        { key: 'timeSize', label: '时间字号', type: 'range', min: 24, max: 72, default: 44 },
+        { key: 'dateColor', label: '日期颜色', type: 'color', default: '#666666' },
+        { key: 'dividerColor', label: '分隔线颜色', type: 'color', default: '#333333' },
+      ]},
+    ],
+    gen: function (c) {
+      var ts = Number(c.timeSize);
+      var cityY1 = 50;
+      var timeY1 = cityY1 + 26;
+      var dateY1 = timeY1 + ts * 0.8;
+      var divY = dateY1 + 30;
+      var cityY2 = divY + 24;
+      var timeY2 = cityY2 + 26;
+      var dateY2 = timeY2 + ts * 0.8;
+      var o1 = Number(c.offset1) || 0;
+      var o2 = Number(c.offset2) || 0;
+      return [
+        '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+        '  <Var name="safeW" type="number" expression="(#view_width - #marginL - 20)" />',
+        '  <Var name="utcNow" type="number" expression="(#time_sys + (' + (o1 * -3600000) + '))" />',
+        '  <Var name="utcNow2" type="number" expression="(#time_sys + (' + (o2 * -3600000) + '))" />',
+        '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
+        '  <Group x="#marginL" y="0" w="#safeW">',
+        '    <Text text="' + JCM.escXml(c.city1) + '" x="0" y="' + cityY1 + '" size="13" color="' + c.dateColor + '" />',
+        '    <Text textExp="formatDate(\'HH:mm\', #utcNow)" x="0" y="' + timeY1 + '" size="' + ts + '" color="' + c.timeColor1 + '" bold="true" />',
+        '    <Text textExp="formatDate(\'MM/dd EEEE\', #utcNow)" x="0" y="' + Math.round(dateY1) + '" size="13" color="' + c.dateColor + '" alpha="0.6" />',
+        '    <Rectangle x="0" y="' + divY + '" w="#safeW" h="1" fillColor="' + c.dividerColor + '" />',
+        '    <Text text="' + JCM.escXml(c.city2) + '" x="0" y="' + cityY2 + '" size="13" color="' + c.dateColor + '" />',
+        '    <Text textExp="formatDate(\'HH:mm\', #utcNow2)" x="0" y="' + timeY2 + '" size="' + ts + '" color="' + c.timeColor2 + '" bold="true" />',
+        '    <Text textExp="formatDate(\'MM/dd EEEE\', #utcNow2)" x="0" y="' + Math.round(dateY2) + '" size="13" color="' + c.dateColor + '" alpha="0.6" />',
+        '  </Group>',
+      ].join('\n');
+    },
+  },
+
+  // ─── 每日一句 ───
+  {
+    id: 'dailyquote', icon: '💊', name: '每日一句', desc: '每天自动切换一条语录',
+    updater: 'DateTime.Day',
+    config: [
+      { group: '基本', fields: [
+        { key: 'cardName', label: '卡片名称', type: 'text', default: '每日一句' },
+        { key: 'bgColor', label: '背景颜色', type: 'color', default: '#0a0a1a' },
+      ]},
+      { group: '语录 (每天轮换一条)', fields: [
+        { key: 'quote1', label: '语录 1', type: 'textarea', default: '生活不止眼前的苟且\n还有诗和远方' },
+        { key: 'quote2', label: '语录 2', type: 'textarea', default: '世界上只有一种英雄主义\n就是在认清生活真相之后\n依然热爱生活' },
+        { key: 'quote3', label: '语录 3', type: 'textarea', default: '万物皆有裂痕\n那是光照进来的地方' },
+        { key: 'quote4', label: '语录 4', type: 'textarea', default: '凡是过往\n皆为序章' },
+        { key: 'quote5', label: '语录 5', type: 'textarea', default: '知足且上进\n温柔而坚定' },
+        { key: 'quote6', label: '语录 6', type: 'textarea', default: '不乱于心\n不困于情\n不畏将来\n不念过往' },
+        { key: 'quote7', label: '语录 7', type: 'textarea', default: '愿你出走半生\n归来仍是少年' },
+      ]},
+      { group: '样式', fields: [
+        { key: 'textColor', label: '文字颜色', type: 'color', default: '#ffffff' },
+        { key: 'textSize', label: '字号', type: 'range', min: 18, max: 48, default: 26 },
+        { key: 'accentColor', label: '强调色', type: 'color', default: '#6c5ce7' },
+        { key: 'dayColor', label: '日期颜色', type: 'color', default: '#555555' },
+      ]},
+    ],
+    gen: function (c) {
+      var quotes = [c.quote1, c.quote2, c.quote3, c.quote4, c.quote5, c.quote6, c.quote7].filter(Boolean);
+      if (quotes.length === 0) quotes = ['每日一句'];
+      var lines = [
+        '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+        '  <Var name="safeW" type="number" expression="(#view_width - #marginL - 30)" />',
+        '  <Var name="dayIdx" type="number" expression="((#year * 366 + #month * 31 + #date) % ' + quotes.length + ')" />',
+        '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
+        '  <Group x="#marginL" y="0" w="#safeW">',
+      ];
+      // Generate conditional text for each quote
+      quotes.forEach(function (q, i) {
+        var cond = i === 0 ? '' : 'else ';
+        if (i < quotes.length - 1) {
+          lines.push('    <Text' + (i === 0 ? '' : '') + ' textExp="ifelse((#dayIdx == ' + i + '), \'' + JCM.escXml(q).replace(/\n/g, '\\n') + '\', \'__NEXT__\')" x="0" y="50" size="' + c.textSize + '" color="' + c.textColor + '" w="#safeW" multiLine="true" />');
+        }
+      });
+      // Simpler approach: just use ifelse chain for textExp
+      var expr = quotes.map(function (q, i) {
+        return '(ifelse((#dayIdx == ' + i + '), \'' + JCM.escXml(q).replace(/\n/g, '\\\\n') + '\', \'';
+      }).join('') + '\'\')' + ')'.repeat(quotes.length);
+      lines.length = 4; // reset, rebuild simpler
+      lines.push('  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />');
+      lines.push('  <Var name="safeW" type="number" expression="(#view_width - #marginL - 30)" />');
+      lines.push('  <Var name="dayIdx" type="number" expression="((#year * 366 + #month * 31 + #date) % ' + quotes.length + ')" />');
+      lines.push('  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />');
+      lines.push('  <Group x="#marginL" y="0" w="#safeW">');
+      // Build ifelse chain
+      var textExpr = '\'' + JCM.escXml(quotes[quotes.length - 1]).replace(/\n/g, '\\\\n') + '\'';
+      for (var i = quotes.length - 2; i >= 0; i--) {
+        textExpr = 'ifelse((#dayIdx == ' + i + '), \'' + JCM.escXml(quotes[i]).replace(/\n/g, '\\\\n') + '\', ' + textExpr + ')';
+      }
+      lines.push('    <Text textExp="' + textExpr + '" x="0" y="50" size="' + c.textSize + '" color="' + c.textColor + '" w="#safeW" multiLine="true" />');
+      lines.push('    <Rectangle x="0" y="42" w="24" h="3" fillColor="' + c.accentColor + '" cornerRadius="1.5" />');
+      lines.push('    <Text textExp="formatDate(\'MM/dd EEEE\', #time_sys)" x="0" y="(#view_height - 50)" size="12" color="' + c.dayColor + '" alpha="0.5" />');
+      lines.push('  </Group>');
+      return lines.join('\n');
+    },
+  },
+
+  // ─── 环形进度 ───
+  {
+    id: 'ring', icon: '🎯', name: '环形进度', desc: '环形进度条显示步数或电量',
+    updater: 'Step,Battery',
+    config: [
+      { group: '基本', fields: [
+        { key: 'cardName', label: '卡片名称', type: 'text', default: '环形进度' },
+        { key: 'bgColor', label: '背景颜色', type: 'color', default: '#0a0a1a' },
+      ]},
+      { group: '数据源', fields: [
+        { key: 'source', label: '数据来源', type: 'select', options: [
+          { v: 'step', l: '步数' },
+          { v: 'battery', l: '电量' },
+        ], default: 'step' },
+        { key: 'goal', label: '目标值 (步数模式)', type: 'text', default: '10000' },
+        { key: 'demoValue', label: '预览值', type: 'range', min: 0, max: 100, default: 65 },
+      ]},
+      { group: '样式', fields: [
+        { key: 'ringColor', label: '进度环颜色', type: 'color', default: '#6c5ce7' },
+        { key: 'trackColor', label: '轨道颜色', type: 'color', default: '#222233' },
+        { key: 'textColor', label: '文字颜色', type: 'color', default: '#ffffff' },
+        { key: 'labelColor', label: '标签颜色', type: 'color', default: '#888888' },
+        { key: 'ringSize', label: '环粗细', type: 'range', min: 6, max: 20, default: 12 },
+      ]},
+    ],
+    gen: function (c) {
+      var isBattery = c.source === 'battery';
+      var goalN = parseInt(c.goal) || 10000;
+      var dataVar = isBattery ? '#battery_level' : '(#step_count * 100 / ' + goalN + ')';
+      var pctExpr = isBattery ? '#battery_level' : 'ifelse((#step_count > ' + goalN + '), 100, (#step_count * 100 / ' + goalN + '))';
+      var label = isBattery ? '电量' : '步数';
+      var valueExpr = isBattery ? '#battery_level' : '#step_count';
+      var unit = isBattery ? '%' : '步';
+      return [
+        '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+        '  <Var name="cx" type="number" expression="(#marginL + (#view_width - #marginL) / 2)" />',
+        '  <Var name="pct" type="number" expression="' + pctExpr + '" />',
+        '  <Var name="ringR" type="number" expression="80" />',
+        '  <Var name="ringW" type="number" expression="' + c.ringSize + '" />',
+        '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
+        '  <Circle x="#cx" y="120" r="#ringR" fillColor="' + c.trackColor + '" />',
+        '  <Circle x="#cx" y="120" r="(#ringR - #ringW)" fillColor="' + c.bgColor + '" />',
+        '  <Text textExp="#pct" x="(#cx - 50)" y="80" w="100" size="48" color="' + c.textColor + '" textAlign="center" bold="true" />',
+        '  <Text text="' + unit + '" x="(#cx - 20)" y="138" size="16" color="' + c.labelColor + '" alpha="0.6" />',
+        '  <Text text="' + label + '" x="(#cx - 30)" y="220" w="60" size="14" color="' + c.labelColor + '" alpha="0.5" textAlign="center" />',
+      ].join('\n');
+    },
+  },
+
+  // ─── 仪表盘 ───
+  {
+    id: 'dashboard', icon: '📊', name: '仪表盘', desc: '一屏聚合时间、步数、电量、天气',
+    updater: 'DateTime.Minute',
+    config: [
+      { group: '基本', fields: [
+        { key: 'cardName', label: '卡片名称', type: 'text', default: '仪表盘' },
+        { key: 'bgColor', label: '背景颜色', type: 'color', default: '#0a0e1a' },
+      ]},
+      { group: '样式', fields: [
+        { key: 'timeColor', label: '时间颜色', type: 'color', default: '#ffffff' },
+        { key: 'accentColor', label: '强调色', type: 'color', default: '#6c5ce7' },
+        { key: 'textColor', label: '文字颜色', type: 'color', default: '#cccccc' },
+        { key: 'dimColor', label: '次要颜色', type: 'color', default: '#555555' },
+      ]},
+    ],
+    gen: function (c) {
+      return [
+        '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+        '  <Var name="safeW" type="number" expression="(#view_width - #marginL - 20)" />',
+        '  <Var name="colW" type="number" expression="(#safeW / 2)" />',
+        '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
+        '  <Group x="#marginL" y="0" w="#safeW">',
+        // Time - top left
+        '    <Text textExp="formatDate(\'HH:mm\', #time_sys)" x="0" y="20" size="40" color="' + c.timeColor + '" bold="true" />',
+        '    <Text textExp="formatDate(\'MM/dd EEEE\', #time_sys)" x="0" y="68" size="12" color="' + c.dimColor + '" />',
+        // Divider
+        '    <Rectangle x="0" y="92" w="#safeW" h="1" fillColor="#1a1f2e" />',
+        // Steps - bottom left
+        '    <Text text="步数" x="0" y="110" size="11" color="' + c.dimColor + '" />',
+        '    <Text textExp="#step_count" x="0" y="128" size="24" color="' + c.textColor + '" bold="true" />',
+        '    <Text text="步" x="0" y="158" size="11" color="' + c.dimColor + '" alpha="0.6" />',
+        // Battery - bottom right
+        '    <Text text="电量" x="#colW" y="110" size="11" color="' + c.dimColor + '" />',
+        '    <Text textExp="(#battery_level + \'%\')" x="#colW" y="128" size="24" color="' + c.textColor + '" bold="true" />',
+        // Weather - bottom
+        '    <Rectangle x="0" y="178" w="#safeW" h="1" fillColor="#1a1f2e" />',
+        '    <Text textExp="#weather_desc" x="0" y="196" size="14" color="' + c.accentColor + '" />',
+        '    <Text textExp="(#weather_temp + \'°\')" x="#colW" y="196" size="18" color="' + c.textColor + '" />',
+        '    <Text textExp="(\'湿度 \' + #weather_humidity + \'%\')" x="0" y="218" size="11" color="' + c.dimColor + '" alpha="0.5" />',
+        '  </Group>',
+      ].join('\n');
+    },
+  },
+
+  // ─── 纯图片 ───
+  {
+    id: 'image', icon: '🖼️', name: '纯图片', desc: '放壁纸、照片或二维码',
+    config: [
+      { group: '基本', fields: [
+        { key: 'cardName', label: '卡片名称', type: 'text', default: '图片卡片' },
+        { key: 'bgColor', label: '背景颜色', type: 'color', default: '#000000' },
+      ]},
+    ],
+    gen: function (c) {
+      return [
+        '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+        '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
+      ].join('\n');
+    },
+  },
+
   // ─── 自定义 ───
   {
     id: 'custom', icon: '🛠️', name: '自定义', desc: '从零开始，手动添加文字、形状、图片、视频',

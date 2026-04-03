@@ -367,6 +367,11 @@ function renderPreview() {
     case 'weather':   html = r.renderWeather(_cfg); break;
     case 'steps':     html = r.renderSteps(_cfg); break;
     case 'calendar':  html = r.renderCalendar(_cfg); break;
+    case 'dualclock': html = r.renderDualclock(_cfg); break;
+    case 'dailyquote':html = r.renderDailyquote(_cfg); break;
+    case 'ring':      html = r.renderRing(_cfg); break;
+    case 'dashboard': html = r.renderDashboard(_cfg); break;
+    case 'image':     html = r.renderImage(_cfg); break;
     case 'custom':    html = r.renderCustom(_cfg); break;
   }
   html += r.renderElements(_elements, JCM.uploadedFiles, _selIdx);
