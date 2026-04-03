@@ -28,7 +28,7 @@ const jszip = fs.readFileSync(path.join(ROOT, 'lib', 'jszip.min.js'), 'utf8');
 
 // Build single HTML
 const html = `<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -114,6 +114,7 @@ const html = `<!DOCTYPE html>
           <div class="preview-actions">
             <button class="btn btn-secondary" onclick="renderPreview()"><span class="btn-icon">🔄</span> 生成预览</button>
             <button class="btn btn-export" onclick="JCM.handleExport()"><span class="btn-icon">📦</span> 导出 ZIP</button>
+            <button class="btn btn-secondary" onclick="JCM.handleExportPNG()"><span class="btn-icon">🖼</span> 导出 PNG</button>
           </div>
         </div>
       </div>

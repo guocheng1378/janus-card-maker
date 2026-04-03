@@ -2,6 +2,8 @@
 
 为小米背屏（SubScreen）制作 MAML 卡片模板的工具。
 
+> 🌐 **在线使用**：[https://guocheng1378.github.io/janus-card-maker/](https://guocheng1378.github.io/janus-card-maker/)
+
 ## v3 改动
 
 - **零构建**：砍掉 TypeScript + esbuild，纯原生 JS，改代码刷新浏览器即生效
@@ -42,13 +44,27 @@ npx serve .
 
 ### Android 打包
 ```bash
-node build.js
+npm run build
 # 输出 → app/src/main/assets/index.html
+# 然后用 Android Studio 构建 APK
 ```
 
-### 功能
-- 🎨 7 个预设模板：时钟、名言、电池、状态、倒计时、音乐、渐变
-- 🛠️ 自定义模式：自由添加文字、矩形、圆形、图片、视频
-- 📱 双机型适配：Pro (904×572) / Pro Max (976×596)
-- 📷 摄像头避让：自动计算安全区
-- 📦 一键导出：生成 MAML ZIP，导入 Janus
+### Android CI/CD
+仓库已配置 GitHub Actions，push tag 或手动触发即可自动构建 APK：
+- `Build Android APK` — Release 发布时自动构建并上传
+- `Deploy to GitHub Pages` — 推送到 main 自动部署在线版本
+
+## 功能
+
+- 🎨 **10 个预设模板**：时钟、名言、电池、状态、倒计时、音乐、渐变、天气、步数、日历
+- 🛠️ **自定义模式**：自由添加文字、矩形、圆形、线条、图片、视频
+- 📱 **双机型适配**：Pro (904×572) / Pro Max (976×596)
+- 📷 **摄像头避让**：自动计算安全区
+- 📦 **一键导出**：生成 MAML ZIP，导入 Janus
+- 🖼️ **PNG 导出**：预览截图导出
+- ↩️ **撤销/重做**：支持多步操作回退
+- 🌗 **深色/浅色主题**
+
+## License
+
+[MIT](LICENSE)

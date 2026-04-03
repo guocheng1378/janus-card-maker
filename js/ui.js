@@ -14,6 +14,15 @@ var SNAP_GRID = 10;
 var _previewTimer = null;
 var _clipboard = null; // Copy/paste buffer
 
+// ─── Debounce ─────────────────────────────────────────────────────
+function debounce(fn, ms) {
+  var timer;
+  return function () {
+    clearTimeout(timer);
+    timer = setTimeout(fn, ms);
+  };
+}
+
 // ─── Undo/Redo ────────────────────────────────────────────────────
 var _history = [];
 var _redoStack = [];
@@ -649,6 +658,11 @@ function onPreviewMouseUp() {
 }
 
 // ─── Event Delegation ─────────────────────────────────────────────
+var _autoPreview = debounce(function () {
+  _dirty = true;
+  if (_step === 2) renderPreview();
+}, 300);
+
 function setupEvents() {
   // Template grid
   document.getElementById('tplGrid').addEventListener('click', function (e) {
@@ -683,6 +697,7 @@ function setupEvents() {
       else _elements[idx][prop] = t.value;
       _dirty = true;
     }
+    _autoPreview();
   });
 
   document.getElementById('cfgContent').addEventListener('change', function (e) {
@@ -697,6 +712,7 @@ function setupEvents() {
       _dirty = true;
       renderConfig();
     }
+    _autoPreview();
   });
 
   document.getElementById('cfgContent').addEventListener('click', function (e) {

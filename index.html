@@ -135,7 +135,9 @@
 <!-- JSZip (local fallback) -->
 <script>
   if (typeof JSZip === 'undefined') {
-    document.write('<script src="lib/jszip.min.js"><\/script>');
+    var s = document.createElement('script');
+    s.src = 'lib/jszip.min.js';
+    document.head.appendChild(s);
   }
 </script>
 <script>

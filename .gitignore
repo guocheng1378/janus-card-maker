@@ -2,13 +2,17 @@ node_modules/
 dist/
 .DS_Store
 *.log
-gradle/wrapper/gradle-wrapper.jar
 
-# Keystore (use GitHub Secrets)
+# Gradle
+.gradle/
+build/
 *.p12
 *.jks
 *.pem
 janus-key.pem
 janus-cert.pem
-gradle/wrapper/gradle-wrapper.jar
-gradlew
+
+# IDE
+.idea/
+*.iml
+.vscode/

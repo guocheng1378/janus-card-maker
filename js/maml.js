@@ -30,6 +30,12 @@ JCM.generateMAML = function (opts) {
   return lines.join('\n');
 };
 
+function alphaAttr(el) {
+  return (el.opacity !== undefined && el.opacity !== 100)
+    ? ' alpha="' + (el.opacity / 100).toFixed(2) + '"'
+    : '';
+}
+
 function renderEl(el, files) {
   var p = '    ';
   switch (el.type) {
@@ -39,20 +45,20 @@ function renderEl(el, files) {
       var ml = el.multiLine ? ' multiLine="true"' : '';
       var w = el.multiLine || (el.textAlign && el.textAlign !== 'left') ? ' w="' + (el.w || 200) + '"' : '';
       var b = el.bold ? ' bold="true"' : '';
-      var al = (el.opacity !== undefined && el.opacity !== 100) ? ' alpha="' + (el.opacity / 100).toFixed(2) + '"' : '';
       var sh = '';
       if (el.shadow === 'light') sh = ' shadow="1" shadowColor="#000000"';
       else if (el.shadow === 'dark') sh = ' shadow="3" shadowColor="#000000"';
       else if (el.shadow === 'glow') sh = ' shadow="4" shadowColor="' + (el.color || '#ffffff') + '"';
-      return p + '<Text ' + t + ' x="' + el.x + '" y="' + el.y + '" size="' + el.size + '" color="' + el.color + '"' + w + a + ml + b + al + sh + ' />';
+      return p + '<Text ' + t + ' x="' + el.x + '" y="' + el.y + '" size="' + el.size + '" color="' + el.color + '"' + w + a + ml + b + alphaAttr(el) + sh + ' />';
     }
     case 'rectangle': {
-      var al = (el.opacity !== undefined && el.opacity !== 100) ? ' alpha="' + (el.opacity / 100).toFixed(2) + '"' : '';
-      return p + '<Rectangle x="' + el.x + '" y="' + el.y + '" w="' + el.w + '" h="' + el.h + '" fillColor="' + el.color + '"' + (el.radius ? ' cornerRadius="' + el.radius + '"' : '') + al + ' />';
+      if (el.h <= 3 && el.radius >= 1) {
+        return p + '<Line x="' + el.x + '" y="' + el.y + '" w="' + el.w + '" h="' + el.h + '" fillColor="' + el.color + '" cornerRadius="' + el.radius + '"' + alphaAttr(el) + ' />';
+      }
+      return p + '<Rectangle x="' + el.x + '" y="' + el.y + '" w="' + el.w + '" h="' + el.h + '" fillColor="' + el.color + '"' + (el.radius ? ' cornerRadius="' + el.radius + '"' : '') + alphaAttr(el) + ' />';
     }
     case 'circle': {
-      var al = (el.opacity !== undefined && el.opacity !== 100) ? ' alpha="' + (el.opacity / 100).toFixed(2) + '"' : '';
-      return p + '<Circle x="' + el.x + '" y="' + el.y + '" r="' + el.r + '" fillColor="' + el.color + '"' + al + ' />';
+      return p + '<Circle x="' + el.x + '" y="' + el.y + '" r="' + el.r + '" fillColor="' + el.color + '"' + alphaAttr(el) + ' />';
     }
     case 'image': {
       var folder = el.src && files[el.src] && files[el.src].mimeType.indexOf('video/') === 0 ? 'videos' : 'images';
