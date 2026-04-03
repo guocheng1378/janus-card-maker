@@ -8,26 +8,23 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Base64
-import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
-import androidx.activity.ComponentActivity
-import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AppCompatActivity
 import androidx.webkit.WebViewAssetLoader
 import java.io.File
 import java.io.FileOutputStream
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
 
         webView = WebView(this).apply {
             settings.javaScriptEnabled = true
@@ -42,7 +39,6 @@ class MainActivity : ComponentActivity() {
                 .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this@MainActivity))
                 .build()
 
-            // Add JS bridge for file saving
             addJavascriptInterface(AndroidBridge(), "AndroidBridge")
 
             webChromeClient = WebChromeClient()
@@ -66,7 +62,6 @@ class MainActivity : ComponentActivity() {
         if (webView.canGoBack()) {
             webView.goBack()
         } else {
-            @Suppress("DEPRECATION")
             super.onBackPressed()
         }
     }
@@ -78,20 +73,18 @@ class MainActivity : ComponentActivity() {
                 val bytes = Base64.decode(base64Data, Base64.DEFAULT)
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    // Use MediaStore for Android 10+
                     val contentValues = ContentValues().apply {
                         put(MediaStore.Downloads.DISPLAY_NAME, fileName)
                         put(MediaStore.Downloads.MIME_TYPE, "application/zip")
                         put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/JanusCards")
                     }
                     val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-                    uri?.let {
-                        contentResolver.openOutputStream(it)?.use { os ->
+                    uri?.let { u ->
+                        contentResolver.openOutputStream(u)?.use { os ->
                             os.write(bytes)
                         }
                     }
                 } else {
-                    // Legacy storage
                     val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "JanusCards")
                     dir.mkdirs()
                     val file = File(dir, fileName)
@@ -101,7 +94,6 @@ class MainActivity : ComponentActivity() {
                 runOnUiThread {
                     Toast.makeText(this@MainActivity, "已保存到 Downloads/JanusCards/$fileName", Toast.LENGTH_LONG).show()
 
-                    // Open share intent
                     val intent = Intent(Intent.ACTION_SEND).apply {
                         type = "application/zip"
                         putExtra(Intent.EXTRA_SUBJECT, fileName)
