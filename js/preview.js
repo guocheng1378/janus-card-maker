@@ -43,9 +43,16 @@ PreviewRenderer.prototype.calcCountdown = function (str) {
   var tMonth = Math.floor(Number(td) / 100), tDay = Number(td) % 100;
   if (tMonth < 1 || tMonth > 12 || tDay < 1 || tDay > 31) return 0;
   var now = new Date(), y = now.getFullYear();
-  var target = new Date(y, tMonth - 1, tDay);
-  var diff = Math.ceil((target.getTime() - now.getTime()) / 86400000);
-  if (diff < 0) { target = new Date(y + 1, tMonth - 1, tDay); diff = Math.ceil((target.getTime() - now.getTime()) / 86400000); }
+  // Helper: absolute day number from year 0 (handles leap years)
+  function absDay(year, month, day) {
+    var y = year, m = month;
+    if (m <= 2) { y--; m += 12; }
+    return 365*y + Math.floor(y/4) - Math.floor(y/100) + Math.floor(y/400) + Math.floor(306*(m+1)/10) + day - 654855;
+  }
+  var today = absDay(y, now.getMonth()+1, now.getDate());
+  var target = absDay(y, tMonth, tDay);
+  var diff = target - today;
+  if (diff <= 0) { diff = absDay(y+1, tMonth, tDay) - today; }
   return diff;
 };
 
