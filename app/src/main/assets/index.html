@@ -319,8 +319,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
       <div class="device-row">
         <label>机型</label>
         <select id="deviceSelect" onchange="renderPreview()">
-          <option value="p2">Mix Flip 2 (P2) — 976×596</option>
-          <option value="q200">Mix Flip (Q200) — 904×572</option>
+          <option value="p2">Pro Max — 976×596</option>
+          <option value="q200">Pro — 904×572</option>
         </select>
         <label class="check-label">
           <input type="checkbox" id="showCamera" checked onchange="renderPreview()"> 摄像头遮挡区
@@ -339,7 +339,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
               </div>
             </div>
           </div>
-          <div class="preview-device-label" id="deviceLabel">Mix Flip 2 (P2) — 976 × 596</div>
+          <div class="preview-device-label" id="deviceLabel">Pro — 904 × 572</div>
         </div>
         <div class="preview-side">
           <h3>📄 MAML XML</h3>
@@ -846,7 +846,7 @@ function renderPreview() {
 
   const dims = device === 'p2' ? { w: 976, h: 596 } : { w: 904, h: 572 };
   document.getElementById('deviceLabel').textContent =
-    device === 'p2' ? 'Mix Flip 2 (P2) — 976 × 596' : 'Mix Flip (Q200) — 904 × 572';
+    device === 'p2' ? 'Pro Max — 976 × 596' : 'Pro — 904 × 572';
 
   const camera = document.getElementById('previewCamera');
   camera.style.width = showCam ? '74px' : '0';
