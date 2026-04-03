@@ -76,6 +76,21 @@ class MainActivity : AppCompatActivity() {
                 ): android.webkit.WebResourceResponse? {
                     return assetLoader.shouldInterceptRequest(request.url)
                 }
+
+                override fun shouldOverrideUrlLoading(
+                    view: WebView?,
+                    request: android.webkit.WebResourceRequest?
+                ): Boolean {
+                    val url = request?.url ?: return false
+                    // Open external links in system browser
+                    if (url.scheme == "http" || url.scheme == "https") {
+                        if (!url.host.equals("appassets.androidplatform.net")) {
+                            startActivity(Intent(Intent.ACTION_VIEW, url))
+                            return true
+                        }
+                    }
+                    return false
+                }
             }
 
             loadUrl("https://appassets.androidplatform.net/assets/index.html")
