@@ -690,7 +690,7 @@ function selectTemplate(id) {
   configValues = {};
   tpl.config.forEach(g => g.fields.forEach(f => configValues[f.key] = f.default));
   customElements = tpl.id === 'custom' ? [
-    { type: 'text', text: 'Hello Card', x: 30, y: 60, size: 28, color: '#ffffff' }
+    { type: 'text', text: 'Hello Card', x: 10, y: 60, size: 28, color: '#ffffff', textAlign: 'left', bold: false, multiLine: false, w: 200 }
   ] : [];
   selectedElIdx = -1;
   previewDirty = true;
@@ -717,10 +717,10 @@ function renderConfig() {
     html += `</div></div>`;
   });
 
-  // Custom elements editor
-  if (currentTpl.id === 'custom') {
+  // Custom elements editor (available for all templates)
+  {
     html += `<div class="config-section">
-      <div class="config-section-title"><span>▸</span> 元素</div>
+      <div class="config-section-title"><span>▸</span> 额外元素</div>
       <div class="el-toolbar">
         <button class="el-btn" onclick="addElement('text')"><span class="el-btn-icon">T</span> 文字</button>
         <button class="el-btn" onclick="addElement('rectangle')"><span class="el-btn-icon">▢</span> 矩形</button>
@@ -751,7 +751,6 @@ function renderConfig() {
       html += renderElementEditor(customElements[selectedElIdx], selectedElIdx);
     }
     html += `</div>`;
-  }
 
   document.getElementById('cfgContent').innerHTML = html;
   document.querySelectorAll('.color-val').forEach(el => {
@@ -990,8 +989,33 @@ function setElProp(prop, val) {
 
 function generateMAML() {
   if (!currentTpl) return '';
-  if (currentTpl.id === 'custom') return generateCustomMAML();
-  return currentTpl.gen(configValues);
+  let maml;
+  if (currentTpl.id === 'custom') {
+    maml = generateCustomMAML();
+  } else {
+    maml = currentTpl.gen(configValues);
+  }
+  // Append custom elements to any template
+  if (customElements.length > 0) {
+    // Insert extra elements before the closing </Widget> tag
+    const closeIdx = maml.lastIndexOf('</Widget>');
+    if (closeIdx > 0) {
+      let extra = '';
+      customElements.forEach(el => {
+        if (el.type === 'text') {
+          const align = el.textAlign && el.textAlign !== 'left' ? ` textAlign="${el.textAlign}"` : '';
+          const ml = el.multiLine ? ' multiLine="true"' : '';
+          const w = el.multiLine || (el.textAlign && el.textAlign !== 'left') ? ` w="${el.w||200}"` : '';
+          extra += `  <Text text="${esc(el.text)}" x="${el.x}" y="${el.y}" size="${el.size}" color="${el.color}"${w}${align}${ml}${el.bold ? ' bold="true"' : ''} />\n`;
+        } else if (el.type === 'rectangle') extra += `  <Rectangle x="${el.x}" y="${el.y}" w="${el.w}" h="${el.h}" fillColor="${el.color}"${el.radius ? ` cornerRadius="${el.radius}"` : ''} />\n`;
+        else if (el.type === 'circle') extra += `  <Circle x="${el.x}" y="${el.y}" r="${el.r}" fillColor="${el.color}" />\n`;
+        else if (el.type === 'image') extra += `  <Image src="${esc(el.src)}" x="${el.x}" y="${el.y}" w="${el.w||100}" h="${el.h||100}" />\n`;
+        else if (el.type === 'video') extra += `  <Video src="${esc(el.src)}" x="${el.x}" y="${el.y}" w="${el.w||240}" h="${el.h||135}" autoPlay="true" loop="true" />\n`;
+      });
+      maml = maml.slice(0, closeIdx) + extra + maml.slice(closeIdx);
+    }
+  }
+  return maml;
 }
 
 // Camera safe zone: 30% of screen width on the left
@@ -1048,81 +1072,15 @@ function renderPreview() {
 function renderPreviewHTML(showCam) {
   if (!currentTpl) return '';
   const c = configValues;
-  // Landscape preview: 420px wide, MAML is 480px wide
-  const PW = 420; // preview width
-  const S = PW / 480; // scale factor = 0.875
-  const camW = showCam ? PW * CAMERA_ZONE_RATIO : 0; // camera zone in preview px
+  const PW = 420;
+  const S = PW / 480;
+  const camW = showCam ? PW * CAMERA_ZONE_RATIO : 0;
 
-  if (currentTpl.id === 'clock') {
-    const now = new Date();
-    const timeStr = c.timeFormat === 'HH:mm'
-      ? String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0')
-      : (now.getHours() % 12 || 12) + ':' + String(now.getMinutes()).padStart(2,'0');
-    const days = ['日','一','二','三','四','五','六'];
-    const dateStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} 星期${days[now.getDay()]}`;
-    return `<div style="position:absolute;inset:0;background:${c.bgColor}"></div>
-      <div style="position:absolute;left:${camW+10}px;top:30px;font-size:${Math.round(c.timeSize*S)}px;color:${c.timeColor};font-weight:700;letter-spacing:1px">${timeStr}</div>
-      <div style="position:absolute;left:${camW+10}px;top:${30+c.timeSize*S+6}px;font-size:${Math.round(20*S)}px;color:${c.dateColor}">${dateStr}</div>`;
-  }
-
-  if (currentTpl.id === 'quote') {
-    const lines = c.text.split('\n');
-    return `<div style="position:absolute;inset:0;background:${c.bgColor}"></div>
-      <div style="position:absolute;left:${camW+10}px;top:24px;right:10px;font-size:${Math.round(c.textSize*S)}px;color:${c.textColor};line-height:1.4">${lines.map(l=>esc(l)).join('<br>')}</div>
-      <div style="position:absolute;left:${camW+10}px;bottom:20px;font-size:${Math.round(16*S)}px;color:${c.authorColor}">${esc(c.author)}</div>`;
-  }
-
-  if (currentTpl.id === 'battery') {
-    return `<div style="position:absolute;inset:0;background:${c.bgColor}"></div>
-      <div style="position:absolute;left:${camW+10}px;top:20px;font-size:${Math.round(18*S)}px;color:${c.textColor};opacity:0.6">电量</div>
-      <div style="position:absolute;left:${camW+10}px;top:42px;font-size:${Math.round(56*S)}px;color:${c.textColor};font-weight:700">78%</div>
-      <div style="position:absolute;left:${camW+10}px;top:110px;width:${PW-camW-20}px;height:7px;background:#333;border-radius:4px">
-        <div style="width:78%;height:100%;background:${c.barColor};border-radius:4px"></div>
-      </div>
-      <div style="position:absolute;left:${camW+10}px;top:126px;font-size:${Math.round(16*S)}px;color:${c.textColor};opacity:0.5">电量充足</div>`;
-  }
-
-  if (currentTpl.id === 'status') {
-    const items = [c.item1, c.item2, c.item3, c.item4].filter(Boolean);
-    return `<div style="position:absolute;inset:0;background:${c.bgColor}"></div>
-      <div style="position:absolute;left:${camW+6}px;top:18px;display:flex;align-items:center;gap:6px">
-        <div style="width:3px;height:${Math.round(24*S)}px;background:${c.accentColor};border-radius:2px"></div>
-        <span style="font-size:${Math.round(22*S)}px;color:${c.textColor};font-weight:600">${esc(c.title)}</span>
-      </div>
-      ${items.map((t,i) => `<div style="position:absolute;left:${camW+16}px;top:${50+i*Math.round(40*S)}px;font-size:${Math.round(16*S)}px;color:${c.textColor};opacity:0.8">${esc(t)}</div>`).join('')}`;
-  }
-
-  if (currentTpl.id === 'countdown') {
-    return `<div style="position:absolute;inset:0;background:${c.bgColor}"></div>
-      <div style="position:absolute;left:${camW+10}px;top:20px;font-size:${Math.round(18*S)}px;color:${c.textColor};opacity:0.6">${esc(c.eventName)}</div>
-      <div style="position:absolute;left:${camW+10}px;top:44px;font-size:${Math.round(72*S)}px;color:${c.accentColor};font-weight:700">42</div>
-      <div style="position:absolute;left:${camW+10}px;top:${44+72*S+4}px;font-size:${Math.round(20*S)}px;color:${c.textColor};opacity:0.5">天</div>`;
-  }
-
-  if (currentTpl.id === 'music') {
-    return `<div style="position:absolute;inset:0;background:${c.bgColor}"></div>
-      <div style="position:absolute;left:${camW+10}px;top:18px;display:flex;gap:8px;align-items:center">
-        <div style="width:${Math.round(48*S)}px;height:${Math.round(48*S)}px;background:${c.accentColor};border-radius:${Math.round(12*S)}px;display:flex;align-items:center;justify-content:center;font-size:${Math.round(28*S)}px;color:#fff">♪</div>
-        <span style="font-size:${Math.round(12*S)}px;color:${c.accentColor}">正在播放</span>
-      </div>
-      <div style="position:absolute;left:${camW+10}px;top:${18+48*S+10}px;font-size:${Math.round(24*S)}px;color:${c.titleColor};font-weight:600">歌曲名称</div>
-      <div style="position:absolute;left:${camW+10}px;top:${18+48*S+10+24*S+4}px;font-size:${Math.round(16*S)}px;color:${c.artistColor}">歌手名称</div>
-      <div style="position:absolute;left:${camW+10}px;right:10px;top:${18+48*S+10+24*S+4+22}px;height:2px;background:#333;border-radius:1px">
-        <div style="width:40%;height:100%;background:${c.accentColor};border-radius:1px"></div>
-      </div>`;
-  }
-
-  if (currentTpl.id === 'gradient') {
-    const lines = c.text.split('\n');
-    return `<div style="position:absolute;left:0;top:0;width:50%;height:100%;background:${c.bgColor1}"></div>
-      <div style="position:absolute;left:50%;top:0;width:50%;height:100%;background:${c.bgColor2};opacity:0.7"></div>
-      <div style="position:absolute;left:${camW}px;right:0;top:30%;text-align:center;font-size:${Math.round(c.textSize*S)}px;color:${c.textColor};font-weight:700;line-height:1.3">${lines.map(l=>esc(l)).join('<br>')}</div>`;
-  }
-
-  if (currentTpl.id === 'custom') {
-    let html = `<div style="position:absolute;inset:0;background:${c.bgColor}"></div>`;
+  // Helper: render custom elements overlay
+  function renderElements() {
+    if (customElements.length === 0) return '';
+    let html = '';
     customElements.forEach((el, i) => {
-      // Elements are in Group x="#marginL", so add camera zone offset
       const px = camW + el.x * S;
       const py = el.y * S;
       const inCam = px < camW;
@@ -1131,12 +1089,10 @@ function renderPreviewHTML(showCam) {
       if (selected && inCam) bdr = 'outline:2px solid #e17055;outline-offset:2px;';
       else if (selected) bdr = 'outline:1.5px dashed #6c5ce7;outline-offset:2px;';
       else if (inCam) bdr = 'outline:1.5px dashed rgba(225,112,85,0.6);outline-offset:2px;';
-
       if (el.type === 'text') {
-        const txtAlign = el.textAlign || 'left';
+        const ta = el.textAlign && el.textAlign !== 'left' ? `text-align:${el.textAlign};` : '';
         const fw = el.bold ? 'font-weight:700;' : '';
-        const ta = txtAlign !== 'left' ? `text-align:${txtAlign};` : '';
-        const w = el.multiLine || txtAlign !== 'left' ? `width:${(el.w||200)*S}px;` : '';
+        const w = el.multiLine || (el.textAlign && el.textAlign !== 'left') ? `width:${(el.w||200)*S}px;` : '';
         const lh = el.multiLine ? 'white-space:pre-wrap;line-height:1.4;' : '';
         html += `<div style="position:absolute;left:${px}px;top:${py}px;font-size:${el.size*S}px;color:${el.color};${w}${ta}${fw}${lh}${bdr}">${esc(el.text)}</div>`;
       } else if (el.type === 'rectangle') {
@@ -1144,25 +1100,91 @@ function renderPreviewHTML(showCam) {
       } else if (el.type === 'circle') {
         html += `<div style="position:absolute;left:${camW+(el.x-el.r)*S}px;top:${(el.y-el.r)*S}px;width:${el.r*2*S}px;height:${el.r*2*S}px;background:${el.color};border-radius:50%;${bdr}"></div>`;
       } else if (el.type === 'image') {
-        const fileInfo = el.fileName ? uploadedFiles[el.fileName] : null;
-        if (fileInfo) {
-          html += `<img src="${fileInfo.dataUrl}" style="position:absolute;left:${px}px;top:${py}px;width:${(el.w||100)*S}px;height:${(el.h||100)*S}px;object-fit:cover;border-radius:2px;${bdr}">`;
-        } else {
-          html += `<div style="position:absolute;left:${px}px;top:${py}px;width:${(el.w||100)*S}px;height:${(el.h||100)*S}px;background:#222;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#666;${bdr}">🖼</div>`;
-        }
+        const fi = el.fileName ? uploadedFiles[el.fileName] : null;
+        if (fi) html += `<img src="${fi.dataUrl}" style="position:absolute;left:${px}px;top:${py}px;width:${(el.w||100)*S}px;height:${(el.h||100)*S}px;object-fit:cover;border-radius:2px;${bdr}">`;
+        else html += `<div style="position:absolute;left:${px}px;top:${py}px;width:${(el.w||100)*S}px;height:${(el.h||100)*S}px;background:#222;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#666;${bdr}">🖼</div>`;
       } else if (el.type === 'video') {
-        const fileInfo = el.fileName ? uploadedFiles[el.fileName] : null;
-        if (fileInfo) {
-          html += `<video src="${fileInfo.dataUrl}" muted loop autoplay style="position:absolute;left:${px}px;top:${py}px;width:${(el.w||240)*S}px;height:${(el.h||135)*S}px;object-fit:cover;border-radius:2px;${bdr}"></video>`;
-        } else {
-          html += `<div style="position:absolute;left:${px}px;top:${py}px;width:${(el.w||240)*S}px;height:${(el.h||135)*S}px;background:#1a1a2e;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#555;${bdr}">🎬</div>`;
-        }
+        const fi = el.fileName ? uploadedFiles[el.fileName] : null;
+        if (fi) html += `<video src="${fi.dataUrl}" muted loop autoplay style="position:absolute;left:${px}px;top:${py}px;width:${(el.w||240)*S}px;height:${(el.h||135)*S}px;object-fit:cover;border-radius:2px;${bdr}"></video>`;
+        else html += `<div style="position:absolute;left:${px}px;top:${py}px;width:${(el.w||240)*S}px;height:${(el.h||135)*S}px;background:#1a1a2e;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#555;${bdr}">🎬</div>`;
       }
     });
     return html;
   }
 
-  return '';
+  // Helper: combine base + elements
+  function withElements(base) {
+    return base + renderElements();
+  }
+
+  if (currentTpl.id === 'clock') {
+    const now = new Date();
+    const timeStr = c.timeFormat === 'HH:mm'
+      ? String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0')
+      : (now.getHours() % 12 || 12) + ':' + String(now.getMinutes()).padStart(2,'0');
+    const days = ['日','一','二','三','四','五','六'];
+    const dateStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} 星期${days[now.getDay()]}`;
+    return withElements(`<div style="position:absolute;inset:0;background:${c.bgColor}"></div>
+      <div style="position:absolute;left:${camW+10}px;top:30px;font-size:${Math.round(c.timeSize*S)}px;color:${c.timeColor};font-weight:700;letter-spacing:1px">${timeStr}</div>
+      <div style="position:absolute;left:${camW+10}px;top:${30+c.timeSize*S+6}px;font-size:${Math.round(20*S)}px;color:${c.dateColor}">${dateStr}</div>`);
+  }
+
+  if (currentTpl.id === 'quote') {
+    const lines = c.text.split('\n');
+    return withElements(`<div style="position:absolute;inset:0;background:${c.bgColor}"></div>
+      <div style="position:absolute;left:${camW+10}px;top:24px;right:10px;font-size:${Math.round(c.textSize*S)}px;color:${c.textColor};line-height:1.4">${lines.map(l=>esc(l)).join('<br>')}</div>
+      <div style="position:absolute;left:${camW+10}px;bottom:20px;font-size:${Math.round(16*S)}px;color:${c.authorColor}">${esc(c.author)}</div>`);
+  }
+
+  if (currentTpl.id === 'battery') {
+    return withElements(`<div style="position:absolute;inset:0;background:${c.bgColor}"></div>
+      <div style="position:absolute;left:${camW+10}px;top:20px;font-size:${Math.round(18*S)}px;color:${c.textColor};opacity:0.6">电量</div>
+      <div style="position:absolute;left:${camW+10}px;top:42px;font-size:${Math.round(56*S)}px;color:${c.textColor};font-weight:700">78%</div>
+      <div style="position:absolute;left:${camW+10}px;top:110px;width:${PW-camW-20}px;height:7px;background:#333;border-radius:4px">
+        <div style="width:78%;height:100%;background:${c.barColor};border-radius:4px"></div>
+      </div>
+      <div style="position:absolute;left:${camW+10}px;top:126px;font-size:${Math.round(16*S)}px;color:${c.textColor};opacity:0.5">电量充足</div>`);
+  }
+
+  if (currentTpl.id === 'status') {
+    const items = [c.item1, c.item2, c.item3, c.item4].filter(Boolean);
+    return withElements(`<div style="position:absolute;inset:0;background:${c.bgColor}"></div>
+      <div style="position:absolute;left:${camW+6}px;top:18px;display:flex;align-items:center;gap:6px">
+        <div style="width:3px;height:${Math.round(24*S)}px;background:${c.accentColor};border-radius:2px"></div>
+        <span style="font-size:${Math.round(22*S)}px;color:${c.textColor};font-weight:600">${esc(c.title)}</span>
+      </div>
+      ${items.map((t,i) => `<div style="position:absolute;left:${camW+16}px;top:${50+i*Math.round(40*S)}px;font-size:${Math.round(16*S)}px;color:${c.textColor};opacity:0.8">${esc(t)}</div>`).join('')}`);
+  }
+
+  if (currentTpl.id === 'countdown') {
+    return withElements(`<div style="position:absolute;inset:0;background:${c.bgColor}"></div>
+      <div style="position:absolute;left:${camW+10}px;top:20px;font-size:${Math.round(18*S)}px;color:${c.textColor};opacity:0.6">${esc(c.eventName)}</div>
+      <div style="position:absolute;left:${camW+10}px;top:44px;font-size:${Math.round(72*S)}px;color:${c.accentColor};font-weight:700">42</div>
+      <div style="position:absolute;left:${camW+10}px;top:${44+72*S+4}px;font-size:${Math.round(20*S)}px;color:${c.textColor};opacity:0.5">天</div>`);
+  }
+
+  if (currentTpl.id === 'music') {
+    return withElements(`<div style="position:absolute;inset:0;background:${c.bgColor}"></div>
+      <div style="position:absolute;left:${camW+10}px;top:18px;display:flex;gap:8px;align-items:center">
+        <div style="width:${Math.round(48*S)}px;height:${Math.round(48*S)}px;background:${c.accentColor};border-radius:${Math.round(12*S)}px;display:flex;align-items:center;justify-content:center;font-size:${Math.round(28*S)}px;color:#fff">♪</div>
+        <span style="font-size:${Math.round(12*S)}px;color:${c.accentColor}">正在播放</span>
+      </div>
+      <div style="position:absolute;left:${camW+10}px;top:${18+48*S+10}px;font-size:${Math.round(24*S)}px;color:${c.titleColor};font-weight:600">歌曲名称</div>
+      <div style="position:absolute;left:${camW+10}px;top:${18+48*S+10+24*S+4}px;font-size:${Math.round(16*S)}px;color:${c.artistColor}">歌手名称</div>
+      <div style="position:absolute;left:${camW+10}px;right:10px;top:${18+48*S+10+24*S+4+22}px;height:2px;background:#333;border-radius:1px">
+        <div style="width:40%;height:100%;background:${c.accentColor};border-radius:1px"></div>
+      </div>`);
+  }
+
+  if (currentTpl.id === 'gradient') {
+    const lines = c.text.split('\n');
+    return withElements(`<div style="position:absolute;left:0;top:0;width:50%;height:100%;background:${c.bgColor1}"></div>
+      <div style="position:absolute;left:50%;top:0;width:50%;height:100%;background:${c.bgColor2};opacity:0.7"></div>
+      <div style="position:absolute;left:${camW}px;right:0;top:30%;text-align:center;font-size:${Math.round(c.textSize*S)}px;color:${c.textColor};font-weight:700;line-height:1.3">${lines.map(l=>esc(l)).join('<br>')}</div>`);
+  }
+
+  // Custom template: background + elements
+  return withElements(`<div style="position:absolute;inset:0;background:${c.bgColor}"></div>`);
 }
 
 // ─── Export ────────────────────────────────────────────────────────
@@ -1183,24 +1205,22 @@ async function exportZip() {
   }
 
   // Pack uploaded images and videos
-  if (currentTpl?.id === 'custom') {
+  if (currentTpl) {
     const usedFiles = new Set();
     customElements.forEach(el => {
       if ((el.type === 'image' || el.type === 'video') && el.fileName && uploadedFiles[el.fileName]) {
         usedFiles.add(el.fileName);
       }
     });
-    const imgFolder = zip.folder('images');
-    const vidFolder = zip.folder('videos');
-    usedFiles.forEach(fname => {
-      const info = uploadedFiles[fname];
-      const isVideo = info.mimeType.startsWith('video/');
-      if (isVideo) {
-        vidFolder.file(fname, info.data);
-      } else {
-        imgFolder.file(fname, info.data);
-      }
-    });
+    if (usedFiles.size > 0) {
+      const imgFolder = zip.folder('images');
+      const vidFolder = zip.folder('videos');
+      usedFiles.forEach(fname => {
+        const info = uploadedFiles[fname];
+        if (info.mimeType.startsWith('video/')) vidFolder.file(fname, info.data);
+        else imgFolder.file(fname, info.data);
+      });
+    }
   }
 
   const blob = await zip.generateAsync({ type: 'blob' });
