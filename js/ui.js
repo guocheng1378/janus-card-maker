@@ -815,18 +815,29 @@ JCM.toggleTheme = function () {
   var current = html.getAttribute('data-theme') || 'dark';
   var next = current === 'dark' ? 'light' : 'dark';
   html.setAttribute('data-theme', next);
-  localStorage.setItem('jcm-theme', next);
-  document.getElementById('themeToggle').textContent = next === 'dark' ? '🌙' : '☀️';
+  try { localStorage.setItem('jcm-theme', next); } catch(e) {}
+  var btn = document.getElementById('themeToggle');
+  if (btn) btn.textContent = next === 'dark' ? '🌙' : '☀️';
 };
 
 function initTheme() {
-  var saved = localStorage.getItem('jcm-theme');
-  if (saved) {
-    document.documentElement.setAttribute('data-theme', saved);
-    var btn = document.getElementById('themeToggle');
-    if (btn) btn.textContent = saved === 'dark' ? '🌙' : '☀️';
-  }
+  try {
+    var saved = localStorage.getItem('jcm-theme');
+    if (saved) {
+      document.documentElement.setAttribute('data-theme', saved);
+      var btn = document.getElementById('themeToggle');
+      if (btn) btn.textContent = saved === 'dark' ? '🌙' : '☀️';
+    }
+  } catch(e) {}
 }
+
+// Apply theme immediately to prevent flash
+(function() {
+  try {
+    var saved = localStorage.getItem('jcm-theme');
+    if (saved) document.documentElement.setAttribute('data-theme', saved);
+  } catch(e) {}
+})();
 
 JCM.initUI = function () {
   initTheme();
