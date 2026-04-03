@@ -39,6 +39,9 @@ jobs:
       - name: Bundle HTML (node build.js)
         run: node build.js
 
+      - name: Generate Gradle wrapper
+        run: gradle wrapper --gradle-version 8.5
+
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
