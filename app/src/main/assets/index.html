@@ -187,7 +187,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
 
 .preview-phone-wrap{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px}
 .preview-phone{
-  width:260px;height:520px;border-radius:28px;overflow:hidden;position:relative;
+  width:420px;height:252px;border-radius:20px;overflow:hidden;position:relative;
   background:#000;border:2px solid var(--border);
   box-shadow:0 20px 60px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.05);
 }
@@ -283,6 +283,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
   .tpl-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
   .config-grid{grid-template-columns:1fr}
   .preview-layout{grid-template-columns:1fr}
+  .preview-phone{width:320px;height:192px}
   .bottombar{padding:10px 16px}
 }
 </style>
@@ -1016,7 +1017,7 @@ function renderPreview() {
     device === 'p2' ? 'Pro Max — 976 × 596' : 'Pro — 904 × 572';
 
   const camera = document.getElementById('previewCamera');
-  camera.style.width = showCam ? '74px' : '0';
+  camera.style.width = showCam ? '30%' : '0';
   camera.className = 'preview-camera' + (showCam ? '' : ' hidden');
 
   const content = document.getElementById('previewContent');
@@ -1029,7 +1030,10 @@ function renderPreview() {
 function renderPreviewHTML(showCam) {
   if (!currentTpl) return '';
   const c = configValues;
-  const sw = 260 - (showCam ? 74 : 0) - 10;
+  // Landscape preview: 420px wide, MAML is 480px wide
+  const PW = 420; // preview width
+  const S = PW / 480; // scale factor = 0.875
+  const camW = showCam ? PW * CAMERA_ZONE_RATIO : 0; // camera zone in preview px
 
   if (currentTpl.id === 'clock') {
     const now = new Date();
@@ -1039,53 +1043,53 @@ function renderPreviewHTML(showCam) {
     const days = ['日','一','二','三','四','五','六'];
     const dateStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} 星期${days[now.getDay()]}`;
     return `<div style="position:absolute;inset:0;background:${c.bgColor}"></div>
-      <div style="position:absolute;left:8px;top:60px;font-size:${Math.round(c.timeSize*0.42)}px;color:${c.timeColor};font-weight:700;letter-spacing:1px">${timeStr}</div>
-      <div style="position:absolute;left:8px;top:${60+c.timeSize*0.42+10}px;font-size:11px;color:${c.dateColor}">${dateStr}</div>`;
+      <div style="position:absolute;left:${camW+10}px;top:30px;font-size:${Math.round(c.timeSize*S)}px;color:${c.timeColor};font-weight:700;letter-spacing:1px">${timeStr}</div>
+      <div style="position:absolute;left:${camW+10}px;top:${30+c.timeSize*S+6}px;font-size:${Math.round(20*S)}px;color:${c.dateColor}">${dateStr}</div>`;
   }
 
   if (currentTpl.id === 'quote') {
     const lines = c.text.split('\n');
     return `<div style="position:absolute;inset:0;background:${c.bgColor}"></div>
-      <div style="position:absolute;left:12px;top:40px;right:12px;font-size:${Math.round(c.textSize*0.45)}px;color:${c.textColor};line-height:1.5">${lines.map(l=>esc(l)).join('<br>')}</div>
-      <div style="position:absolute;left:12px;bottom:40px;font-size:10px;color:${c.authorColor}">${esc(c.author)}</div>`;
+      <div style="position:absolute;left:${camW+10}px;top:24px;right:10px;font-size:${Math.round(c.textSize*S)}px;color:${c.textColor};line-height:1.4">${lines.map(l=>esc(l)).join('<br>')}</div>
+      <div style="position:absolute;left:${camW+10}px;bottom:20px;font-size:${Math.round(16*S)}px;color:${c.authorColor}">${esc(c.author)}</div>`;
   }
 
   if (currentTpl.id === 'battery') {
     return `<div style="position:absolute;inset:0;background:${c.bgColor}"></div>
-      <div style="position:absolute;left:12px;top:35px;font-size:11px;color:${c.textColor};opacity:0.6">电量</div>
-      <div style="position:absolute;left:12px;top:52px;font-size:32px;color:${c.textColor};font-weight:700">78%</div>
-      <div style="position:absolute;left:12px;top:100px;right:12px;height:7px;background:#333;border-radius:4px">
+      <div style="position:absolute;left:${camW+10}px;top:20px;font-size:${Math.round(18*S)}px;color:${c.textColor};opacity:0.6">电量</div>
+      <div style="position:absolute;left:${camW+10}px;top:42px;font-size:${Math.round(56*S)}px;color:${c.textColor};font-weight:700">78%</div>
+      <div style="position:absolute;left:${camW+10}px;top:110px;width:${PW-camW-20}px;height:7px;background:#333;border-radius:4px">
         <div style="width:78%;height:100%;background:${c.barColor};border-radius:4px"></div>
       </div>
-      <div style="position:absolute;left:12px;top:118px;font-size:10px;color:${c.textColor};opacity:0.5">电量充足</div>`;
+      <div style="position:absolute;left:${camW+10}px;top:126px;font-size:${Math.round(16*S)}px;color:${c.textColor};opacity:0.5">电量充足</div>`;
   }
 
   if (currentTpl.id === 'status') {
     const items = [c.item1, c.item2, c.item3, c.item4].filter(Boolean);
     return `<div style="position:absolute;inset:0;background:${c.bgColor}"></div>
-      <div style="position:absolute;left:8px;top:30px;display:flex;align-items:center;gap:7px">
-        <div style="width:3px;height:16px;background:${c.accentColor};border-radius:2px"></div>
-        <span style="font-size:14px;color:${c.textColor};font-weight:600">${esc(c.title)}</span>
+      <div style="position:absolute;left:${camW+6}px;top:18px;display:flex;align-items:center;gap:6px">
+        <div style="width:3px;height:${Math.round(24*S)}px;background:${c.accentColor};border-radius:2px"></div>
+        <span style="font-size:${Math.round(22*S)}px;color:${c.textColor};font-weight:600">${esc(c.title)}</span>
       </div>
-      ${items.map((t,i) => `<div style="position:absolute;left:18px;top:${65+i*28}px;font-size:11px;color:${c.textColor};opacity:0.8">${esc(t)}</div>`).join('')}`;
+      ${items.map((t,i) => `<div style="position:absolute;left:${camW+16}px;top:${50+i*Math.round(40*S)}px;font-size:${Math.round(16*S)}px;color:${c.textColor};opacity:0.8">${esc(t)}</div>`).join('')}`;
   }
 
   if (currentTpl.id === 'countdown') {
     return `<div style="position:absolute;inset:0;background:${c.bgColor}"></div>
-      <div style="position:absolute;left:12px;top:40px;font-size:12px;color:${c.textColor};opacity:0.6">${esc(c.eventName)}</div>
-      <div style="position:absolute;left:12px;top:60px;font-size:48px;color:${c.accentColor};font-weight:700">42</div>
-      <div style="position:absolute;left:12px;top:118px;font-size:13px;color:${c.textColor};opacity:0.5">天</div>`;
+      <div style="position:absolute;left:${camW+10}px;top:20px;font-size:${Math.round(18*S)}px;color:${c.textColor};opacity:0.6">${esc(c.eventName)}</div>
+      <div style="position:absolute;left:${camW+10}px;top:44px;font-size:${Math.round(72*S)}px;color:${c.accentColor};font-weight:700">42</div>
+      <div style="position:absolute;left:${camW+10}px;top:${44+72*S+4}px;font-size:${Math.round(20*S)}px;color:${c.textColor};opacity:0.5">天</div>`;
   }
 
   if (currentTpl.id === 'music') {
     return `<div style="position:absolute;inset:0;background:${c.bgColor}"></div>
-      <div style="position:absolute;left:12px;top:30px;display:flex;gap:10px;align-items:center">
-        <div style="width:32px;height:32px;background:${c.accentColor};border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff">♪</div>
-        <span style="font-size:8px;color:${c.accentColor}">正在播放</span>
+      <div style="position:absolute;left:${camW+10}px;top:18px;display:flex;gap:8px;align-items:center">
+        <div style="width:${Math.round(48*S)}px;height:${Math.round(48*S)}px;background:${c.accentColor};border-radius:${Math.round(12*S)}px;display:flex;align-items:center;justify-content:center;font-size:${Math.round(28*S)}px;color:#fff">♪</div>
+        <span style="font-size:${Math.round(12*S)}px;color:${c.accentColor}">正在播放</span>
       </div>
-      <div style="position:absolute;left:12px;top:75px;font-size:15px;color:${c.titleColor};font-weight:600">歌曲名称</div>
-      <div style="position:absolute;left:12px;top:96px;font-size:10px;color:${c.artistColor}">歌手名称</div>
-      <div style="position:absolute;left:12px;right:12px;top:125px;height:2px;background:#333;border-radius:1px">
+      <div style="position:absolute;left:${camW+10}px;top:${18+48*S+10}px;font-size:${Math.round(24*S)}px;color:${c.titleColor};font-weight:600">歌曲名称</div>
+      <div style="position:absolute;left:${camW+10}px;top:${18+48*S+10+24*S+4}px;font-size:${Math.round(16*S)}px;color:${c.artistColor}">歌手名称</div>
+      <div style="position:absolute;left:${camW+10}px;right:10px;top:${18+48*S+10+24*S+4+22}px;height:2px;background:#333;border-radius:1px">
         <div style="width:40%;height:100%;background:${c.accentColor};border-radius:1px"></div>
       </div>`;
   }
@@ -1094,44 +1098,41 @@ function renderPreviewHTML(showCam) {
     const lines = c.text.split('\n');
     return `<div style="position:absolute;left:0;top:0;width:50%;height:100%;background:${c.bgColor1}"></div>
       <div style="position:absolute;left:50%;top:0;width:50%;height:100%;background:${c.bgColor2};opacity:0.7"></div>
-      <div style="position:absolute;left:0;right:0;top:35%;text-align:center;font-size:${Math.round(c.textSize*0.45)}px;color:${c.textColor};font-weight:700;line-height:1.4">${lines.map(l=>esc(l)).join('<br>')}</div>`;
+      <div style="position:absolute;left:${camW}px;right:0;top:30%;text-align:center;font-size:${Math.round(c.textSize*S)}px;color:${c.textColor};font-weight:700;line-height:1.3">${lines.map(l=>esc(l)).join('<br>')}</div>`;
   }
 
   if (currentTpl.id === 'custom') {
-    // Camera safe zone in preview: elements at x=0 means marginL offset in MAML
-    // In preview, the camera overlay is at left, so elements with small x are in danger
-    const camZonePx = 260 * CAMERA_ZONE_RATIO; // ~78px in preview
     let html = `<div style="position:absolute;inset:0;background:${c.bgColor}"></div>`;
-    // Draw safe zone boundary line (subtle)
-    html += `<div style="position:absolute;left:${camZonePx}px;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.06);z-index:5;pointer-events:none"></div>`;
     customElements.forEach((el, i) => {
-      const elPx = el.x * 0.5; // position in preview pixels
-      const inCam = elPx < camZonePx;
+      // Elements are in Group x="#marginL", so add camera zone offset
+      const px = camW + el.x * S;
+      const py = el.y * S;
+      const inCam = px < camW;
       const selected = i === selectedElIdx;
-      let borderStyle = '';
-      if (selected && inCam) borderStyle = 'outline:2px solid #e17055;outline-offset:2px;';
-      else if (selected) borderStyle = 'outline:1.5px dashed #6c5ce7;outline-offset:2px;';
-      else if (inCam) borderStyle = 'outline:1.5px dashed rgba(225,112,85,0.6);outline-offset:2px;';
+      let bdr = '';
+      if (selected && inCam) bdr = 'outline:2px solid #e17055;outline-offset:2px;';
+      else if (selected) bdr = 'outline:1.5px dashed #6c5ce7;outline-offset:2px;';
+      else if (inCam) bdr = 'outline:1.5px dashed rgba(225,112,85,0.6);outline-offset:2px;';
 
       if (el.type === 'text') {
-        html += `<div style="position:absolute;left:${elPx}px;top:${el.y*0.5}px;font-size:${el.size*0.5}px;color:${el.color};${borderStyle}">${esc(el.text)}</div>`;
+        html += `<div style="position:absolute;left:${px}px;top:${py}px;font-size:${el.size*S}px;color:${el.color};${bdr}">${esc(el.text)}</div>`;
       } else if (el.type === 'rectangle') {
-        html += `<div style="position:absolute;left:${elPx}px;top:${el.y*0.5}px;width:${el.w*0.5}px;height:${el.h*0.5}px;background:${el.color};border-radius:${(el.radius||0)*0.5}px;${borderStyle}"></div>`;
+        html += `<div style="position:absolute;left:${px}px;top:${py}px;width:${el.w*S}px;height:${el.h*S}px;background:${el.color};border-radius:${(el.radius||0)*S}px;${bdr}"></div>`;
       } else if (el.type === 'circle') {
-        html += `<div style="position:absolute;left:${(el.x-el.r)*0.5}px;top:${(el.y-el.r)*0.5}px;width:${el.r}px;height:${el.r}px;background:${el.color};border-radius:50%;${borderStyle}"></div>`;
+        html += `<div style="position:absolute;left:${camW+(el.x-el.r)*S}px;top:${(el.y-el.r)*S}px;width:${el.r*2*S}px;height:${el.r*2*S}px;background:${el.color};border-radius:50%;${bdr}"></div>`;
       } else if (el.type === 'image') {
         const fileInfo = el.fileName ? uploadedFiles[el.fileName] : null;
         if (fileInfo) {
-          html += `<img src="${fileInfo.dataUrl}" style="position:absolute;left:${elPx}px;top:${el.y*0.5}px;width:${(el.w||100)*0.5}px;height:${(el.h||100)*0.5}px;object-fit:cover;border-radius:2px;${borderStyle}">`;
+          html += `<img src="${fileInfo.dataUrl}" style="position:absolute;left:${px}px;top:${py}px;width:${(el.w||100)*S}px;height:${(el.h||100)*S}px;object-fit:cover;border-radius:2px;${bdr}">`;
         } else {
-          html += `<div style="position:absolute;left:${elPx}px;top:${el.y*0.5}px;width:${(el.w||100)*0.5}px;height:${(el.h||100)*0.5}px;background:#222;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#666;${borderStyle}">🖼</div>`;
+          html += `<div style="position:absolute;left:${px}px;top:${py}px;width:${(el.w||100)*S}px;height:${(el.h||100)*S}px;background:#222;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#666;${bdr}">🖼</div>`;
         }
       } else if (el.type === 'video') {
         const fileInfo = el.fileName ? uploadedFiles[el.fileName] : null;
         if (fileInfo) {
-          html += `<video src="${fileInfo.dataUrl}" muted loop autoplay style="position:absolute;left:${elPx}px;top:${el.y*0.5}px;width:${(el.w||240)*0.5}px;height:${(el.h||135)*0.5}px;object-fit:cover;border-radius:2px;${borderStyle}"></video>`;
+          html += `<video src="${fileInfo.dataUrl}" muted loop autoplay style="position:absolute;left:${px}px;top:${py}px;width:${(el.w||240)*S}px;height:${(el.h||135)*S}px;object-fit:cover;border-radius:2px;${bdr}"></video>`;
         } else {
-          html += `<div style="position:absolute;left:${elPx}px;top:${el.y*0.5}px;width:${(el.w||240)*0.5}px;height:${(el.h||135)*0.5}px;background:#1a1a2e;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#555;${borderStyle}">🎬</div>`;
+          html += `<div style="position:absolute;left:${px}px;top:${py}px;width:${(el.w||240)*S}px;height:${(el.h||135)*S}px;background:#1a1a2e;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#555;${bdr}">🎬</div>`;
         }
       }
     });
