@@ -30,7 +30,7 @@ JCM.TEMPLATES = [
     gen: function (c) {
       var dateY = 80 + Number(c.timeSize) * 0.9;
       return [
-        '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+        JCM.generateAutoDetectMAML(),
         '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
         '  <Group x="#marginL" y="0">',
         '    <Text textExp="formatDate(\'' + c.timeFormat + '\', #time_sys)" x="0" y="80" size="' + c.timeSize + '" color="' + c.timeColor + '" />',
@@ -58,7 +58,7 @@ JCM.TEMPLATES = [
     ],
     gen: function (c) {
       return [
-        '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+        JCM.generateAutoDetectMAML(),
         '  <Var name="safeW" type="number" expression="(#view_width - #marginL - 20)" />',
         '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
         '  <Group x="#marginL" y="40" w="#safeW">',
@@ -86,7 +86,7 @@ JCM.TEMPLATES = [
     ],
     gen: function (c) {
       return [
-        '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+        JCM.generateAutoDetectMAML(),
         '  <Var name="safeW" type="number" expression="(#view_width - #marginL - 40)" />',
         '  <Var name="barW" type="number" expression="(#safeW * #battery_level / 100)" />',
         '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
@@ -125,7 +125,7 @@ JCM.TEMPLATES = [
     gen: function (c) {
       var items = [c.item1, c.item2, c.item3, c.item4].filter(Boolean);
       var lines = [
-        '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+        JCM.generateAutoDetectMAML(),
         '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
         '  <Group x="#marginL" y="0">',
         '    <Rectangle x="0" y="40" w="4" h="24" fillColor="' + c.accentColor + '" cornerRadius="2" />',
@@ -161,7 +161,7 @@ JCM.TEMPLATES = [
       var td = String(c.targetDate || '0101');
       var validTd = /^\d{4}$/.test(td) ? td : '0101';
       return [
-        '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+        JCM.generateAutoDetectMAML(),
         '  <Var name="m" type="number" expression="#month" />',
         '  <Var name="d" type="number" expression="#date" />',
         '  <Var name="doy_base" type="number" expression="(ifelse((#m == 1), 0, ifelse((#m == 2), 31, ifelse((#m == 3), 59, ifelse((#m == 4), 90, ifelse((#m == 5), 120, ifelse((#m == 6), 151, ifelse((#m == 7), 181, ifelse((#m == 8), 212, ifelse((#m == 9), 243, ifelse((#m == 10), 273, ifelse((#m == 11), 304, 334)))))))))))" />',
@@ -205,7 +205,7 @@ JCM.TEMPLATES = [
     ],
     gen: function (c) {
       return [
-        '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+        JCM.generateAutoDetectMAML(),
         '  <Var name="safeW" type="number" expression="(#view_width - #marginL - 30)" />',
         '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
         '  <Group x="#marginL" y="0">',
@@ -240,7 +240,7 @@ JCM.TEMPLATES = [
     ],
     gen: function (c) {
       return [
-        '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+        JCM.generateAutoDetectMAML(),
         '  <Var name="safeW" type="number" expression="(#view_width - #marginL - 30)" />',
         '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor1 + '" />',
         '  <Rectangle x="(#view_width * 0.5)" w="(#view_width * 0.5)" h="#view_height" fillColor="' + c.bgColor2 + '" alpha="0.7" />',
@@ -270,7 +270,7 @@ JCM.TEMPLATES = [
     ],
     gen: function (c) {
       return [
-        '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+        JCM.generateAutoDetectMAML(),
         '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
         '  <Group x="#marginL" y="0">',
         '    <Text text="' + JCM.escXml(c.city) + '" x="0" y="30" size="14" color="' + c.descColor + '" alpha="0.7" />',
@@ -301,7 +301,7 @@ JCM.TEMPLATES = [
     ],
     gen: function (c) {
       return [
-        '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+        JCM.generateAutoDetectMAML(),
         '  <Var name="safeW" type="number" expression="(#view_width - #marginL - 40)" />',
         '  <Var name="goalN" type="number" expression="' + (parseInt(c.goal) || 10000) + '" />',
         '  <Var name="pct" type="number" expression="ifelse((#step_count > #goalN), 100, (#step_count * 100 / #goalN))" />',
@@ -345,7 +345,7 @@ JCM.TEMPLATES = [
     gen: function (c) {
       var events = [c.event1, c.event2, c.event3].filter(Boolean);
       var lines = [
-        '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+        JCM.generateAutoDetectMAML(),
         '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
         '  <Group x="#marginL" y="0">',
         '    <Text textExp="formatDate(\'MM/dd\', #time_sys)" x="0" y="20" size="14" color="' + c.textColor + '" alpha="0.5" />',
@@ -397,7 +397,7 @@ JCM.TEMPLATES = [
       var o1 = Number(c.offset1) || 0;
       var o2 = Number(c.offset2) || 0;
       return [
-        '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+        JCM.generateAutoDetectMAML(),
         '  <Var name="safeW" type="number" expression="(#view_width - #marginL - 20)" />',
         '  <Var name="utcNow" type="number" expression="(#time_sys + (' + (o1 * -3600000) + '))" />',
         '  <Var name="utcNow2" type="number" expression="(#time_sys + (' + (o2 * -3600000) + '))" />',
@@ -444,7 +444,7 @@ JCM.TEMPLATES = [
       var quotes = [c.quote1, c.quote2, c.quote3, c.quote4, c.quote5, c.quote6, c.quote7].filter(Boolean);
       if (quotes.length === 0) quotes = ['每日一句'];
       var lines = [
-        '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+        JCM.generateAutoDetectMAML(),
         '  <Var name="safeW" type="number" expression="(#view_width - #marginL - 30)" />',
         '  <Var name="dayIdx" type="number" expression="((#year * 366 + #month * 31 + #date) % ' + quotes.length + ')" />',
         '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
@@ -514,7 +514,7 @@ JCM.TEMPLATES = [
       var valueExpr = isBattery ? '#battery_level' : '#step_count';
       var unit = isBattery ? '%' : '步';
       return [
-        '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+        JCM.generateAutoDetectMAML(),
         '  <Var name="cx" type="number" expression="(#marginL + (#view_width - #marginL) / 2)" />',
         '  <Var name="pct" type="number" expression="' + pctExpr + '" />',
         '  <Var name="ringR" type="number" expression="80" />',
@@ -547,7 +547,7 @@ JCM.TEMPLATES = [
     ],
     gen: function (c) {
       return [
-        '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+        JCM.generateAutoDetectMAML(),
         '  <Var name="safeW" type="number" expression="(#view_width - #marginL - 20)" />',
         '  <Var name="colW" type="number" expression="(#safeW / 2)" />',
         '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
@@ -585,7 +585,7 @@ JCM.TEMPLATES = [
     ],
     gen: function (c) {
       return [
-        '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+        JCM.generateAutoDetectMAML(),
         '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
       ].join('\n');
     },
