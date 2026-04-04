@@ -674,7 +674,17 @@ JCM.handleImportZip = function () {
       // Switch to custom template
       _tpl = JCM.TEMPLATES.find(function (t) { return t.id === 'custom'; });
       _cfg = { cardName: data.cardName, bgColor: data.bgColor };
-      _elements = data.elements;
+      // GIF 动图转视频元素
+      _elements = data.elements.map(function(el) {
+        if (el.type === 'image' && el.fileName) {
+          var fi = data.files[el.fileName];
+          if (fi && fi.mimeType === 'image/gif') {
+            fi.mimeType = 'video/gif';
+            el.type = 'video';
+          }
+        }
+        return el;
+      });
       JCM.uploadedFiles = data.files;
       _selIdx = -1;
       _dirty = true;
@@ -750,9 +760,16 @@ JCM.replaceAssetPrompt = function (fname) {
       toast('✅ 已替换: ' + file.name, 'success');
     }
 
-    if (isVideo) {
-      var blobUrl = URL.createObjectURL(file);
-      replaceDone({ data: file, mimeType: file.type, dataUrl: blobUrl, originalName: file.name, isBlobUrl: true });
+    var isGifReplace = file.type === 'image/gif';
+    if (isVideo || isGifReplace) {
+      var reader2 = new FileReader();
+      reader2.onload = function (ev) {
+        var buf = ev.target.result;
+        var storeMime = isGifReplace ? 'video/gif' : file.type;
+        var blobUrl = URL.createObjectURL(new Blob([buf], { type: file.type }));
+        replaceDone({ data: buf, mimeType: storeMime, dataUrl: blobUrl, originalName: file.name });
+      };
+      reader2.readAsArrayBuffer(file);
     } else {
       var reader = new FileReader();
       reader.onload = function (ev) {
@@ -780,31 +797,42 @@ function handleFilePicked(e) {
   _pendingAdd = null;
   _pendingReplace = -1;
 
+  // GIF 动图自动转为视频元素（MAML <Image> 不支持动图播放）
+  var isGif = file.type === 'image/gif';
+  if (isGif) type = 'video';
+
+  var isVideo = file.type.indexOf('video/') === 0 || isGif;
+
+  // 视频格式提示：仅 MP4 (H.264) 可在背屏播放
+  if (isVideo && !isGif && file.type !== 'video/mp4') {
+    toast('⚠️ 背屏仅支持 MP4 (H.264) 格式，' + file.type + ' 可能无法播放', 'warning');
+  }
+
   var ext = file.name.split('.').pop() || (type === 'image' ? 'png' : 'mp4');
   var safeName = 'media_' + Date.now() + '.' + ext;
 
-  var isVideo = file.type.indexOf('video/') === 0;
-
   if (isVideo) {
-    // Video: read as ArrayBuffer for export, blob URL for preview
+    // Video / GIF: read as ArrayBuffer for export, blob URL for preview
     var reader = new FileReader();
     reader.onload = function (ev) {
       var buf = ev.target.result;
+      // GIF 伪装为 video/gif，确保导出到 videos/ 目录
+      var storeMime = isGif ? 'video/gif' : file.type;
       var blobUrl = URL.createObjectURL(new Blob([buf], { type: file.type }));
-      JCM.uploadedFiles[safeName] = { data: buf, mimeType: file.type, dataUrl: blobUrl, originalName: file.name };
+      JCM.uploadedFiles[safeName] = { data: buf, mimeType: storeMime, dataUrl: blobUrl, originalName: file.name };
       captureState();
       if (replaceIdx >= 0 && replaceIdx < _elements.length) {
         _elements[replaceIdx].fileName = safeName;
         _elements[replaceIdx].src = safeName;
       } else {
-        _elements.push({ type: type, fileName: safeName, src: safeName, x: 10, y: 60, w: 240, h: 135 });
+        _elements.push({ type: 'video', fileName: safeName, src: safeName, x: 10, y: 60, w: 240, h: 135 });
         _selIdx = _elements.length - 1;
       }
       _dirty = true;
       renderConfig();
-      toast(file.name + ' 已添加', 'success');
+      toast(file.name + (isGif ? ' 已添加（动图→视频）' : ' 已添加'), 'success');
     };
-    reader.onerror = function () { toast('视频读取失败', 'error'); };
+    reader.onerror = function () { toast('文件读取失败', 'error'); };
     reader.readAsArrayBuffer(file);
   } else {
     var reader = new FileReader();

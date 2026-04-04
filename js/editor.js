@@ -34,7 +34,7 @@ JCM.renderElementEditor = function (el, idx, device) {
       html += '<span class="media-picker-icon">' + (isImg ? '🖼' : '🎬') + '</span>';
     }
     html += '<div class="media-picker-info"><div class="media-picker-name">' + (has ? esc(fi.originalName) : (isImg ? '点击选择图片' : '点击选择视频')) + '</div>' +
-      '<div class="media-picker-hint">' + (has ? fmtSize(fi.data.byteLength) + ' · 点击更换' : (isImg ? '支持 JPG / PNG / GIF / WebP' : '支持 MP4 / WebM / 3GP')) + '</div></div>';
+      '<div class="media-picker-hint">' + (has ? fmtSize(fi.data.byteLength) + ' · 点击更换' : (isImg ? '支持 JPG / PNG / WebP（GIF 动图会自动转为视频）' : '推荐 MP4 (H.264)，背屏仅支持此格式')) + '</div></div>';
     if (has) html += '<button class="media-picker-change" onclick="event.stopPropagation();JCM.pickMediaReplace(' + idx + ')">更换</button>';
     html += '</div>';
 
