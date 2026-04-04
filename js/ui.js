@@ -277,7 +277,7 @@ function renderConfig() {
       } else {
         thumb = '<div style="width:48px;height:48px;border-radius:8px;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🖼</div>';
       }
-      var sz = fi.data ? (fi.data.byteLength || fi.data.size || 0) : 0;
+      var sz = fi.data ? (fi.data.size || fi.data.byteLength || 0) : 0;
       var sizeStr = fmtSize(sz);
       var useCount = _elements.filter(function (e) { return e.fileName === fname; }).length;
       html += '<div class="media-picker has-file" data-replace-asset="' + fname + '">' +
@@ -714,22 +714,30 @@ JCM.replaceAssetPrompt = function (fname) {
     if (!file) return;
     var oldName = JCM._pendingReplaceAsset;
     JCM._pendingReplaceAsset = null;
-    var reader = new FileReader();
-    reader.onload = function (ev) {
-      var dataUrl = ev.target.result;
-      var base64 = dataUrl.split(',')[1];
-      var bin = atob(base64);
-      var arr = new Uint8Array(bin.length);
-      for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
 
+    function replaceDone(info) {
       captureState();
-      // Replace the file data in uploadedFiles (keep same key so all references update)
-      JCM.uploadedFiles[oldName] = { data: arr.buffer, mimeType: file.type, dataUrl: dataUrl, originalName: file.name };
+      JCM.uploadedFiles[oldName] = info;
       _dirty = true;
       renderConfig();
       toast('✅ 已替换: ' + file.name, 'success');
-    };
-    reader.readAsDataURL(file);
+    }
+
+    if (isVideo) {
+      var blobUrl = URL.createObjectURL(file);
+      replaceDone({ data: file, mimeType: file.type, dataUrl: blobUrl, originalName: file.name, isBlobUrl: true });
+    } else {
+      var reader = new FileReader();
+      reader.onload = function (ev) {
+        var dataUrl = ev.target.result;
+        var base64 = dataUrl.split(',')[1];
+        var bin = atob(base64);
+        var arr = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+        replaceDone({ data: arr.buffer, mimeType: file.type, dataUrl: dataUrl, originalName: file.name });
+      };
+      reader.readAsDataURL(file);
+    }
   };
   input.click();
 };
@@ -748,16 +756,10 @@ function handleFilePicked(e) {
   var ext = file.name.split('.').pop() || (type === 'image' ? 'png' : 'mp4');
   var safeName = 'media_' + Date.now() + '.' + ext;
 
-  var reader = new FileReader();
-  reader.onload = function (ev) {
-    var dataUrl = ev.target.result;
-    var base64 = dataUrl.split(',')[1];
-    var bin = atob(base64);
-    var arr = new Uint8Array(bin.length);
-    for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  var isVideo = file.type.indexOf('video/') === 0;
 
-    JCM.uploadedFiles[safeName] = { data: arr.buffer, mimeType: file.type, dataUrl: dataUrl, originalName: file.name };
-
+  function addFile(info) {
+    JCM.uploadedFiles[safeName] = info;
     captureState();
     if (replaceIdx >= 0 && replaceIdx < _elements.length) {
       _elements[replaceIdx].fileName = safeName;
@@ -766,12 +768,27 @@ function handleFilePicked(e) {
       _elements.push({ type: type, fileName: safeName, src: safeName, x: 10, y: 60, w: type === 'image' ? 200 : 240, h: type === 'image' ? 200 : 135 });
       _selIdx = _elements.length - 1;
     }
-
     _dirty = true;
     renderConfig();
     toast(file.name + ' 已添加', 'success');
-  };
-  reader.readAsDataURL(file);
+  }
+
+  if (isVideo) {
+    // Use blob URL for instant video playback, keep file ref for export
+    var blobUrl = URL.createObjectURL(file);
+    addFile({ data: file, mimeType: file.type, dataUrl: blobUrl, originalName: file.name, isBlobUrl: true });
+  } else {
+    var reader = new FileReader();
+    reader.onload = function (ev) {
+      var dataUrl = ev.target.result;
+      var base64 = dataUrl.split(',')[1];
+      var bin = atob(base64);
+      var arr = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      addFile({ data: arr.buffer, mimeType: file.type, dataUrl: dataUrl, originalName: file.name });
+    };
+    reader.readAsDataURL(file);
+  }
 }
 
 // ─── Drag & Drop in Preview ───────────────────────────────────────
