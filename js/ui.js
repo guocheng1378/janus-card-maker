@@ -635,6 +635,33 @@ JCM.handleBatchExport = function () {
   exportNext();
 };
 
+// ─── Universal Export (one card fits all) ─────────────────────────
+JCM.handleUniversalExport = function () {
+  if (!_tpl) return toast('请先选择模板', 'error');
+
+  // Use Pro Max as base, auto-detect handles the rest
+  var baseDevice = JCM.getDevice('p2');
+  var innerXml = _tpl.gen ? _tpl.gen(_cfg) : generateCustomMAML(baseDevice);
+
+  var maml = JCM.generateMAML({
+    cardName: _cfg.cardName || _tpl.name,
+    device: baseDevice,
+    innerXml: innerXml,
+    updater: _tpl.updater,
+    extraElements: _elements,
+    uploadedFiles: JCM.uploadedFiles,
+  });
+
+  var validation = JCM.validateMAML(maml);
+  if (!validation.valid) {
+    return toast('XML 校验失败: ' + validation.errors[0], 'error');
+  }
+
+  JCM.exportZip(maml, (_cfg.cardName || 'card') + '_all', _elements, JCM.uploadedFiles, _tpl.id === 'custom')
+    .then(function () { toast('✅ 通用卡片已导出（适配所有机型）', 'success'); })
+    .catch(function (e) { toast('导出失败: ' + e.message, 'error'); });
+};
+
 // ─── Import ───────────────────────────────────────────────────────
 JCM.handleImportZip = function () {
   var input = document.createElement('input');
