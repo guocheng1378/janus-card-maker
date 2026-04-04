@@ -5,14 +5,14 @@ plugins {
 
 android {
     namespace = "com.janus.cardmaker"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.janus.cardmaker"
         minSdk = 26
-        targetSdk = 34
-        versionCode = 7
-        versionName = "3.1.0"
+        targetSdk = 35
+        versionCode = 8
+        versionName = "3.2.0"
     }
 
     buildTypes {
@@ -36,7 +36,7 @@ android {
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.12.0")
-    implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("androidx.webkit:webkit:1.9.0")
+    implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("androidx.webkit:webkit:1.12.1")
 }

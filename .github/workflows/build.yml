@@ -32,7 +32,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "8.5"
+          gradle-version: "8.11.1"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -43,7 +43,7 @@ jobs:
         run: node build.js
 
       - name: Generate Gradle wrapper
-        run: gradle wrapper --gradle-version 8.5
+        run: gradle wrapper --gradle-version 8.11.1
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug

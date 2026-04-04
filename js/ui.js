@@ -441,12 +441,13 @@ function generateCustomMAML(device) {
         lines.push('    <Circle x="' + el.x + '" y="' + el.y + '" r="' + el.r + '" fillColor="' + el.color + '" />');
         break;
       case 'image': {
-        var folder = el.src && JCM.uploadedFiles[el.src] && JCM.uploadedFiles[el.src].mimeType.indexOf('video/') === 0 ? 'videos' : 'images';
-        lines.push('    <Image src="' + folder + '/' + (el.src || '') + '" x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 100) + '" h="' + (el.h || 100) + '" />');
+        var imgSrc = el.src || el.fileName || '';
+        var folder = imgSrc && JCM.uploadedFiles[imgSrc] && JCM.uploadedFiles[imgSrc].mimeType.indexOf('video/') === 0 ? 'videos' : 'images';
+        lines.push('    <Image src="' + folder + '/' + JCM.escXml(imgSrc) + '" x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 100) + '" h="' + (el.h || 100) + '" />');
         break;
       }
       case 'video':
-        lines.push('    <Video src="videos/' + (el.src || '') + '" x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 240) + '" h="' + (el.h || 135) + '" autoPlay="true" loop="true" />');
+        lines.push('    <Video src="videos/' + JCM.escXml(el.src || el.fileName || '') + '" x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 240) + '" h="' + (el.h || 135) + '" autoPlay="true" loop="true" />');
         break;
     }
   });
@@ -847,6 +848,10 @@ function setupEvents() {
   document.getElementById('fileImagePick').addEventListener('change', handleFilePicked);
   document.getElementById('fileVideoPick').addEventListener('change', handleFilePicked);
 
+  // Device select
+  document.getElementById('deviceSelect').addEventListener('change', function () { renderPreview(); });
+  document.getElementById('showCamera').addEventListener('change', function () { renderPreview(); });
+
   // Preview drag
   document.getElementById('previewContent').addEventListener('mousedown', onPreviewMouseDown);
 
@@ -943,3 +948,7 @@ JCM.initUI = function () {
   renderTplGrid();
   setupEvents();
 };
+
+// Expose internal helpers for inline use
+JCM.renderPreview = renderPreview;
+JCM.getSelectedDevice = getSelectedDevice;

@@ -33,6 +33,9 @@ const html = `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Janus 卡片制作器</title>
+<meta name="description" content="为小米背屏（SubScreen）制作 MAML 卡片模板的免费在线工具。">
+<meta property="og:title" content="Janus 卡片制作器">
+<meta property="og:description" content="为小米背屏制作 MAML 卡片模板的免费在线工具">
 <script>try{var t=localStorage.getItem('jcm-theme');if(t){document.documentElement.setAttribute('data-theme',t);window.__themeBtn=t==='dark'?'🌙':'☀️'}}catch(e){}</script>
 <style>${css}</style>
 </head>
@@ -89,14 +92,14 @@ const html = `<!DOCTYPE html>
     <div class="page page-preview" id="page2">
       <div class="device-row">
         <label>机型</label>
-        <select id="deviceSelect" onchange="renderPreview()">
+        <select id="deviceSelect">
           <option value="q200">Pro — 904×572</option>
           <option value="p2">Pro Max — 976×596</option>
           <option value="q100">标准版 — 840×520</option>
           <option value="ultra">Ultra — 1020×620</option>
         </select>
         <label class="check-label">
-          <input type="checkbox" id="showCamera" checked onchange="renderPreview()"> 摄像头遮挡区
+          <input type="checkbox" id="showCamera" checked> 摄像头遮挡区
         </label>
       </div>
       <div class="preview-layout">
@@ -118,7 +121,7 @@ const html = `<!DOCTYPE html>
           <h3>📄 MAML XML</h3>
           <div class="xml-preview"><pre id="codeContent">选择模板并配置后，点击「生成预览」查看 XML</pre></div>
           <div class="preview-actions">
-            <button class="btn btn-secondary" onclick="renderPreview()"><span class="btn-icon">🔄</span> 生成预览</button>
+            <button class="btn btn-secondary" onclick="JCM.renderPreview()"><span class="btn-icon">🔄</span> 生成预览</button>
             <button class="btn btn-export" onclick="JCM.handleExport()"><span class="btn-icon">📦</span> 导出 ZIP</button>
             <button class="btn btn-secondary" onclick="JCM.handleExportPNG()"><span class="btn-icon">🖼</span> 导出 PNG</button>
           </div>

@@ -13,7 +13,7 @@ PreviewRenderer.prototype.bg = function (bg, inner) {
 };
 
 PreviewRenderer.prototype.esc = function (s) {
-  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return JCM.escHtml(s);
 };
 
 PreviewRenderer.prototype.fmtTime = function (now, fmt) {
@@ -152,7 +152,8 @@ PreviewRenderer.prototype.renderWeather = function (c) {
     '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:32px;font-size:' + Math.round(Number(c.tempSize) * this.scale) + 'px;color:' + c.tempColor + ';font-weight:700">23°</div>' +
     '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:' + Math.round(32 + Number(c.tempSize) * this.scale + 8) + 'px;font-size:' + Math.round(18 * this.scale) + 'px;color:' + c.descColor + '">晴</div>' +
     '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:' + Math.round(32 + Number(c.tempSize) * this.scale + 40) + 'px;font-size:' + Math.round(14 * this.scale) + 'px;color:' + c.descColor + ';opacity:0.5">湿度 45%</div>' +
-    '<div style="position:absolute;left:' + (this.camW + 120) + 'px;top:' + Math.round(32 + Number(c.tempSize) * this.scale + 40) + 'px;font-size:' + Math.round(14 * this.scale) + 'px;color:' + c.descColor + ';opacity:0.5">体感 21°</div>'
+    '<div style="position:absolute;left:' + (this.camW + 120) + 'px;top:' + Math.round(32 + Number(c.tempSize) * this.scale + 40) + 'px;font-size:' + Math.round(14 * this.scale) + 'px;color:' + c.descColor + ';opacity:0.5">体感 21°</div>' +
+    '<div style="position:absolute;right:8px;bottom:6px;font-size:' + Math.round(10 * this.scale) + 'px;color:' + c.descColor + ';opacity:0.3">预览数据</div>'
   );
 };
 
@@ -169,7 +170,8 @@ PreviewRenderer.prototype.renderSteps = function (c) {
       '<div style="width:' + barW + 'px;height:100%;background:' + c.barColor + ';border-radius:3px"></div></div>' +
     '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:' + Math.round(30 + 52 * this.scale + 44) + 'px;font-size:' + Math.round(12 * this.scale) + 'px;color:' + c.textColor + ';opacity:0.4">目标 ' + goal.toLocaleString() + ' · ' + pct + '%</div>' +
     '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:' + Math.round(30 + 52 * this.scale + 70) + 'px;font-size:' + Math.round(14 * this.scale) + 'px;color:' + c.accentColor + ';opacity:0.7">距离 4.2 km</div>' +
-    '<div style="position:absolute;left:' + (this.camW + 130) + 'px;top:' + Math.round(30 + 52 * this.scale + 70) + 'px;font-size:' + Math.round(14 * this.scale) + 'px;color:' + c.accentColor + ';opacity:0.7">消耗 186 kcal</div>'
+    '<div style="position:absolute;left:' + (this.camW + 130) + 'px;top:' + Math.round(30 + 52 * this.scale + 70) + 'px;font-size:' + Math.round(14 * this.scale) + 'px;color:' + c.accentColor + ';opacity:0.7">消耗 186 kcal</div>' +
+    '<div style="position:absolute;right:8px;bottom:6px;font-size:' + Math.round(10 * this.scale) + 'px;color:' + c.textColor + ';opacity:0.15">预览数据</div>'
   );
 };
 

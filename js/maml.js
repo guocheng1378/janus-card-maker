@@ -61,11 +61,12 @@ function renderEl(el, files) {
       return p + '<Circle x="' + el.x + '" y="' + el.y + '" r="' + el.r + '" fillColor="' + el.color + '"' + alphaAttr(el) + ' />';
     }
     case 'image': {
-      var folder = el.src && files[el.src] && files[el.src].mimeType.indexOf('video/') === 0 ? 'videos' : 'images';
-      return p + '<Image src="' + folder + '/' + JCM.escXml(el.src || '') + '" x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 100) + '" h="' + (el.h || 100) + '" />';
+      var srcFile = el.src || el.fileName || '';
+      var folder = srcFile && files[srcFile] && files[srcFile].mimeType.indexOf('video/') === 0 ? 'videos' : 'images';
+      return p + '<Image src="' + folder + '/' + JCM.escXml(srcFile) + '" x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 100) + '" h="' + (el.h || 100) + '" />';
     }
     case 'video':
-      return p + '<Video src="videos/' + JCM.escXml(el.src || '') + '" x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 240) + '" h="' + (el.h || 135) + '" autoPlay="true" loop="true" />';
+      return p + '<Video src="videos/' + JCM.escXml(el.src || el.fileName || '') + '" x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 240) + '" h="' + (el.h || 135) + '" autoPlay="true" loop="true" />';
     default:
       return '';
   }
@@ -74,21 +75,41 @@ function renderEl(el, files) {
 // ─── XML 校验 ────────────────────────────────────────────────────
 JCM.validateMAML = function (xml) {
   var errors = [];
-  // Check root Widget tag
-  if (!xml.match(/<Widget[\s>]/)) errors.push('缺少 <Widget> 根标签');
-  if (!xml.match(/<\/Widget>\s*$/)) errors.push('缺少 </Widget> 闭合标签');
-  // Check balanced tags
-  var openTags = xml.match(/<[A-Z][a-zA-Z]*\s[^/]*>/g) || [];
-  var closeTags = xml.match(/<\/[A-Z][a-zA-Z]*>/g) || [];
-  var selfClose = xml.match(/<[A-Z][a-zA-Z]*\s[^>]*\/>/g) || [];
-  if (openTags.length !== closeTags.length + selfClose.length) {
-    errors.push('标签开闭不匹配 (开:' + openTags.length + ' 闭:' + closeTags.length + ' 自闭:' + selfClose.length + ')');
+
+  // Use DOMParser for reliable parsing when available
+  if (typeof DOMParser !== 'undefined') {
+    var parser = new DOMParser();
+    var doc = parser.parseFromString(xml, 'application/xml');
+    var parseError = doc.querySelector('parsererror');
+    if (parseError) {
+      errors.push('XML 解析错误: ' + parseError.textContent.substring(0, 100));
+    } else {
+      // Check root Widget tag exists
+      if (!doc.documentElement || doc.documentElement.nodeName !== 'Widget') {
+        errors.push('缺少 <Widget> 根标签');
+      }
+      // Check name attribute
+      if (!doc.documentElement.getAttribute('name')) {
+        errors.push('缺少 name 属性');
+      }
+    }
+  } else {
+    // Fallback: regex-based checks
+    if (!xml.match(/<Widget[\s>]/)) errors.push('缺少 <Widget> 根标签');
+    if (!xml.match(/<\/Widget>\s*$/)) errors.push('缺少 </Widget> 闭合标签');
+    var openTags = xml.match(/<[A-Z][a-zA-Z]*\s[^/]*>/g) || [];
+    var closeTags = xml.match(/<\/[A-Z][a-zA-Z]*>/g) || [];
+    var selfClose = xml.match(/<[A-Z][a-zA-Z]*\s[^>]*\/>/g) || [];
+    if (openTags.length !== closeTags.length + selfClose.length) {
+      errors.push('标签开闭不匹配 (开:' + openTags.length + ' 闭:' + closeTags.length + ' 自闭:' + selfClose.length + ')');
+    }
+    if (!xml.match(/name="/)) errors.push('缺少 name 属性');
   }
-  // Check for unescaped special chars in attribute values
+
+  // Common checks
   if (xml.match(/="[^"]*[&<][^"]*"/)) {
     errors.push('属性值中存在未转义的 & 或 < 字符');
   }
-  // Check name attribute
-  if (!xml.match(/name="/)) errors.push('缺少 name 属性');
+
   return { valid: errors.length === 0, errors: errors };
 };

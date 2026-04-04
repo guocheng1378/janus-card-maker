@@ -17,8 +17,9 @@ JCM.exportZip = function (maml, cardName, elements, files, isCustom) {
 
   var usedFiles = {};
   elements.forEach(function (el) {
-    if ((el.type === 'image' || el.type === 'video') && el.fileName && files[el.fileName]) {
-      usedFiles[el.fileName] = files[el.fileName];
+    var fname = el.fileName || el.src;
+    if ((el.type === 'image' || el.type === 'video') && fname && files[fname]) {
+      usedFiles[fname] = files[fname];
     }
   });
 
@@ -153,44 +154,135 @@ function parseXmlAttrs(str) {
   return attrs;
 }
 
-// ─── Export PNG ────────────────────────────────────────────────────
+// ─── Export PNG (Canvas-based, no external CSS dependency) ─────────
 JCM.exportPNG = function (cardName) {
-  var el = document.querySelector('.preview-phone');
+  var el = document.querySelector('.preview-screen');
   if (!el) return Promise.reject(new Error('预览区域不存在'));
 
-  var w = el.offsetWidth, h = el.offsetHeight;
-  var html = el.innerHTML;
-  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '">' +
-    '<foreignObject width="100%" height="100%">' +
-    '<div xmlns="http://www.w3.org/1999/xhtml" style="width:' + w + 'px;height:' + h + 'px;position:relative;overflow:hidden;background:#000">' +
-    html + '</div></foreignObject></svg>';
-
+  var device = getSelectedDevice ? getSelectedDevice() : { width: 420, height: 252 };
+  var scale = 2;
   var canvas = document.createElement('canvas');
-  canvas.width = w * 2;
-  canvas.height = h * 2;
+  canvas.width = device.width * scale;
+  canvas.height = device.height * scale;
   var ctx = canvas.getContext('2d');
-  ctx.scale(2, 2);
+  ctx.scale(scale, scale);
 
-  var blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
-  var url = URL.createObjectURL(blob);
+  // Draw background
+  var bgColor = _cfg.bgColor || '#000000';
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(0, 0, device.width, device.height);
+
+  // Draw background patterns for custom template
+  if (_tpl && _tpl.id === 'custom') {
+    var pat = _cfg.bgPattern || 'solid';
+    if (pat === 'dots') {
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      for (var dx = 10; dx < device.width; dx += 20) {
+        for (var dy = 10; dy < device.height; dy += 20) {
+          ctx.beginPath(); ctx.arc(dx, dy, 1, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    } else if (pat === 'grid') {
+      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+      ctx.lineWidth = 0.5;
+      for (var gx = 0; gx < device.width; gx += 20) { ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, device.height); ctx.stroke(); }
+      for (var gy = 0; gy < device.height; gy += 20) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(device.width, gy); ctx.stroke(); }
+    } else if (pat === 'gradient') {
+      var grd = ctx.createLinearGradient(0, 0, device.width, device.height);
+      grd.addColorStop(0, bgColor);
+      grd.addColorStop(1, _cfg.bgColor2 || '#1a1a2e');
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, device.width, device.height);
+    }
+  }
+
+  // Draw template-specific backgrounds
+  if (_tpl && _tpl.id === 'gradient') {
+    ctx.fillStyle = _cfg.bgColor1 || '#667eea';
+    ctx.fillRect(0, 0, device.width / 2, device.height);
+    ctx.globalAlpha = 0.7;
+    ctx.fillStyle = _cfg.bgColor2 || '#764ba2';
+    ctx.fillRect(device.width / 2, 0, device.width / 2, device.height);
+    ctx.globalAlpha = 1;
+  }
+
+  // Draw elements
+  var camW = device.width * device.cameraZoneRatio;
+  if (_elements) {
+    _elements.forEach(function (el) {
+      ctx.save();
+      var opacity = (el.opacity !== undefined ? el.opacity : 100) / 100;
+      ctx.globalAlpha = opacity;
+
+      switch (el.type) {
+        case 'text':
+          var weight = el.bold ? '700' : '400';
+          ctx.font = weight + ' ' + el.size + 'px -apple-system, sans-serif';
+          ctx.fillStyle = el.color || '#ffffff';
+          if (el.shadow === 'light') { ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1; }
+          else if (el.shadow === 'dark') { ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 2; }
+          else if (el.shadow === 'glow') { ctx.shadowColor = el.color; ctx.shadowBlur = 16; }
+          if (el.multiLine) {
+            var textLines = String(el.text || '').split('\n');
+            textLines.forEach(function (line, li) { ctx.fillText(line, el.x, el.y + el.size + li * el.size * 1.4, el.w || 9999); });
+          } else {
+            var align = el.textAlign || 'left';
+            if (align === 'center') { ctx.textAlign = 'center'; ctx.fillText(el.text || '', el.x + (el.w || 200) / 2, el.y + el.size); }
+            else if (align === 'right') { ctx.textAlign = 'right'; ctx.fillText(el.text || '', el.x + (el.w || 200), el.y + el.size); }
+            else { ctx.fillText(el.text || '', el.x, el.y + el.size); }
+          }
+          ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+          break;
+        case 'rectangle':
+          var rr = el.radius || 0;
+          ctx.fillStyle = el.color || '#333333';
+          drawRoundRect(ctx, el.x, el.y, el.w, el.h, rr);
+          ctx.fill();
+          break;
+        case 'circle':
+          ctx.fillStyle = el.color || '#6c5ce7';
+          ctx.beginPath(); ctx.arc(el.x, el.y, el.r || 30, 0, Math.PI * 2); ctx.fill();
+          break;
+        case 'image':
+          var fi = el.fileName ? JCM.uploadedFiles[el.fileName] : null;
+          if (fi && fi.dataUrl) {
+            try {
+              var img = new Image();
+              img.src = fi.dataUrl;
+              ctx.drawImage(img, el.x, el.y, el.w || 100, el.h || 100);
+            } catch (e) { /* image load failed in export */ }
+          }
+          break;
+      }
+      ctx.restore();
+    });
+  }
 
   return new Promise(function (resolve, reject) {
-    var img = new Image();
-    img.onload = function () {
-      ctx.drawImage(img, 0, 0);
-      URL.revokeObjectURL(url);
-      canvas.toBlob(function (pngBlob) {
-        var a = document.createElement('a');
-        a.href = URL.createObjectURL(pngBlob);
-        a.download = (cardName || 'card') + '.png';
-        a.click();
-        resolve();
-      }, 'image/png');
-    };
-    img.onerror = function () { reject(new Error('PNG 导出失败')); };
-    img.src = url;
+    canvas.toBlob(function (pngBlob) {
+      if (!pngBlob) return reject(new Error('PNG 导出失败'));
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(pngBlob);
+      a.download = (cardName || 'card') + '.png';
+      a.click();
+      resolve();
+    }, 'image/png');
   });
 };
+
+function drawRoundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
 
 // ─── Export Template Config JSON ───────────────────────────────────
 JCM.exportTemplateJSON = function (tplId, cfg, elements) {
