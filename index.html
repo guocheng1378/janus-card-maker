@@ -96,16 +96,49 @@
       <div class="tpl-grid" id="tplGrid"></div>
     </div>
 
-    <!-- Page 2: Configuration -->
-    <div class="page page-config" id="page1">
-      <div class="config-header">
-        <span class="tpl-icon" id="cfgIcon"></span>
-        <div>
-          <h2 id="cfgTitle">配置</h2>
-          <p id="cfgDesc">调整参数以自定义卡片</p>
+    <!-- Page 2: Configuration with Live Preview -->
+    <div class="page page-config-live" id="page1">
+      <div class="config-live-left">
+        <div class="config-header">
+          <span class="tpl-icon" id="cfgIcon"></span>
+          <div>
+            <h2 id="cfgTitle">配置</h2>
+            <p id="cfgDesc">调整参数以自定义卡片</p>
+          </div>
+        </div>
+        <div class="config-live-device-row">
+          <label>机型</label>
+          <select id="cfgDeviceSelect">
+            <option value="p2">Pro Max — 976×596</option>
+            <option value="q200">Pro — 904×572</option>
+            <option value="q100">标准版 — 840×520</option>
+            <option value="ultra">Ultra — 1020×620</option>
+          </select>
+          <label class="check-label">
+            <input type="checkbox" id="cfgShowCamera" checked> 摄像头
+          </label>
+        </div>
+        <div id="cfgContent"></div>
+      </div>
+      <div class="config-live-right">
+        <div class="config-live-preview-label"><span>📱</span> 实时预览</div>
+        <div class="preview-phone config-preview-phone">
+          <div class="preview-screen">
+            <div class="preview-camera" id="cfgPreviewCamera"></div>
+            <div class="preview-content" id="cfgPreviewContent">
+              <div class="preview-placeholder">
+                <span>📱</span>
+                <p>修改参数即可实时预览</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="preview-device-label" id="cfgDeviceLabel">Pro Max — 976 × 596</div>
+        <div class="config-live-export-row">
+          <button class="btn btn-secondary" onclick="JCM.goStep(2)"><span class="btn-icon">🔍</span> 全屏预览</button>
+          <button class="btn btn-export" onclick="JCM.handleExport()"><span class="btn-icon">📦</span> 导出 ZIP</button>
         </div>
       </div>
-      <div id="cfgContent"></div>
     </div>
 
     <!-- Page 3: Preview & Export -->

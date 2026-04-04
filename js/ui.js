@@ -86,12 +86,34 @@ JCM.goStep = function (n) {
     btnNext.innerHTML = n === 0 ? '下一步 <span class="btn-icon">→</span>' : '预览 & 导出 <span class="btn-icon">→</span>';
   }
 
-  if (n === 1) renderConfig();
-  if (n === 2) renderPreview();
+  if (n === 1) {
+    renderConfig();
+    // Sync device select from preview page to config page
+    var devSel = document.getElementById('deviceSelect');
+    var cfgDevSel = document.getElementById('cfgDeviceSelect');
+    if (devSel && cfgDevSel) cfgDevSel.value = devSel.value;
+    var showCam = document.getElementById('showCamera');
+    var cfgShowCam = document.getElementById('cfgShowCamera');
+    if (showCam && cfgShowCam) cfgShowCam.checked = showCam.checked;
+    renderLivePreview();
+  }
+  if (n === 2) {
+    // Sync device select from config page to preview page
+    var cfgDevSel2 = document.getElementById('cfgDeviceSelect');
+    var devSel2 = document.getElementById('deviceSelect');
+    if (cfgDevSel2 && devSel2) devSel2.value = cfgDevSel2.value;
+    var cfgShowCam2 = document.getElementById('cfgShowCamera');
+    var showCam2 = document.getElementById('showCamera');
+    if (cfgShowCam2 && showCam2) showCam2.checked = cfgShowCam2.checked;
+    renderPreview();
+  }
   // Auto-refresh for time-based templates
   clearInterval(_previewTimer);
-  if (n === 2 && _tpl && (_tpl.updater === 'DateTime.Minute' || _tpl.updater === 'DateTime.Day')) {
-    _previewTimer = setInterval(renderPreview, 1000);
+  if (n >= 1 && _tpl && (_tpl.updater === 'DateTime.Minute' || _tpl.updater === 'DateTime.Day')) {
+    _previewTimer = setInterval(function () {
+      if (_step === 1) renderLivePreview();
+      if (_step === 2) renderPreview();
+    }, 1000);
   }
 };
 
@@ -276,6 +298,9 @@ function renderConfig() {
     var input = el.previousElementSibling;
     if (input) el.textContent = input.value;
   });
+
+  // Trigger live preview update after config rebuild
+  if (_step === 1) renderLivePreview();
 }
 
 function renderField(f) {
@@ -436,6 +461,52 @@ function renderPreview() {
   });
   document.getElementById('codeContent').textContent = maml;
   _dirty = false;
+}
+
+// ─── Live Preview (on config page) ────────────────────────────────
+function getCfgDevice() {
+  var sel = document.getElementById('cfgDeviceSelect');
+  return sel ? JCM.getDevice(sel.value) : JCM.getDevice('p2');
+}
+
+function getCfgShowCamera() {
+  var cb = document.getElementById('cfgShowCamera');
+  return cb ? cb.checked : true;
+}
+
+function renderLivePreview() {
+  if (!_tpl) return;
+  var device = getCfgDevice();
+  var showCam = getCfgShowCamera();
+
+  var labelEl = document.getElementById('cfgDeviceLabel');
+  if (labelEl) labelEl.textContent = device.label;
+  var camEl = document.getElementById('cfgPreviewCamera');
+  if (camEl) camEl.style.width = showCam ? (device.cameraZoneRatio * 100) + '%' : '0';
+
+  var r = new JCM.PreviewRenderer(device, showCam);
+  var html = '';
+  switch (_tpl.id) {
+    case 'clock':     html = r.renderClock(_cfg); break;
+    case 'quote':     html = r.renderQuote(_cfg); break;
+    case 'battery':   html = r.renderBattery(_cfg); break;
+    case 'status':    html = r.renderStatus(_cfg); break;
+    case 'countdown': html = r.renderCountdown(_cfg); break;
+    case 'music':     html = r.renderMusic(_cfg); break;
+    case 'gradient':  html = r.renderGradient(_cfg); break;
+    case 'weather':   html = r.renderWeather(_cfg); break;
+    case 'steps':     html = r.renderSteps(_cfg); break;
+    case 'calendar':  html = r.renderCalendar(_cfg); break;
+    case 'dualclock': html = r.renderDualclock(_cfg); break;
+    case 'dailyquote':html = r.renderDailyquote(_cfg); break;
+    case 'ring':      html = r.renderRing(_cfg); break;
+    case 'dashboard': html = r.renderDashboard(_cfg); break;
+    case 'image':     html = r.renderImage(_cfg); break;
+    case 'custom':    html = r.renderCustom(_cfg); break;
+  }
+  html += r.renderElements(_elements, JCM.uploadedFiles, _selIdx);
+  var contentEl = document.getElementById('cfgPreviewContent');
+  if (contentEl) contentEl.innerHTML = html;
 }
 
 function generateCustomMAML(device) {
@@ -764,6 +835,7 @@ function onPreviewMouseUp() {
 // ─── Event Delegation ─────────────────────────────────────────────
 var _autoPreview = debounce(function () {
   _dirty = true;
+  if (_step === 1) renderLivePreview();
   if (_step === 2) renderPreview();
 }, 300);
 
@@ -870,6 +942,19 @@ function setupEvents() {
   document.getElementById('deviceSelect').addEventListener('change', function () { renderPreview(); });
   document.getElementById('showCamera').addEventListener('change', function () { renderPreview(); });
 
+  // Config page live preview: device & camera
+  document.getElementById('cfgDeviceSelect').addEventListener('change', function () {
+    // Sync to preview page
+    var devSel = document.getElementById('deviceSelect');
+    if (devSel) devSel.value = this.value;
+    renderLivePreview();
+  });
+  document.getElementById('cfgShowCamera').addEventListener('change', function () {
+    var showCam = document.getElementById('showCamera');
+    if (showCam) showCam.checked = this.checked;
+    renderLivePreview();
+  });
+
   // Preview drag
   document.getElementById('previewContent').addEventListener('mousedown', onPreviewMouseDown);
 
@@ -972,4 +1057,5 @@ JCM.initUI = function () {
 
 // Expose internal helpers for inline use
 JCM.renderPreview = renderPreview;
+JCM.renderLivePreview = renderLivePreview;
 JCM.getSelectedDevice = getSelectedDevice;
