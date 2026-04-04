@@ -758,25 +758,27 @@ function handleFilePicked(e) {
 
   var isVideo = file.type.indexOf('video/') === 0;
 
-  function addFile(info) {
-    JCM.uploadedFiles[safeName] = info;
-    captureState();
-    if (replaceIdx >= 0 && replaceIdx < _elements.length) {
-      _elements[replaceIdx].fileName = safeName;
-      _elements[replaceIdx].src = safeName;
-    } else {
-      _elements.push({ type: type, fileName: safeName, src: safeName, x: 10, y: 60, w: type === 'image' ? 200 : 240, h: type === 'image' ? 200 : 135 });
-      _selIdx = _elements.length - 1;
-    }
-    _dirty = true;
-    renderConfig();
-    toast(file.name + ' 已添加', 'success');
-  }
-
   if (isVideo) {
-    // Use blob URL for instant video playback, keep file ref for export
-    var blobUrl = URL.createObjectURL(file);
-    addFile({ data: file, mimeType: file.type, dataUrl: blobUrl, originalName: file.name, isBlobUrl: true });
+    // Video: read as ArrayBuffer for export, blob URL for preview
+    var reader = new FileReader();
+    reader.onload = function (ev) {
+      var buf = ev.target.result;
+      var blobUrl = URL.createObjectURL(new Blob([buf], { type: file.type }));
+      JCM.uploadedFiles[safeName] = { data: buf, mimeType: file.type, dataUrl: blobUrl, originalName: file.name };
+      captureState();
+      if (replaceIdx >= 0 && replaceIdx < _elements.length) {
+        _elements[replaceIdx].fileName = safeName;
+        _elements[replaceIdx].src = safeName;
+      } else {
+        _elements.push({ type: type, fileName: safeName, src: safeName, x: 10, y: 60, w: 240, h: 135 });
+        _selIdx = _elements.length - 1;
+      }
+      _dirty = true;
+      renderConfig();
+      toast(file.name + ' 已添加', 'success');
+    };
+    reader.onerror = function () { toast('视频读取失败', 'error'); };
+    reader.readAsArrayBuffer(file);
   } else {
     var reader = new FileReader();
     reader.onload = function (ev) {
@@ -785,7 +787,18 @@ function handleFilePicked(e) {
       var bin = atob(base64);
       var arr = new Uint8Array(bin.length);
       for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-      addFile({ data: arr.buffer, mimeType: file.type, dataUrl: dataUrl, originalName: file.name });
+      JCM.uploadedFiles[safeName] = { data: arr.buffer, mimeType: file.type, dataUrl: dataUrl, originalName: file.name };
+      captureState();
+      if (replaceIdx >= 0 && replaceIdx < _elements.length) {
+        _elements[replaceIdx].fileName = safeName;
+        _elements[replaceIdx].src = safeName;
+      } else {
+        _elements.push({ type: type, fileName: safeName, src: safeName, x: 10, y: 60, w: 200, h: 200 });
+        _selIdx = _elements.length - 1;
+      }
+      _dirty = true;
+      renderConfig();
+      toast(file.name + ' 已添加', 'success');
     };
     reader.readAsDataURL(file);
   }
