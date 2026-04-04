@@ -510,9 +510,9 @@ function renderLivePreview() {
 }
 
 function generateCustomMAML(device) {
-  var lines = [
-    '  <Rectangle w="#view_width" h="#view_height" fillColor="' + _cfg.bgColor + '" />',
-  ];
+  var lines = [];
+  lines.push(JCM.generateAutoDetectMAML());
+  lines.push('  <Rectangle w="#view_width" h="#view_height" fillColor="' + _cfg.bgColor + '" />');
   _elements.forEach(function (el) {
     switch (el.type) {
       case 'text': {
