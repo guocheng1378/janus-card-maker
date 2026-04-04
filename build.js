@@ -49,10 +49,14 @@ const html = `<!DOCTYPE html>
     <div class="topbar-left">
       <h1><span>🃏</span> Janus 卡片制作器</h1>
       <span class="badge">MAML</span>
+    </div>
+    <div class="topbar-right">
       <button class="theme-toggle" id="themeToggle" onclick="JCM.toggleTheme()" title="切换主题">🌙</button>
       <button class="theme-toggle" id="helpBtn" onclick="JCM.toggleHelp()" title="快捷键帮助">⌨️</button>
       <a class="theme-toggle" href="https://github.com/guocheng1378/janus-card-maker" target="_blank" title="GitHub">⭐</a>
     </div>
+  </div>
+  <div class="stepper">
     <div class="steps" id="stepIndicator">
       <div class="step-tab active" data-step="0" onclick="JCM.goStep(0)">
         <span class="step-num">1</span>
