@@ -9,6 +9,7 @@ JCM.ElementDefaults = {
   progress: function () { return { type: 'progress', x: 10, y: 100, w: 200, h: 8, color: '#6c5ce7', bgColor: '#333333', value: 60, radius: 4, locked: false }; },
   lottie: function () { return { type: 'lottie', x: 50, y: 50, w: 120, h: 120, fileName: '', speed: 1, locked: false, _browserOnly: true }; },
   // arc: MAML 不原生支持，导出时用 Circle 模拟
+  // image/video 支持 fit: cover | contain | fill
 };
 
 JCM.isInCameraZone = function (el, device) {
@@ -47,6 +48,10 @@ JCM.renderElementEditor = function (el, idx, device) {
       field('Y', '<input type="number" value="' + el.y + '" data-prop="y" data-idx="' + idx + '">') +
       field('宽', '<input type="number" value="' + (el.w || 100) + '" data-prop="w" data-idx="' + idx + '">') +
       field('高', '<input type="number" value="' + (el.h || 100) + '" data-prop="h" data-idx="' + idx + '">') +
+      field('填充', '<select data-prop="fit" data-idx="' + idx + '">' +
+        '<option value="cover"' + ((!el.fit || el.fit === 'cover') ? ' selected' : '') + '>覆盖 (cover)</option>' +
+        '<option value="contain"' + (el.fit === 'contain' ? ' selected' : '') + '>包含 (contain)</option>' +
+        '<option value="fill"' + (el.fit === 'fill' ? ' selected' : '') + '>拉伸 (fill)</option></select>') +
       '</div>';
   } else if (el.type === 'text') {
     html += '<div class="config-grid">' +
@@ -174,6 +179,7 @@ function field(label, input, full) {
 function colorField(label, value, prop, idx) {
   return '<div class="field field-color"><label>' + label + '</label>' +
     '<input type="color" value="' + value + '" data-prop="' + prop + '" data-idx="' + idx + '">' +
+    '<input type="text" value="' + value + '" class="color-hex-input" data-color-sync="' + prop + '" data-cidx="' + idx + '" maxlength="7" placeholder="#ffffff">' +
     '<span class="color-val">' + value + '</span></div>';
 }
 

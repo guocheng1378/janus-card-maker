@@ -760,3 +760,20 @@ kbd{
   z-index: 10000;
   animation: slide-down 0.3s ease;
 }
+
+/* Color Hex Input */
+.color-hex-input {
+  width: 80px;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface2);
+  color: var(--text);
+  font-family: monospace;
+  font-size: 12px;
+  text-transform: lowercase;
+}
+.color-hex-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}

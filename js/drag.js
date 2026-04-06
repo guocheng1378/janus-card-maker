@@ -57,6 +57,20 @@ function onPreviewPointerDown(e) {
   var rect = screen.getBoundingClientRect();
   var scale = rect.width / device.width;
 
+  // Alt+拖拽 = 复制元素
+  if (e.altKey) {
+    captureState('复制并拖拽');
+    var clone = JSON.parse(JSON.stringify(_elements[idx]));
+    clone.x += 10;
+    clone.y += 10;
+    // 重新生成 blob URL（不会被 JSON 序列化）
+    _elements.push(clone);
+    idx = _elements.length - 1;
+    _selIdx = idx;
+    _dirty = true;
+    renderConfig();
+  }
+
   _dragging = {
     idx: idx,
     startX: pos.clientX,

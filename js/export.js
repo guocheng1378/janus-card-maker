@@ -7,12 +7,28 @@ JCM.exportZip = function (maml, cardName, elements, files, isCustom, bgImage) {
   zip.file('manifest.xml', maml);
 
   if (!isCustom) {
-    zip.file('var_config.xml',
-      '<?xml version="1.0" encoding="UTF-8"?>\n' +
-      '<WidgetConfig version="1">\n' +
-      '  <OnOff name="isDisplayDefaultBg" displayTitle="显示默认背景" default="0"/>\n' +
-      '</WidgetConfig>'
-    );
+    var varConfig = '<?xml version="1.0" encoding="UTF-8"?>\n<WidgetConfig version="1">\n' +
+      '  <OnOff name="isDisplayDefaultBg" displayTitle="显示默认背景" default="0"/>\n';
+
+    // 真实设备模板：添加 ContentProvider 变量声明
+    if (maml.indexOf('ContentProviderBinder') >= 0) {
+      varConfig += '  <!-- ContentProvider 变量由系统自动绑定 -->\n';
+      var varMatches = maml.match(/name="(\w+)"\s+type="(\w+)"\s+column="(\w+)"/g);
+      if (varMatches) {
+        varMatches.forEach(function (vm) {
+          var nameM = vm.match(/name="(\w+)"/);
+          if (nameM) varConfig += '  <!-- Variable: ' + nameM[1] + ' -->\n';
+        });
+      }
+    }
+
+    // MusicControl 模板
+    if (maml.indexOf('MusicControl') >= 0) {
+      varConfig += '  <!-- MusicControl: 由系统音乐播放器自动提供数据 -->\n';
+    }
+
+    varConfig += '</WidgetConfig>';
+    zip.file('var_config.xml', varConfig);
   }
 
   var usedFiles = {};
@@ -433,7 +449,12 @@ JCM.exportSVG = function (cardName) {
   }
   var device = JCM.getSelectedDevice ? JCM.getSelectedDevice() : { width: 976, height: 596, cameraZoneRatio: 0.3 };
   var svgParts = [];
+  var gradId = 0;
   svgParts.push('<svg xmlns="http://www.w3.org/2000/svg" width="' + device.width + '" height="' + device.height + '" viewBox="0 0 ' + device.width + ' ' + device.height + '">');
+
+  // Defs for gradients
+  var defs = [];
+
   svgParts.push('<rect width="100%" height="100%" fill="' + (_cfg.bgColor || '#000000') + '"/>');
 
   _elements.forEach(function (el) {
@@ -445,9 +466,27 @@ JCM.exportSVG = function (cardName) {
       case 'text':
         var anchor = el.textAlign === 'center' ? 'middle' : el.textAlign === 'right' ? 'end' : 'start';
         var tx = el.textAlign === 'center' ? el.x + (el.w || 200) / 2 : el.textAlign === 'right' ? el.x + (el.w || 200) : el.x;
+        var fill = el.color;
+        var strokeAttr = '';
+
+        // 文本渐变
+        if (el.textGradient && el.textGradient !== 'none') {
+          var gradColors = { sunset: '#ff6b6b,#feca57', ocean: '#0984e3,#00cec9', neon: '#ff00ff,#00ffff', gold: '#f39c12,#fdcb6e', aurora: '#6c5ce7,#00b894' };
+          var gc = el.textGradient === 'custom' ? (el.color || '#ffffff') + ',' + (el.gradientColor2 || '#ff6b6b') : gradColors[el.textGradient] || gradColors.sunset;
+          var colors = gc.split(',');
+          var gid = 'grad' + (++gradId);
+          defs.push('<linearGradient id="' + gid + '" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="' + colors[0].trim() + '"/><stop offset="100%" stop-color="' + (colors[1] || colors[0]).trim() + '"/></linearGradient>');
+          fill = 'url(#' + gid + ')';
+        }
+
+        // 文本描边
+        if (el.textStroke && el.textStroke > 0) {
+          strokeAttr = ' stroke="' + (el.textStrokeColor || '#000000') + '" stroke-width="' + el.textStroke + '"';
+        }
+
         var lines = String(el.text || '').split('\n');
         lines.forEach(function (line, li) {
-          svgParts.push('<text x="' + tx + '" y="' + (el.y + el.size + li * el.size * (el.lineHeight || 1.4)) + '" font-size="' + el.size + '" fill="' + el.color + '" text-anchor="' + anchor + '"' + (el.bold ? ' font-weight="bold"' : '') + opAttr + '>' + JCM.escXml(line) + '</text>');
+          svgParts.push('<text x="' + tx + '" y="' + (el.y + el.size + li * el.size * (el.lineHeight || 1.4)) + '" font-size="' + el.size + '" fill="' + fill + '" text-anchor="' + anchor + '"' + (el.bold ? ' font-weight="bold"' : '') + opAttr + strokeAttr + '>' + JCM.escXml(line) + '</text>');
         });
         break;
       case 'rectangle':
@@ -469,6 +508,11 @@ JCM.exportSVG = function (cardName) {
         break;
     }
   });
+
+  // 插入 defs（渐变等）
+  if (defs.length > 0) {
+    svgParts.splice(1, 0, '<defs>' + defs.join('') + '</defs>');
+  }
 
   svgParts.push('</svg>');
   var svgStr = svgParts.join('\n');
