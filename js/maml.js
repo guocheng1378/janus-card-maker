@@ -16,7 +16,18 @@ JCM.generateMAML = function (opts) {
   if (opts.updater) attrs += ' useVariableUpdater="' + opts.updater + '"';
   attrs += ' name="' + JCM.escXml(opts.cardName) + '"';
   lines.push('<Widget ' + attrs + '>');
-  lines.push(opts.innerXml);
+
+  // 背景图：插入到 innerXml 最前面（在 <Rectangle> 背景之上）
+  var innerXml = opts.innerXml;
+  if (opts.bgImage) {
+    var bgImgLine = '  <Image src="' + JCM.escXml(opts.bgImage) + '" x="0" y="0" w="#view_width" h="#view_height" />';
+    if (innerXml.indexOf('<Rectangle') >= 0) {
+      innerXml = innerXml.replace(/(  <Rectangle w="#view_width"[^>]*>)/, bgImgLine + '\n$1');
+    } else {
+      innerXml = bgImgLine + '\n' + innerXml;
+    }
+  }
+  lines.push(innerXml);
 
   if (opts.extraElements.length > 0) {
     lines.push('  <Group x="#marginL" y="0">');
@@ -80,6 +91,24 @@ function renderEl(el, files) {
     }
     case 'video':
       return p + '<Video src="videos/' + JCM.escXml(el.src || el.fileName || '') + '" x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 240) + '" h="' + (el.h || 135) + '" autoPlay="true" loop="true" />';
+    case 'arc': {
+      // 弧形用两个圆形模拟（外圆 - 内圆裁切）
+      var ar = el.r || 40;
+      return p + '<!-- Arc: MAML 不原生支持 <Arc>，用 Circle 模拟 -->\n' +
+        p + '<Circle x="' + el.x + '" y="' + el.y + '" r="' + ar + '" fillColor="' + el.color + '" />';
+    }
+    case 'progress': {
+      var pw = el.w || 200;
+      var ph = el.h || 8;
+      var pv = el.value || 60;
+      var pr = el.radius || 4;
+      var barW = Math.round(pw * pv / 100);
+      return p + '<Rectangle x="' + el.x + '" y="' + el.y + '" w="' + pw + '" h="' + ph + '" fillColor="' + (el.bgColor || '#333333') + '" cornerRadius="' + pr + '" />\n' +
+        p + '<Rectangle x="' + el.x + '" y="' + el.y + '" w="' + barW + '" h="' + ph + '" fillColor="' + el.color + '" cornerRadius="' + pr + '" />';
+    }
+    case 'lottie':
+      // Lottie 不被 MAML 支持，输出注释占位
+      return p + '<!-- Lottie 动画: MAML 引擎不支持此格式，请替换为 Image/Video -->';
     default:
       return '';
   }

@@ -1,6 +1,6 @@
 // ─── Export: ZIP 打包 / 导入 / PNG 导出 ────────────────────────────
 
-JCM.exportZip = function (maml, cardName, elements, files, isCustom) {
+JCM.exportZip = function (maml, cardName, elements, files, isCustom, bgImage) {
   if (typeof JSZip === 'undefined') throw new Error('JSZip 未加载');
 
   var zip = new JSZip();
@@ -23,6 +23,22 @@ JCM.exportZip = function (maml, cardName, elements, files, isCustom) {
     }
   });
 
+  // 背景图：如果是本地上传的 base64/DataURL，也打包进 ZIP
+  if (bgImage && bgImage.indexOf('data:') === 0) {
+    try {
+      var b64data = bgImage.split(',')[1];
+      var mimeMatch = bgImage.match(/^data:([^;]+);/);
+      var mime = mimeMatch ? mimeMatch[1] : 'image/png';
+      var ext = mime.split('/')[1] || 'png';
+      if (ext === 'jpeg') ext = 'jpg';
+      var bgFileName = 'bg.' + ext;
+      var binStr = atob(b64data);
+      var bgArr = new Uint8Array(binStr.length);
+      for (var bi = 0; bi < binStr.length; bi++) bgArr[bi] = binStr.charCodeAt(bi);
+      usedFiles[bgFileName] = { data: bgArr.buffer, mimeType: mime };
+    } catch (e) { /* background image parse failed, skip */ }
+  }
+
   var keys = Object.keys(usedFiles);
 
   function buildZipWithData() {
@@ -43,7 +59,7 @@ JCM.exportZip = function (maml, cardName, elements, files, isCustom) {
     var fileName = (cardName || 'card') + '.zip';
 
     return zip.generateAsync({ type: 'blob' }).then(function (blob) {
-      if (typeof AndroidBridge !== 'undefined') {
+      if (typeof AndroidBridge !== 'undefined' && typeof AndroidBridge.saveZip === 'function') {
         var reader = new FileReader();
         reader.onload = function () {
           AndroidBridge.saveZip(reader.result.split(',')[1], fileName);
@@ -55,8 +71,11 @@ JCM.exportZip = function (maml, cardName, elements, files, isCustom) {
       var a = document.createElement('a');
       a.href = url;
       a.download = fileName;
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      // 延迟释放，确保下载已触发
+      setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
     });
   }
 
@@ -64,11 +83,28 @@ JCM.exportZip = function (maml, cardName, elements, files, isCustom) {
 };
 
 // ─── Import ZIP ────────────────────────────────────────────────────
+var MAX_ZIP_SIZE = 200 * 1024 * 1024; // 200MB 总大小限制
+var MAX_FILE_SIZE = 50 * 1024 * 1024;  // 单文件 50MB 限制
+
 JCM.importZip = function (file) {
   if (typeof JSZip === 'undefined') throw new Error('JSZip 未加载');
 
+  // 文件大小检查
+  if (file.size > MAX_ZIP_SIZE) {
+    return Promise.reject(new Error('ZIP 文件过大（最大 200MB），当前 ' + (file.size / 1048576).toFixed(1) + 'MB'));
+  }
+
   return JSZip.loadAsync(file).then(function (zip) {
     var result = { cardName: '导入的卡片', bgColor: '#000000', elements: [], files: {} };
+
+    // 解压总大小检查
+    var totalSize = 0;
+    zip.forEach(function (path, entry) {
+      if (!entry.dir) totalSize += entry._data ? entry._data.uncompressedSize : 0;
+    });
+    if (totalSize > MAX_ZIP_SIZE * 3) {
+      return Promise.reject(new Error('ZIP 解压后内容过大，可能存在 zip bomb 攻击'));
+    }
 
     // Read manifest
     var manifestFile = zip.file('manifest.xml');
@@ -129,7 +165,16 @@ JCM.importZip = function (file) {
       zip.forEach(function (path, entry) {
         if (path === 'manifest.xml' || path === 'var_config.xml') return;
         if (path.match(/^(images|videos)\//) && !entry.dir) {
+          // 单文件大小检查
+          if (entry._data && entry._data.uncompressedSize > MAX_FILE_SIZE) {
+            console.warn('跳过过大文件: ' + path + ' (' + (entry._data.uncompressedSize / 1048576).toFixed(1) + 'MB)');
+            return;
+          }
           promises.push(entry.async('arraybuffer').then(function (buf) {
+            if (buf.byteLength > MAX_FILE_SIZE) {
+              console.warn('跳过过大文件: ' + path);
+              return;
+            }
             var fname = path.replace(/^(images|videos)\//, '');
             var ext = fname.split('.').pop().toLowerCase();
             var isVideo = ['mp4', 'webm', '3gp', 'mkv', 'mov', 'avi', 'ts', 'flv'].indexOf(ext) >= 0;
@@ -178,6 +223,23 @@ JCM.exportPNG = function (cardName) {
   ctx.fillStyle = bgColor;
   ctx.fillRect(0, 0, device.width, device.height);
 
+  // Draw background image if set
+  var bgImgPromise = Promise.resolve();
+  if (_cfg.bgImage) {
+    bgImgPromise = new Promise(function (resolve) {
+      var bgImg = new Image();
+      bgImg.crossOrigin = 'anonymous';
+      bgImg.onload = function () {
+        ctx.drawImage(bgImg, 0, 0, device.width, device.height);
+        resolve();
+      };
+      bgImg.onerror = function () { resolve(); };
+      bgImg.src = _cfg.bgImage;
+    });
+  }
+
+  return bgImgPromise.then(function () {
+
   // Draw background patterns for custom template
   if (_tpl && _tpl.id === 'custom') {
     var pat = _cfg.bgPattern || 'solid';
@@ -212,68 +274,123 @@ JCM.exportPNG = function (cardName) {
     ctx.globalAlpha = 1;
   }
 
-  // Draw elements
+  // Draw elements — 先收集所有需要加载的图片
   var camW = device.width * device.cameraZoneRatio;
+  var imageLoaders = [];
+
+  // 预加载所有图片元素
   if (_elements) {
     _elements.forEach(function (el) {
-      ctx.save();
-      var opacity = (el.opacity !== undefined ? el.opacity : 100) / 100;
-      ctx.globalAlpha = opacity;
-
-      switch (el.type) {
-        case 'text':
-          var weight = el.bold ? '700' : '400';
-          ctx.font = weight + ' ' + el.size + 'px -apple-system, sans-serif';
-          ctx.fillStyle = el.color || '#ffffff';
-          if (el.shadow === 'light') { ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1; }
-          else if (el.shadow === 'dark') { ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 2; }
-          else if (el.shadow === 'glow') { ctx.shadowColor = el.color; ctx.shadowBlur = 16; }
-          if (el.multiLine) {
-            var textLines = String(el.text || '').split('\n');
-            textLines.forEach(function (line, li) { ctx.fillText(line, el.x, el.y + el.size + li * el.size * 1.4, el.w || 9999); });
-          } else {
-            var align = el.textAlign || 'left';
-            if (align === 'center') { ctx.textAlign = 'center'; ctx.fillText(el.text || '', el.x + (el.w || 200) / 2, el.y + el.size); }
-            else if (align === 'right') { ctx.textAlign = 'right'; ctx.fillText(el.text || '', el.x + (el.w || 200), el.y + el.size); }
-            else { ctx.fillText(el.text || '', el.x, el.y + el.size); }
-          }
-          ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-          break;
-        case 'rectangle':
-          var rr = el.radius || 0;
-          ctx.fillStyle = el.color || '#333333';
-          drawRoundRect(ctx, el.x, el.y, el.w, el.h, rr);
-          ctx.fill();
-          break;
-        case 'circle':
-          ctx.fillStyle = el.color || '#6c5ce7';
-          ctx.beginPath(); ctx.arc(el.x, el.y, el.r || 30, 0, Math.PI * 2); ctx.fill();
-          break;
-        case 'image':
-          var fi = el.fileName ? JCM.uploadedFiles[el.fileName] : null;
-          if (fi && fi.dataUrl) {
-            try {
-              var img = new Image();
-              img.src = fi.dataUrl;
-              ctx.drawImage(img, el.x, el.y, el.w || 100, el.h || 100);
-            } catch (e) { /* image load failed in export */ }
-          }
-          break;
-      }
-      ctx.restore();
+      if (el.type !== 'image') return;
+      var fi = el.fileName ? JCM.uploadedFiles[el.fileName] : null;
+      if (!fi || !fi.dataUrl) return;
+      imageLoaders.push(new Promise(function (resolve) {
+        var img = new Image();
+        img.onload = function () { resolve({ el: el, img: img }); };
+        img.onerror = function () { resolve(null); };
+        img.src = fi.dataUrl;
+      }));
     });
   }
 
-  return new Promise(function (resolve, reject) {
-    canvas.toBlob(function (pngBlob) {
-      if (!pngBlob) return reject(new Error('PNG 导出失败'));
-      var a = document.createElement('a');
-      a.href = URL.createObjectURL(pngBlob);
-      a.download = (cardName || 'card') + '.png';
-      a.click();
-      resolve();
-    }, 'image/png');
+  return Promise.all(imageLoaders).then(function (loadedImages) {
+    var imgMap = {};
+    loadedImages.forEach(function (item) {
+      if (item) imgMap[item.el.fileName] = item.img;
+    });
+
+    // 绘制所有元素
+    if (_elements) {
+      _elements.forEach(function (el) {
+        ctx.save();
+        var opacity = (el.opacity !== undefined ? el.opacity : 100) / 100;
+        ctx.globalAlpha = opacity;
+
+        switch (el.type) {
+          case 'text':
+            var weight = el.bold ? '700' : '400';
+            ctx.font = weight + ' ' + el.size + 'px -apple-system, sans-serif';
+            ctx.fillStyle = el.color || '#ffffff';
+            if (el.shadow === 'light') { ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1; }
+            else if (el.shadow === 'dark') { ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 2; }
+            else if (el.shadow === 'glow') { ctx.shadowColor = el.color; ctx.shadowBlur = 16; }
+            if (el.multiLine) {
+              var textLines = String(el.text || '').split('\n');
+              textLines.forEach(function (line, li) { ctx.fillText(line, el.x, el.y + el.size + li * el.size * 1.4, el.w || 9999); });
+            } else {
+              var align = el.textAlign || 'left';
+              if (align === 'center') { ctx.textAlign = 'center'; ctx.fillText(el.text || '', el.x + (el.w || 200) / 2, el.y + el.size); }
+              else if (align === 'right') { ctx.textAlign = 'right'; ctx.fillText(el.text || '', el.x + (el.w || 200), el.y + el.size); }
+              else { ctx.fillText(el.text || '', el.x, el.y + el.size); }
+            }
+            ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+            break;
+          case 'rectangle':
+            var rr = el.radius || 0;
+            if (el.fillColor2) {
+              var grd = ctx.createLinearGradient(el.x, el.y, el.x + el.w, el.y + el.h);
+              grd.addColorStop(0, el.color || '#333333');
+              grd.addColorStop(1, el.fillColor2);
+              ctx.fillStyle = grd;
+            } else {
+              ctx.fillStyle = el.color || '#333333';
+            }
+            drawRoundRect(ctx, el.x, el.y, el.w, el.h, rr);
+            ctx.fill();
+            break;
+          case 'circle':
+            ctx.fillStyle = el.color || '#6c5ce7';
+            ctx.beginPath(); ctx.arc(el.x, el.y, el.r || 30, 0, Math.PI * 2); ctx.fill();
+            break;
+          case 'image':
+            var loadedImg = imgMap[el.fileName];
+            if (loadedImg) {
+              ctx.drawImage(loadedImg, el.x, el.y, el.w || 100, el.h || 100);
+            }
+            break;
+          case 'progress':
+            var pw = (el.w || 200), ph = (el.h || 8), pv = (el.value || 60) / 100;
+            var pr2 = el.radius || 4;
+            ctx.fillStyle = el.bgColor || '#333333';
+            drawRoundRect(ctx, el.x, el.y, pw, ph, pr2);
+            ctx.fill();
+            ctx.fillStyle = el.color || '#6c5ce7';
+            drawRoundRect(ctx, el.x, el.y, pw * pv, ph, pr2);
+            ctx.fill();
+            break;
+          case 'video':
+            // 视频无法导出为 PNG，绘制占位符
+            ctx.fillStyle = '#1a1a2e';
+            drawRoundRect(ctx, el.x, el.y, el.w || 240, el.h || 135, 4);
+            ctx.fill();
+            ctx.globalAlpha = 0.3;
+            ctx.font = '24px sans-serif';
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.fillText('🎬', el.x + (el.w || 240) / 2, el.y + (el.h || 135) / 2 + 8);
+            ctx.textAlign = 'left';
+            break;
+        }
+        ctx.restore();
+      });
+    }
+
+    return new Promise(function (resolve, reject) {
+      canvas.toBlob(function (pngBlob) {
+        if (!pngBlob) return reject(new Error('PNG 导出失败'));
+        var url = URL.createObjectURL(pngBlob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = (cardName || 'card') + '.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
+        resolve();
+      }, 'image/png');
+    });
   });
+  }); // bgImgPromise.then
 };
 
 function drawRoundRect(ctx, x, y, w, h, r) {

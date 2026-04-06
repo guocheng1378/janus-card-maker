@@ -12,12 +12,7 @@ JCM.escHtml = function (s) {
 };
 
 // ─── 颜色预设 ──────────────────────────────────────────────────────
-JCM.COLOR_PRESETS = [
-  '#ffffff','#f5f5f5','#e0e0e0','#9e9e9e','#616161','#212121','#000000',
-  '#f44336','#e91e63','#9c27b0','#673ab7','#3f51b5','#2196f3','#03a9f4',
-  '#00bcd4','#009688','#4caf50','#8bc34a','#cddc39','#ffeb3b','#ffc107',
-  '#ff9800','#ff5722','#795548','#607d8b'
-];
+// ─── 颜色工具（预设在 editor.js 中统一定义）──────────────────────
 JCM.getRecentColors = function () {
   try { return JSON.parse(localStorage.getItem('jcm-recent-colors') || '[]'); } catch (e) { return []; }
 };

@@ -23,6 +23,19 @@ function debounce(fn, ms) {
   };
 }
 
+// ─── 颜色工具 ────────────────────────────────────────────────────
+function isDarkColor(hex) {
+  if (!hex || hex.charAt(0) !== '#') return false;
+  var c = hex.substring(1);
+  if (c.length === 3) c = c[0]+c[0]+c[1]+c[1]+c[2]+c[2];
+  var r = parseInt(c.substring(0, 2), 16) || 0;
+  var g = parseInt(c.substring(2, 4), 16) || 0;
+  var b = parseInt(c.substring(4, 6), 16) || 0;
+  // W3C 相对亮度公式
+  var luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance < 0.35;
+}
+
 // ─── MAML Generation Helper ───────────────────────────────────────
 // 统一处理普通模板、rawXml 模板和自定义模板
 function getTemplateMAML(tpl, cfg, device) {
@@ -185,6 +198,19 @@ JCM.goStep = function (n) {
     if (cfgShowCam2 && showCam2) showCam2.checked = cfgShowCam2.checked;
     renderPreview();
   }
+  // 切换页面时清理预览中的视频元素，防止内存泄漏
+  if (n !== 2) {
+    var previewEl = document.getElementById('previewContent');
+    if (previewEl) {
+      previewEl.querySelectorAll('video').forEach(function (v) { v.pause(); v.src = ''; });
+    }
+  }
+  if (n !== 1) {
+    var cfgPreviewEl = document.getElementById('cfgPreviewContent');
+    if (cfgPreviewEl) {
+      cfgPreviewEl.querySelectorAll('video').forEach(function (v) { v.pause(); v.src = ''; });
+    }
+  }
   // Auto-refresh for time-based templates
   clearInterval(_previewTimer);
   if (n >= 1 && _tpl && (_tpl.updater === 'DateTime.Minute' || _tpl.updater === 'DateTime.Day')) {
@@ -214,6 +240,14 @@ JCM.prevStep = function () { JCM.goStep(_step - 1); };
 JCM.selectTemplate = function (id) {
   var tpl = JCM.TEMPLATES.find(function (t) { return t.id === id; });
   if (!tpl) return;
+
+  // 清理旧模板的 blob URL
+  Object.keys(JCM.uploadedFiles).forEach(function (k) {
+    var f = JCM.uploadedFiles[k];
+    if (f && f.dataUrl && f.dataUrl.indexOf('blob:') === 0) {
+      try { URL.revokeObjectURL(f.dataUrl); } catch (e) {}
+    }
+  });
 
   _tpl = tpl;
   _cfg = {};
@@ -471,7 +505,14 @@ JCM.removeElement = function (idx) {
   var el = _elements[idx];
   if (el && el.fileName) {
     var stillUsed = _elements.some(function (e, i) { return i !== idx && e.fileName === el.fileName; });
-    if (!stillUsed) delete JCM.uploadedFiles[el.fileName];
+    if (!stillUsed) {
+      // 清理 blob URL，防止内存泄漏
+      var fi = JCM.uploadedFiles[el.fileName];
+      if (fi && fi.dataUrl && fi.dataUrl.indexOf('blob:') === 0) {
+        try { URL.revokeObjectURL(fi.dataUrl); } catch (e) {}
+      }
+      delete JCM.uploadedFiles[el.fileName];
+    }
   }
   _elements.splice(idx, 1);
   if (_selIdx >= _elements.length) _selIdx = _elements.length - 1;
@@ -563,11 +604,6 @@ function renderPreview() {
   document.getElementById('previewContent').innerHTML = html;
 
   var innerXml = getTemplateMAML(_tpl, _cfg, device);
-  // 背景图支持
-  if (_cfg.bgImage && innerXml.indexOf('<Rectangle') >= 0) {
-    var bgImg = '  <Image src="' + JCM.escXml(_cfg.bgImage) + '" x="0" y="0" w="#view_width" h="#view_height" />\n';
-    innerXml = innerXml.replace(/(  <Rectangle w="#view_width"[^>]*>)/, bgImg + '$1');
-  }
   var maml;
   if (_tpl.rawXml) {
     // rawXml 模板已经是完整 XML，直接使用
@@ -580,6 +616,7 @@ function renderPreview() {
       updater: _tpl.updater,
       extraElements: _elements,
       uploadedFiles: JCM.uploadedFiles,
+      bgImage: _cfg.bgImage || '',
     });
   }
   document.getElementById('codeContent').value = maml;
@@ -687,11 +724,6 @@ JCM.handleExport = function () {
   if (!_tpl) return toast('请先选择模板', 'error');
   var device = getSelectedDevice();
   var innerXml = getTemplateMAML(_tpl, _cfg, device);
-  // 背景图支持
-  if (_cfg.bgImage && innerXml.indexOf('<Rectangle') >= 0) {
-    var bgImg = '  <Image src="' + JCM.escXml(_cfg.bgImage) + '" x="0" y="0" w="#view_width" h="#view_height" />\n';
-    innerXml = innerXml.replace(/(  <Rectangle w="#view_width"[^>]*>)/, bgImg + '$1');
-  }
   var maml = _tpl.rawXml ? innerXml : JCM.generateMAML({
     cardName: _cfg.cardName || _tpl.name,
     device: device,
@@ -699,6 +731,7 @@ JCM.handleExport = function () {
     updater: _tpl.updater,
     extraElements: _elements,
     uploadedFiles: JCM.uploadedFiles,
+    bgImage: _cfg.bgImage || '',
   });
 
   // XML 校验
@@ -707,7 +740,7 @@ JCM.handleExport = function () {
     return toast('XML 校验失败: ' + validation.errors[0], 'error');
   }
 
-  JCM.exportZip(maml, _cfg.cardName || 'card', _elements, JCM.uploadedFiles, _tpl.id === 'custom')
+  JCM.exportZip(maml, _cfg.cardName || 'card', _elements, JCM.uploadedFiles, _tpl.id === 'custom', _cfg.bgImage || '')
     .then(function () { toast('✅ ZIP 已导出', 'success'); })
     .catch(function (e) { toast('导出失败: ' + e.message, 'error'); });
 };
@@ -1036,6 +1069,7 @@ JCM.handleBatchExport = function () {
       updater: _tpl.updater,
       extraElements: _elements,
       uploadedFiles: JCM.uploadedFiles,
+      bgImage: _cfg.bgImage || '',
     });
     var validation = JCM.validateMAML(maml);
     if (!validation.valid) {
@@ -1044,7 +1078,7 @@ JCM.handleBatchExport = function () {
       exportNext();
       return;
     }
-    JCM.exportZip(maml, (_cfg.cardName || 'card') + '_' + dk, _elements, JCM.uploadedFiles, _tpl.id === 'custom')
+    JCM.exportZip(maml, (_cfg.cardName || 'card') + '_' + dk, _elements, JCM.uploadedFiles, _tpl.id === 'custom', _cfg.bgImage || '')
       .then(function () { count++; setTimeout(exportNext, 500); })
       .catch(function () { errors.push(device.label); count++; setTimeout(exportNext, 500); });
   }
@@ -1066,6 +1100,7 @@ JCM.handleUniversalExport = function () {
     updater: _tpl.updater,
     extraElements: _elements,
     uploadedFiles: JCM.uploadedFiles,
+    bgImage: _cfg.bgImage || '',
   });
 
   var validation = JCM.validateMAML(maml);
@@ -1073,7 +1108,7 @@ JCM.handleUniversalExport = function () {
     return toast('XML 校验失败: ' + validation.errors[0], 'error');
   }
 
-  JCM.exportZip(maml, (_cfg.cardName || 'card') + '_all', _elements, JCM.uploadedFiles, _tpl.id === 'custom')
+  JCM.exportZip(maml, (_cfg.cardName || 'card') + '_all', _elements, JCM.uploadedFiles, _tpl.id === 'custom', _cfg.bgImage || '')
     .then(function () { toast('✅ 通用卡片已导出（适配所有机型）', 'success'); })
     .catch(function (e) { toast('导出失败: ' + e.message, 'error'); });
 };
@@ -1086,6 +1121,13 @@ JCM.handleImportZip = function () {
   input.onchange = function () {
     var file = input.files[0];
     if (!file) return;
+    // 清理旧的 blob URL
+    Object.keys(JCM.uploadedFiles).forEach(function (k) {
+      var f = JCM.uploadedFiles[k];
+      if (f && f.dataUrl && f.dataUrl.indexOf('blob:') === 0) {
+        try { URL.revokeObjectURL(f.dataUrl); } catch (e) {}
+      }
+    });
     JCM.importZip(file).then(function (data) {
       // Switch to custom template
       _tpl = JCM.TEMPLATES.find(function (t) { return t.id === 'custom'; });
@@ -2120,10 +2162,30 @@ JCM.toggleThemeCompare = function () {
 
     // Generate light preview (swap colors for bg elements)
     var lightCfg = JSON.parse(JSON.stringify(_cfg));
-    // Swap dark colors to light
-    if (lightCfg.bgColor === '#000000' || lightCfg.bgColor === '#0a0a0a' || lightCfg.bgColor === '#0d1117' || lightCfg.bgColor === '#0f0f1a' || lightCfg.bgColor === '#1a1a2e' || lightCfg.bgColor === '#1a0a2e') {
+    // 完整的暗→亮颜色映射
+    var darkToLight = {
+      '#000000': '#ffffff', '#0a0a0a': '#f5f5f5', '#0a0a1a': '#f0f0f5',
+      '#0d1117': '#e8ecf0', '#0f0f1a': '#ebebf0', '#0f1b2d': '#dce6f0',
+      '#1a1a2e': '#e0e0ee', '#1a0a2e': '#eadef0', '#0a1628': '#d0e4f0',
+      '#2d3436': '#d5d8da', '#000': '#fff'
+    };
+    var bgLower = (lightCfg.bgColor || '').toLowerCase();
+    if (darkToLight[bgLower]) {
+      lightCfg.bgColor = darkToLight[bgLower];
+    } else if (isDarkColor(lightCfg.bgColor)) {
       lightCfg.bgColor = '#f0f0f0';
     }
+    // 交换文字/前景色
+    var textColors = ['timeColor', 'tempColor', 'dayColor', 'titleColor', 'textColor'];
+    textColors.forEach(function (k) {
+      if (lightCfg[k] && lightCfg[k].toLowerCase() === '#ffffff') lightCfg[k] = '#1a1a1a';
+      if (lightCfg[k] && lightCfg[k].toLowerCase() === '#e0e0e0') lightCfg[k] = '#333333';
+      if (lightCfg[k] && lightCfg[k].toLowerCase() === '#cccccc') lightCfg[k] = '#444444';
+    });
+    // dimColor / dateColor 等次要色
+    if (lightCfg.dimColor && isDarkColor(lightCfg.dimColor)) lightCfg.dimColor = '#888888';
+    if (lightCfg.dateColor && isDarkColor(lightCfg.dateColor)) lightCfg.dateColor = '#666666';
+    if (lightCfg.descColor && isDarkColor(lightCfg.descColor)) lightCfg.descColor = '#556677';
     var lightHtml = renderTemplatePreview(device, showCam, _tpl, lightCfg);
     lightHtml += new JCM.PreviewRenderer(device, showCam).renderElements(_elements, JCM.uploadedFiles, _selIdx);
 
@@ -2167,7 +2229,16 @@ function renderTplCategories() {
   }).join('');
 }
 
+// 搜索防抖包装
+var _filterTimer = null;
 JCM.filterTemplates = function (query) {
+  clearTimeout(_filterTimer);
+  _filterTimer = setTimeout(function () {
+    JCM._doFilterTemplates(query);
+  }, 150);
+};
+
+JCM._doFilterTemplates = function (query) {
   var cards = document.querySelectorAll('.tpl-card');
   query = (query || '').toLowerCase();
   cards.forEach(function (card) {
@@ -2274,8 +2345,10 @@ JCM.initUI = function () {
   // Init slider position after layout
   requestAnimationFrame(function () { moveStepSlider(0); });
   window.addEventListener('resize', function () { moveStepSlider(_step); });
-  // Save draft on page unload
+  // Save draft on page unload + 清理资源
   window.addEventListener('beforeunload', function () {
+    // 暂停所有视频
+    document.querySelectorAll('video').forEach(function (v) { v.pause(); v.src = ''; });
     try {
       var draft = {
         tplId: _tpl ? _tpl.id : null,
