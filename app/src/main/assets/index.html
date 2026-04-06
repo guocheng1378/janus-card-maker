@@ -905,12 +905,12 @@ JCM.TEMPLATES = [
         '  <Var name="barW" type="number" expression="(#safeW * #battery_level / 100)" />',
         '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
         '  <Group x="#marginL" y="0">',
-        '    <Text text="电量" x="0" y="50" size="18" color="' + c.textColor + '" alpha="0.6" />',
+        '    <Text text="电量" x="0" y="50" size="18" color="' + c.textColor + '" alpha="153" />',
         '    <Text textExp="(#battery_level + \'%\')" x="0" y="80" size="56" color="' + c.textColor + '" />',
         '    <Rectangle x="0" y="160" w="#safeW" h="12" fillColor="#333333" cornerRadius="6" />',
         '    <Rectangle x="0" y="160" w="#barW" h="12" fillColor="' + c.barColor + '" cornerRadius="6" />',
         '    <Text textExp="ifelse((#battery_level >= 80), \'电量充足\', ifelse((#battery_level >= 20), \'电量偏低\', \'电量极低\'))"',
-        '          x="0" y="200" size="16" color="' + c.textColor + '" alpha="0.5" />',
+        '          x="0" y="200" size="16" color="' + c.textColor + '" alpha="128" />',
         '  </Group>',
       ].join('\n');
     },
@@ -919,6 +919,7 @@ JCM.TEMPLATES = [
   // ─── 状态 ───
   {
     id: 'status', icon: '📊', name: '状态卡片', desc: '显示多个状态指标',
+    updater: 'DateTime.Minute',
     config: [
       { group: '基本', fields: [
         { key: 'cardName', label: '卡片名称', type: 'text', default: '状态卡片' },
@@ -940,13 +941,14 @@ JCM.TEMPLATES = [
       var items = [c.item1, c.item2, c.item3, c.item4].filter(Boolean);
       var lines = [
         JCM.generateAutoDetectMAML(),
+        '  <Var name="safeW" type="number" expression="(#view_width - #marginL - 20)" />',
         '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
-        '  <Group x="#marginL" y="0">',
+        '  <Group x="#marginL" y="0" w="#safeW">',
         '    <Rectangle x="0" y="40" w="4" h="24" fillColor="' + c.accentColor + '" cornerRadius="2" />',
-        '    <Text text="' + JCM.escXml(c.title) + '" x="14" y="42" size="22" color="' + c.textColor + '" />',
+        '    <Text text="' + JCM.escXml(c.title) + '" x="14" y="42" size="22" color="' + c.textColor + '" w="(#safeW - 14)" />',
       ];
       items.forEach(function (t, i) {
-        lines.push('    <Text text="' + JCM.escXml(t) + '" x="14" y="' + (90 + i * 40) + '" size="16" color="' + c.textColor + '" alpha="0.8" />');
+        lines.push('    <Text text="' + JCM.escXml(t) + '" x="14" y="' + (90 + i * 40) + '" size="16" color="' + c.textColor + '" alpha="204" w="(#safeW - 14)" />');
       });
       lines.push('  </Group>');
       return lines.join('\n');
@@ -991,9 +993,9 @@ JCM.TEMPLATES = [
         '  <Var name="diff" type="number" expression="ifelse((#tdoy >= #doy), (#tdoy - #doy), (#daysLeft + #tdoy))" />',
         '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
         '  <Group x="#marginL" y="0">',
-        '    <Text text="' + JCM.escXml(c.eventName) + '" x="0" y="50" size="18" color="' + c.textColor + '" alpha="0.6" />',
+        '    <Text text="' + JCM.escXml(c.eventName) + '" x="0" y="50" size="18" color="' + c.textColor + '" alpha="153" />',
         '    <Text textExp="#diff" x="0" y="80" size="72" color="' + c.accentColor + '" />',
-        '    <Text text="天" x="0" y="160" size="20" color="' + c.textColor + '" alpha="0.5" />',
+        '    <Text text="天" x="0" y="160" size="20" color="' + c.textColor + '" alpha="128" />',
         '  </Group>',
       ].join('\n');
     },
@@ -1057,7 +1059,7 @@ JCM.TEMPLATES = [
         JCM.generateAutoDetectMAML(),
         '  <Var name="safeW" type="number" expression="(#view_width - #marginL - 30)" />',
         '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor1 + '" />',
-        '  <Rectangle x="(#view_width * 0.5)" w="(#view_width * 0.5)" h="#view_height" fillColor="' + c.bgColor2 + '" alpha="0.7" />',
+        '  <Rectangle x="(#view_width * 0.5)" w="(#view_width * 0.5)" h="#view_height" fillColor="' + c.bgColor2 + '" alpha="179" />',
         '  <Group x="#marginL" y="0" w="#safeW" h="#view_height">',
         '    <Text text="' + JCM.escXml(c.text) + '" x="0" y="(#view_height * 0.3)" size="' + c.textSize + '" color="' + c.textColor + '" w="#safeW" multiLine="true" textAlign="center" />',
         '  </Group>',
@@ -1087,11 +1089,11 @@ JCM.TEMPLATES = [
         JCM.generateAutoDetectMAML(),
         '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
         '  <Group x="#marginL" y="0">',
-        '    <Text text="' + JCM.escXml(c.city) + '" x="0" y="30" size="14" color="' + c.descColor + '" alpha="0.7" />',
+        '    <Text text="' + JCM.escXml(c.city) + '" x="0" y="30" size="14" color="' + c.descColor + '" alpha="179" />',
         '    <Text textExp="(#weather_temp + \'°\')" x="0" y="60" size="' + c.tempSize + '" color="' + c.tempColor + '" />',
         '    <Text textExp="#weather_desc" x="0" y="140" size="18" color="' + c.descColor + '" />',
-        '    <Text textExp="(\'湿度 \' + #weather_humidity + \'%\')" x="0" y="170" size="14" color="' + c.descColor + '" alpha="0.5" />',
-        '    <Text textExp="(\'体感 \' + #weather_feels_like + \'°\')" x="100" y="170" size="14" color="' + c.descColor + '" alpha="0.5" />',
+        '    <Text textExp="(\'湿度 \' + #weather_humidity + \'%\')" x="0" y="170" size="14" color="' + c.descColor + '" alpha="128" />',
+        '    <Text textExp="(\'体感 \' + #weather_feels_like + \'°\')" x="100" y="170" size="14" color="' + c.descColor + '" alpha="128" />',
         '  </Group>',
       ].join('\n');
     },
@@ -1122,14 +1124,14 @@ JCM.TEMPLATES = [
         '  <Var name="barW" type="number" expression="(#safeW * #pct / 100)" />',
         '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
         '  <Group x="#marginL" y="0">',
-        '    <Text text="今日步数" x="0" y="30" size="14" color="' + c.textColor + '" alpha="0.5" />',
+        '    <Text text="今日步数" x="0" y="30" size="14" color="' + c.textColor + '" alpha="128" />',
         '    <Text textExp="#step_count" x="0" y="50" size="52" color="' + c.textColor + '" />',
-        '    <Text text="步" x="0" y="112" size="16" color="' + c.textColor + '" alpha="0.5" />',
+        '    <Text text="步" x="0" y="112" size="16" color="' + c.textColor + '" alpha="128" />',
         '    <Rectangle x="0" y="140" w="#safeW" h="8" fillColor="#222222" cornerRadius="4" />',
         '    <Rectangle x="0" y="140" w="#barW" h="8" fillColor="' + c.barColor + '" cornerRadius="4" />',
-        '    <Text textExp="(\'目标 \' + #goalN + \' · \' + #pct + \'%\')" x="0" y="160" size="12" color="' + c.textColor + '" alpha="0.4" />',
-        '    <Text textExp="(\'距离 \' + #step_distance + \' km\')" x="0" y="190" size="14" color="' + c.accentColor + '" alpha="0.7" />',
-        '    <Text textExp="(\'消耗 \' + #step_calorie + \' kcal\')" x="120" y="190" size="14" color="' + c.accentColor + '" alpha="0.7" />',
+        '    <Text textExp="(\'目标 \' + #goalN + \' · \' + #pct + \'%\')" x="0" y="160" size="12" color="' + c.textColor + '" alpha="102" />',
+        '    <Text textExp="(\'距离 \' + #step_distance + \' km\')" x="0" y="190" size="14" color="' + c.accentColor + '" alpha="179" />',
+        '    <Text textExp="(\'消耗 \' + #step_calorie + \' kcal\')" x="120" y="190" size="14" color="' + c.accentColor + '" alpha="179" />',
         '  </Group>',
       ].join('\n');
     },
@@ -1162,7 +1164,7 @@ JCM.TEMPLATES = [
         JCM.generateAutoDetectMAML(),
         '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
         '  <Group x="#marginL" y="0">',
-        '    <Text textExp="formatDate(\'MM/dd\', #time_sys)" x="0" y="20" size="14" color="' + c.textColor + '" alpha="0.5" />',
+        '    <Text textExp="formatDate(\'MM/dd\', #time_sys)" x="0" y="20" size="14" color="' + c.textColor + '" alpha="128" />',
         '    <Text textExp="formatDate(\'EEEE\', #time_sys)" x="0" y="40" size="18" color="' + c.accentColor + '" />',
         '    <Text textExp="formatDate(\'dd\', #time_sys)" x="0" y="55" size="' + c.daySize + '" color="' + c.dayColor + '" />',
       ];
@@ -1219,11 +1221,11 @@ JCM.TEMPLATES = [
         '  <Group x="#marginL" y="0" w="#safeW">',
         '    <Text text="' + JCM.escXml(c.city1) + '" x="0" y="' + cityY1 + '" size="13" color="' + c.dateColor + '" />',
         '    <Text textExp="formatDate(\'HH:mm\', #utcNow)" x="0" y="' + timeY1 + '" size="' + ts + '" color="' + c.timeColor1 + '" bold="true" />',
-        '    <Text textExp="formatDate(\'MM/dd EEEE\', #utcNow)" x="0" y="' + Math.round(dateY1) + '" size="13" color="' + c.dateColor + '" alpha="0.6" />',
+        '    <Text textExp="formatDate(\'MM/dd EEEE\', #utcNow)" x="0" y="' + Math.round(dateY1) + '" size="13" color="' + c.dateColor + '" alpha="153" />',
         '    <Rectangle x="0" y="' + divY + '" w="#safeW" h="1" fillColor="' + c.dividerColor + '" />',
         '    <Text text="' + JCM.escXml(c.city2) + '" x="0" y="' + cityY2 + '" size="13" color="' + c.dateColor + '" />',
         '    <Text textExp="formatDate(\'HH:mm\', #utcNow2)" x="0" y="' + timeY2 + '" size="' + ts + '" color="' + c.timeColor2 + '" bold="true" />',
-        '    <Text textExp="formatDate(\'MM/dd EEEE\', #utcNow2)" x="0" y="' + Math.round(dateY2) + '" size="13" color="' + c.dateColor + '" alpha="0.6" />',
+        '    <Text textExp="formatDate(\'MM/dd EEEE\', #utcNow2)" x="0" y="' + Math.round(dateY2) + '" size="13" color="' + c.dateColor + '" alpha="153" />',
         '  </Group>',
       ].join('\n');
     },
@@ -1287,7 +1289,7 @@ JCM.TEMPLATES = [
       }
       lines.push('    <Text textExp="' + textExpr + '" x="0" y="50" size="' + c.textSize + '" color="' + c.textColor + '" w="#safeW" multiLine="true" />');
       lines.push('    <Rectangle x="0" y="42" w="24" h="3" fillColor="' + c.accentColor + '" cornerRadius="1.5" />');
-      lines.push('    <Text textExp="formatDate(\'MM/dd EEEE\', #time_sys)" x="0" y="(#view_height - 50)" size="12" color="' + c.dayColor + '" alpha="0.5" />');
+      lines.push('    <Text textExp="formatDate(\'MM/dd EEEE\', #time_sys)" x="0" y="(#view_height - 50)" size="12" color="' + c.dayColor + '" alpha="128" />');
       lines.push('  </Group>');
       return lines.join('\n');
     },
@@ -1336,8 +1338,8 @@ JCM.TEMPLATES = [
         '  <Circle x="#cx" y="120" r="#ringR" fillColor="' + c.trackColor + '" />',
         '  <Circle x="#cx" y="120" r="(#ringR - #ringW)" fillColor="' + c.bgColor + '" />',
         '  <Text textExp="#pct" x="(#cx - 50)" y="80" w="100" size="48" color="' + c.textColor + '" textAlign="center" bold="true" />',
-        '  <Text text="' + unit + '" x="(#cx - 20)" y="138" size="16" color="' + c.labelColor + '" alpha="0.6" />',
-        '  <Text text="' + label + '" x="(#cx - 30)" y="220" w="60" size="14" color="' + c.labelColor + '" alpha="0.5" textAlign="center" />',
+        '  <Text text="' + unit + '" x="(#cx - 20)" y="138" size="16" color="' + c.labelColor + '" alpha="153" />',
+        '  <Text text="' + label + '" x="(#cx - 30)" y="220" w="60" size="14" color="' + c.labelColor + '" alpha="128" textAlign="center" />',
       ].join('\n');
     },
   },
@@ -1373,7 +1375,7 @@ JCM.TEMPLATES = [
         // Steps - bottom left
         '    <Text text="步数" x="0" y="110" size="11" color="' + c.dimColor + '" />',
         '    <Text textExp="#step_count" x="0" y="128" size="24" color="' + c.textColor + '" bold="true" />',
-        '    <Text text="步" x="0" y="158" size="11" color="' + c.dimColor + '" alpha="0.6" />',
+        '    <Text text="步" x="0" y="158" size="11" color="' + c.dimColor + '" alpha="153" />',
         // Battery - bottom right
         '    <Text text="电量" x="#colW" y="110" size="11" color="' + c.dimColor + '" />',
         '    <Text textExp="(#battery_level + \'%\')" x="#colW" y="128" size="24" color="' + c.textColor + '" bold="true" />',
@@ -1381,7 +1383,7 @@ JCM.TEMPLATES = [
         '    <Rectangle x="0" y="178" w="#safeW" h="1" fillColor="#1a1f2e" />',
         '    <Text textExp="#weather_desc" x="0" y="196" size="14" color="' + c.accentColor + '" />',
         '    <Text textExp="(#weather_temp + \'°\')" x="#colW" y="196" size="18" color="' + c.textColor + '" />',
-        '    <Text textExp="(\'湿度 \' + #weather_humidity + \'%\')" x="0" y="218" size="11" color="' + c.dimColor + '" alpha="0.5" />',
+        '    <Text textExp="(\'湿度 \' + #weather_humidity + \'%\')" x="0" y="218" size="11" color="' + c.dimColor + '" alpha="128" />',
         '  </Group>',
       ].join('\n');
     },
