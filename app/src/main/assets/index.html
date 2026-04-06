@@ -594,6 +594,33 @@ kbd{
   background: none; border: none; cursor: pointer; font-size: 14px;
   padding: 2px 4px; flex-shrink: 0;
 }
+
+/* ─── Color Swatches (inline) ─── */
+.color-swatches{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;max-width:220px}
+.color-dot{width:16px;height:16px;border-radius:3px;cursor:pointer;border:2px solid transparent;transition:var(--transition);flex-shrink:0}
+.color-dot:hover{border-color:var(--accent);transform:scale(1.3)}
+
+/* ─── Context Menu ─── */
+.context-menu{position:fixed;z-index:10000;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 0;min-width:160px;box-shadow:var(--shadow)}
+.ctx-item{padding:8px 16px;font-size:13px;cursor:pointer;transition:var(--transition);display:flex;align-items:center;gap:8px}
+.ctx-item:hover{background:var(--accent-glow);color:var(--accent)}
+.ctx-divider{height:1px;background:var(--border);margin:4px 0}
+
+/* ─── Element drag sort ─── */
+.el-item{cursor:grab;user-select:none}
+.el-item:active{cursor:grabbing;opacity:0.7}
+.el-item.drag-over{border-top:2px solid var(--accent)}
+
+/* ─── Size label ─── */
+.size-label{pointer-events:none;font-family:'SF Mono',Monaco,monospace}
+
+/* ─── Template favorite ─── */
+.tpl-card{position:relative}
+.tpl-fav{position:absolute;top:6px;right:6px;background:none;border:none;font-size:16px;cursor:pointer;z-index:2;opacity:0.4;transition:var(--transition);padding:4px;line-height:1}
+.tpl-fav:hover,.tpl-fav.active{opacity:1}
+
+/* ─── Lottie element ─── */
+.el-badge[data-type="lottie"]{background:#9b59b6}
 </style>
 </head>
 <body>
@@ -811,6 +838,20 @@ kbd{
 <div class="toast" id="toast"></div>
 
 <!-- JS Modules (loaded in order) -->
+<!-- Right-click Context Menu -->
+<div class="context-menu" id="contextMenu" style="display:none">
+  <div class="ctx-item" data-ctx="duplicate">📋 复制元素</div>
+  <div class="ctx-item" data-ctx="delete">🗑️ 删除</div>
+  <div class="ctx-divider"></div>
+  <div class="ctx-item" data-ctx="lock">🔒 锁定/解锁</div>
+  <div class="ctx-item" data-ctx="front">⬆️ 置顶</div>
+  <div class="ctx-item" data-ctx="back">⬇️ 置底</div>
+  <div class="ctx-divider"></div>
+  <div class="ctx-item" data-ctx="align-left">⬅ 左对齐</div>
+  <div class="ctx-item" data-ctx="align-center">↔ 居中</div>
+  <div class="ctx-item" data-ctx="align-right">➡ 右对齐</div>
+</div>
+
 <!-- Inlined by build.js -->
 <script>/*!
 
@@ -836,6 +877,37 @@ JCM.escHtml = function (s) {
     .replace(/"/g, '&quot;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+};
+
+// ─── 颜色预设 ──────────────────────────────────────────────────────
+JCM.COLOR_PRESETS = [
+  '#ffffff','#f5f5f5','#e0e0e0','#9e9e9e','#616161','#212121','#000000',
+  '#f44336','#e91e63','#9c27b0','#673ab7','#3f51b5','#2196f3','#03a9f4',
+  '#00bcd4','#009688','#4caf50','#8bc34a','#cddc39','#ffeb3b','#ffc107',
+  '#ff9800','#ff5722','#795548','#607d8b'
+];
+JCM.getRecentColors = function () {
+  try { return JSON.parse(localStorage.getItem('jcm-recent-colors') || '[]'); } catch (e) { return []; }
+};
+JCM.addRecentColor = function (color) {
+  var recent = JCM.getRecentColors();
+  var idx = recent.indexOf(color);
+  if (idx >= 0) recent.splice(idx, 1);
+  recent.unshift(color);
+  if (recent.length > 12) recent = recent.slice(0, 12);
+  try { localStorage.setItem('jcm-recent-colors', JSON.stringify(recent)); } catch (e) {}
+};
+
+// ─── 模板收藏 ──────────────────────────────────────────────────────
+JCM.getFavorites = function () {
+  try { return JSON.parse(localStorage.getItem('jcm-favorites') || '[]'); } catch (e) { return []; }
+};
+JCM.toggleFavorite = function (id) {
+  var favs = JCM.getFavorites();
+  var idx = favs.indexOf(id);
+  if (idx >= 0) favs.splice(idx, 1); else favs.push(id);
+  try { localStorage.setItem('jcm-favorites', JSON.stringify(favs)); } catch (e) {}
+  return favs.indexOf(id) >= 0;
 };
 
 JCM.createStore = function (init) {
@@ -2061,6 +2133,19 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
       var ew = (el.w || 100) * self.scale, eh = (el.h || 100) * self.scale;
       rh = '<div data-resize-idx="' + i + '" style="position:absolute;left:' + (px + ew - 6) + 'px;top:' + (py + eh - 6) + 'px;width:10px;height:10px;background:#6c5ce7;border:1px solid #fff;border-radius:2px;cursor:nwse-resize;z-index:20"></div>';
     }
+    // Size label for selected element
+    var sizeLabel = '';
+    if (i === selIdx) {
+      var elW = el.w || (el.r ? el.r * 2 : 0) || 0;
+      var elH = el.h || (el.r ? el.r * 2 : 0) || 0;
+      var labelY = py + elH * self.scale + 4;
+      sizeLabel = '<div class="size-label" style="position:absolute;left:' + px + 'px;top:' + labelY + 'px;font-size:10px;color:var(--accent);background:rgba(108,92,231,0.15);padding:1px 6px;border-radius:3px;white-space:nowrap;z-index:20">x:' + el.x + ' y:' + el.y + ' · ' + elW + '×' + elH + '</div>';
+    }
+    // Animation badge
+    var animBadge = '';
+    if (el.animationName) {
+      animBadge = '<div style="position:absolute;left:' + px + 'px;top:' + (py - 14) + 'px;font-size:9px;color:#fdcb6e;background:rgba(253,203,110,0.15);padding:0 4px;border-radius:3px;z-index:20">🎬 ' + el.animationName + '</div>';
+    }
     switch (el.type) {
       case 'text': {
         var ta = el.textAlign && el.textAlign !== 'left' ? 'text-align:' + el.textAlign + ';' : '';
@@ -2090,18 +2175,18 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
       }
       case 'rectangle':
         var rectBg = el.fillColor2 ? 'background:linear-gradient(135deg,' + el.color + ',' + el.fillColor2 + ')' : 'background:' + el.color;
-        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + el.w * self.scale + 'px;height:' + el.h * self.scale + 'px;' + rectBg + ';border-radius:' + (el.radius || 0) * self.scale + 'px;' + op + dc + '"></div>' + rh;
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + el.w * self.scale + 'px;height:' + el.h * self.scale + 'px;' + rectBg + ';border-radius:' + (el.radius || 0) * self.scale + 'px;' + op + dc + '"></div>' + rh + sizeLabel + animBadge;
       case 'circle':
         return '<div data-el-idx="' + i + '" style="position:absolute;left:' + (self.camW + (el.x - el.r) * self.scale) + 'px;top:' + (el.y - el.r) * self.scale + 'px;width:' + el.r * 2 * self.scale + 'px;height:' + el.r * 2 * self.scale + 'px;background:' + el.color + ';border-radius:50%;' + op + dc + '"></div>';
       case 'image': {
         var fi = el.fileName ? files[el.fileName] : null;
-        if (fi) return '<img data-el-idx="' + i + '" src="' + fi.dataUrl + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 100) * self.scale + 'px;height:' + (el.h || 100) * self.scale + 'px;object-fit:cover;border-radius:2px;' + dc + '">' + rh;
-        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 100) * self.scale + 'px;height:' + (el.h || 100) * self.scale + 'px;background:#222;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#666;' + dc + '">🖼</div>' + rh;
+        if (fi) return '<img data-el-idx="' + i + '" src="' + fi.dataUrl + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 100) * self.scale + 'px;height:' + (el.h || 100) * self.scale + 'px;object-fit:cover;border-radius:2px;' + dc + '">' + rh + sizeLabel + animBadge;
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 100) * self.scale + 'px;height:' + (el.h || 100) * self.scale + 'px;background:#222;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#666;' + dc + '">🖼</div>' + rh + sizeLabel + animBadge;
       }
       case 'video': {
         var fi2 = el.fileName ? files[el.fileName] : null;
-        if (fi2) return '<video data-el-idx="' + i + '" src="' + fi2.dataUrl + '" muted loop autoplay style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 240) * self.scale + 'px;height:' + (el.h || 135) * self.scale + 'px;object-fit:cover;border-radius:2px;' + dc + '"></video>' + rh;
-        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 240) * self.scale + 'px;height:' + (el.h || 135) * self.scale + 'px;background:#1a1a2e;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#555;' + dc + '">🎬</div>' + rh;
+        if (fi2) return '<video data-el-idx="' + i + '" src="' + fi2.dataUrl + '" muted loop autoplay style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 240) * self.scale + 'px;height:' + (el.h || 135) * self.scale + 'px;object-fit:cover;border-radius:2px;' + dc + '"></video>' + rh + sizeLabel + animBadge;
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 240) * self.scale + 'px;height:' + (el.h || 135) * self.scale + 'px;background:#1a1a2e;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#555;' + dc + '">🎬</div>' + rh + sizeLabel + animBadge;
       }
       case 'arc': {
         var arcR = el.r || 40;
@@ -2125,9 +2210,12 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
       case 'progress': {
         var pw = (el.w || 200) * self.scale, ph = (el.h || 8) * self.scale;
         var pv = (el.value || 60) / 100;
-        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + (self.camW + el.x * self.scale) + 'px;top:' + (el.y * self.scale) + 'px;width:' + pw + 'px;height:' + ph + 'px;background:' + (el.bgColor || '#333') + ';border-radius:' + ((el.radius || 4) * self.scale) + 'px;' + dc + '"><div style="width:' + (pv * 100) + '%;height:100%;background:' + el.color + ';border-radius:inherit"></div></div>' + rh;
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + (self.camW + el.x * self.scale) + 'px;top:' + (el.y * self.scale) + 'px;width:' + pw + 'px;height:' + ph + 'px;background:' + (el.bgColor || '#333') + ';border-radius:' + ((el.radius || 4) * self.scale) + 'px;' + dc + '"><div style="width:' + (pv * 100) + '%;height:100%;background:' + el.color + ';border-radius:inherit"></div></div>' + rh + sizeLabel + animBadge;
       }
-      default: return '';
+      case 'lottie': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + (self.camW + el.x * self.scale) + 'px;top:' + (el.y * self.scale) + 'px;width:' + ((el.w || 120) * self.scale) + 'px;height:' + ((el.h || 120) * self.scale) + 'px;background:var(--surface2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text2);border:1px dashed var(--border)' + dc + '"' + sa + '>🎭 Lottie</div>' + rh + sizeLabel + animBadge;
+      }
+      default: return sizeLabel + animBadge;
     }
   }).join('');
 };
@@ -2143,6 +2231,7 @@ JCM.ElementDefaults = {
   line: function () { return { type: 'rectangle', x: 10, y: 100, w: 200, h: 2, color: '#555555', radius: 1, opacity: 60, _isLine: true, locked: false }; },
   arc: function () { return { type: 'arc', x: 50, y: 50, r: 40, startAngle: 0, endAngle: 270, color: '#6c5ce7', strokeWidth: 6, locked: false }; },
   progress: function () { return { type: 'progress', x: 10, y: 100, w: 200, h: 8, color: '#6c5ce7', bgColor: '#333333', value: 60, radius: 4, locked: false }; },
+  lottie: function () { return { type: 'lottie', x: 50, y: 50, w: 120, h: 120, fileName: '', speed: 1, locked: false }; },
 };
 
 JCM.isInCameraZone = function (el, device) {
@@ -2270,7 +2359,32 @@ JCM.renderElementEditor = function (el, idx, device) {
       colorField('背景色', el.bgColor || '#333333', 'bgColor', idx) +
       field('圆角', '<input type="number" value="' + (el.radius || 4) + '" data-prop="radius" data-idx="' + idx + '">') +
       '</div>';
+  } else if (el.type === 'lottie') {
+    html += '<div class="config-grid">' +
+      field('X', '<input type="number" value="' + el.x + '" data-prop="x" data-idx="' + idx + '">') +
+      field('Y', '<input type="number" value="' + el.y + '" data-prop="y" data-idx="' + idx + '">') +
+      field('宽', '<input type="number" value="' + (el.w || 120) + '" data-prop="w" data-idx="' + idx + '">') +
+      field('高', '<input type="number" value="' + (el.h || 120) + '" data-prop="h" data-idx="' + idx + '">') +
+      field('速度', '<input type="range" min="0.1" max="3" step="0.1" value="' + (el.speed || 1) + '" data-prop="speed" data-idx="' + idx + '">') +
+      '</div>';
   }
+
+  // 动画配置（所有元素通用）
+  html += '<div class="config-section" style="margin-top:12px"><div class="config-section-title"><span>▸</span> 动画</div><div class="config-grid">';
+  html += '<div class="field"><label>动画类型</label><select data-prop="animationName" data-idx="' + idx + '">' +
+    '<option value=""' + (!el.animationName ? ' selected' : '') + '>无</option>' +
+    '<option value="alpha"' + (el.animationName === 'alpha' ? ' selected' : '') + '>淡入淡出</option>' +
+    '<option value="slideTop"' + (el.animationName === 'slideTop' ? ' selected' : '') + '>从上滑入</option>' +
+    '<option value="slideBottom"' + (el.animationName === 'slideBottom' ? ' selected' : '') + '>从下滑入</option>' +
+    '<option value="slideLeft"' + (el.animationName === 'slideLeft' ? ' selected' : '') + '>从左滑入</option>' +
+    '<option value="slideRight"' + (el.animationName === 'slideRight' ? ' selected' : '') + '>从右滑入</option>' +
+    '<option value="scale"' + (el.animationName === 'scale' ? ' selected' : '') + '>缩放</option>' +
+    '<option value="rotate"' + (el.animationName === 'rotate' ? ' selected' : '') + '>旋转</option></select></div>';
+  html += '<div class="field"><label>时长(ms): <strong>' + (el.animationDuration || 500) + '</strong></label><input type="range" min="100" max="3000" step="100" value="' + (el.animationDuration || 500) + '" data-prop="animationDuration" data-idx="' + idx + '"></div>';
+  html += '<div class="field"><label>延迟(ms): <strong>' + (el.animationDelay || 0) + '</strong></label><input type="range" min="0" max="5000" step="100" value="' + (el.animationDelay || 0) + '" data-prop="animationDelay" data-idx="' + idx + '"></div>';
+  html += '<div class="field"><label>循环次数</label><input type="number" min="1" max="999" value="' + (el.animationRepeat || 1) + '" data-prop="animationRepeat" data-idx="' + idx + '" style="width:80px"></div>';
+  html += '<label class="check-label"><input type="checkbox" data-prop="animationInfinite" data-idx="' + idx + '"' + (el.animationInfinite ? ' checked' : '') + '> 无限循环</label>';
+  html += '</div></div>';
 
   html += '</div>';
   return html;
@@ -3047,9 +3161,17 @@ JCM.selectTemplate = function (id) {
 
 // ─── Template Grid ────────────────────────────────────────────────
 function renderTplGrid() {
-  document.getElementById('tplGrid').innerHTML = JCM.TEMPLATES.map(function (t) {
+  var favs = JCM.getFavorites();
+  var sorted = JCM.TEMPLATES.slice().sort(function (a, b) {
+    var aFav = favs.indexOf(a.id) >= 0 ? 0 : 1;
+    var bFav = favs.indexOf(b.id) >= 0 ? 0 : 1;
+    return aFav - bFav;
+  });
+  document.getElementById('tplGrid').innerHTML = sorted.map(function (t) {
     var thumb = generateTplThumbnail(t);
+    var isFav = favs.indexOf(t.id) >= 0;
     return '<div class="tpl-card' + (_tpl && _tpl.id === t.id ? ' active' : '') + '" data-tpl="' + t.id + '">' +
+      '<button class="tpl-fav' + (isFav ? ' active' : '') + '" data-fav="' + t.id + '">' + (isFav ? '⭐' : '☆') + '</button>' +
       '<div class="tpl-thumb">' + thumb + '</div>' +
       '<div class="tpl-card-name">' + t.name + '</div>' +
       '<div class="tpl-card-desc">' + t.desc + '</div></div>';
@@ -3106,6 +3228,7 @@ function renderConfig() {
     '<button class="el-btn" data-add="progress"><span class="el-btn-icon">▰</span> 进度条</button>' +
     '<button class="el-btn" data-pick="image"><span class="el-btn-icon">🖼</span> 图片</button>' +
     '<button class="el-btn" data-pick="video"><span class="el-btn-icon">🎬</span> 视频</button>' +
+    '<button class="el-btn" data-add="lottie"><span class="el-btn-icon">🎭</span> Lottie</button>' +
     '<button class="el-btn" data-action="importZip" title="导入 MAML ZIP"><span class="el-btn-icon">📦</span> 导入ZIP</button>' +
     '</div>';
 
@@ -3124,7 +3247,7 @@ function renderConfig() {
       : (el.type === 'rectangle' && el.h <= 3 && el.radius >= 1) ? 'line'
       : el.type + ' #' + (i + 1);
     var inCam = JCM.isInCameraZone(el, device);
-    html += '<div class="el-item' + (_selIdx === i ? ' active' : '') + '" data-sel="' + i + '">' +
+    html += '<div class="el-item' + (_selIdx === i ? ' active' : '') + '" draggable="true" data-sel="' + i + '">' +
       '<span class="el-badge">' + el.type + '</span>' +
       '<span class="el-item-name">' + escH(label) + '</span>' +
       (inCam ? '<span title="在摄像头遮挡区内" style="color:#e17055;font-size:14px">⚠️</span>' : '') +
@@ -3233,7 +3356,13 @@ function renderField(f) {
     case 'textarea':
       return '<div class="field"><label>' + f.label + '</label><textarea rows="3" data-cfg="' + f.key + '">' + escH(String(v)) + '</textarea></div>';
     case 'color':
-      return '<div class="field field-color"><label>' + f.label + '</label><input type="color" value="' + v + '" data-cfg="' + f.key + '"><span class="color-val">' + v + '</span></div>';
+      var presets = JCM.COLOR_PRESETS || [];
+      var recent = (JCM.getRecentColors && JCM.getRecentColors()) || [];
+      var swatchHtml = '<div class="color-swatches">';
+      recent.forEach(function (c) { swatchHtml += '<span class="color-dot" style="background:' + c + '" data-cfg-color="' + f.key + '" data-color="' + c + '"></span>'; });
+      presets.forEach(function (c) { swatchHtml += '<span class="color-dot" style="background:' + c + '" data-cfg-color="' + f.key + '" data-color="' + c + '"></span>'; });
+      swatchHtml += '</div>';
+      return '<div class="field field-color"><label>' + f.label + '</label><input type="color" value="' + v + '" data-cfg="' + f.key + '"><span class="color-val">' + v + '</span>' + swatchHtml + '</div>';
     case 'range':
       return '<div class="field"><label>' + f.label + ': <strong>' + v + '</strong></label><input type="range" min="' + f.min + '" max="' + f.max + '" value="' + v + '" data-cfg="' + f.key + '"></div>';
     case 'select':
@@ -3448,6 +3577,18 @@ function generateCustomMAML(device) {
         lines.push('    <Rectangle x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 200) + '" h="' + (el.h || 8) + '" fillColor="' + (el.bgColor || '#333333') + '" cornerRadius="' + (el.radius || 4) + '" />');
         lines.push('    <Rectangle x="' + el.x + '" y="' + el.y + '" w="' + Math.round((el.w || 200) * (el.value || 60) / 100) + '" h="' + (el.h || 8) + '" fillColor="' + el.color + '" cornerRadius="' + (el.radius || 4) + '" />');
         break;
+      case 'lottie':
+        lines.push('    <Lottie src="lottie/' + JCM.escXml(el.src || el.fileName || '') + '" x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 120) + '" h="' + (el.h || 120) + '" speed="' + (el.speed || 1) + '" />');
+        break;
+    }
+    // 动画属性追加到当前元素（修改最后push的行）
+    if (el.animationName && lines.length > 0) {
+      var lastLine = lines[lines.length - 1];
+      if (lastLine.indexOf('/>') > 0) {
+        var anim = ' animationName="' + el.animationName + '" animationDuration="' + (el.animationDuration || 500) + '" animationDelay="' + (el.animationDelay || 0) + '" animationRepeat="' + (el.animationRepeat || 1) + '"';
+        if (el.animationInfinite) anim += ' animationInfinite="true"';
+        lines[lines.length - 1] = lastLine.replace(' />', anim + ' />');
+      }
     }
   });
   return lines.join('\n');
@@ -4462,6 +4603,113 @@ function setupEvents() {
       _pendingAdd = 'video'; _pendingReplace = -1;
       document.getElementById('fileVideoPick').dispatchEvent(new Event('change'));
     }
+  });
+
+  // ── 右键菜单 ──
+  var ctxMenu = document.getElementById('contextMenu');
+  var ctxIdx = -1;
+  document.getElementById('previewContent').addEventListener('contextmenu', function(e) {
+    var elTarget = e.target.closest('[data-el-idx]');
+    if (!elTarget) return;
+    e.preventDefault();
+    ctxIdx = parseInt(elTarget.dataset.elIdx, 10);
+    if (isNaN(ctxIdx)) return;
+    _selIdx = ctxIdx;
+    renderConfig();
+    ctxMenu.style.display = '';
+    ctxMenu.style.left = Math.min(e.clientX, window.innerWidth - 180) + 'px';
+    ctxMenu.style.top = Math.min(e.clientY, window.innerHeight - 250) + 'px';
+  });
+  document.addEventListener('click', function() { ctxMenu.style.display = 'none'; });
+  ctxMenu.addEventListener('click', function(e) {
+    var item = e.target.closest('.ctx-item');
+    if (!item || ctxIdx < 0) return;
+    var action = item.dataset.ctx;
+    ctxMenu.style.display = 'none';
+    switch(action) {
+      case 'duplicate':
+        captureState();
+        var clone = JSON.parse(JSON.stringify(_elements[ctxIdx]));
+        clone.x += 10; clone.y += 10;
+        _elements.push(clone); _selIdx = _elements.length - 1;
+        _dirty = true; renderConfig();
+        toast('✅ 已复制元素', 'success'); break;
+      case 'delete': JCM.removeElement(ctxIdx); break;
+      case 'lock':
+        _elements[ctxIdx].locked = !_elements[ctxIdx].locked;
+        renderConfig();
+        toast(_elements[ctxIdx].locked ? '🔒 已锁定' : '🔓 已解锁', 'info'); break;
+      case 'front':
+        captureState();
+        var el = _elements.splice(ctxIdx, 1)[0];
+        _elements.push(el); _selIdx = _elements.length - 1;
+        _dirty = true; renderConfig(); break;
+      case 'back':
+        captureState();
+        var el2 = _elements.splice(ctxIdx, 1)[0];
+        _elements.unshift(el2); _selIdx = 0;
+        _dirty = true; renderConfig(); break;
+      case 'align-left': JCM.alignElement(ctxIdx, 'left'); break;
+      case 'align-center': JCM.alignElement(ctxIdx, 'hcenter'); break;
+      case 'align-right': JCM.alignElement(ctxIdx, 'right'); break;
+    }
+  });
+
+  // ── 颜色面板点击 ──
+  document.getElementById('cfgContent').addEventListener('click', function(e) {
+    var colorDot = e.target.closest('.color-dot');
+    if (colorDot) {
+      var key = colorDot.dataset.cfgColor;
+      var color = colorDot.dataset.color;
+      _cfg[key] = color;
+      JCM.addRecentColor(color);
+      var input = document.querySelector('input[type="color"][data-cfg="' + key + '"]');
+      if (input) { input.value = color; var cv = input.nextElementSibling; if (cv) cv.textContent = color; }
+      _dirty = true; _autoPreview();
+      return;
+    }
+    // 模板收藏
+    var favBtn = e.target.closest('[data-fav]');
+    if (favBtn) {
+      e.stopPropagation();
+      var favId = favBtn.dataset.fav;
+      var isFav = JCM.toggleFavorite(favId);
+      favBtn.textContent = isFav ? '⭐' : '☆';
+      favBtn.classList.toggle('active', isFav);
+      toast(isFav ? '⭐ 已收藏' : '已取消收藏', 'info');
+      return;
+    }
+  });
+
+  // ── 元素列表拖拽排序 ──
+  var _dragSortIdx = -1;
+  document.getElementById('cfgContent').addEventListener('mousedown', function(e) {
+    var item = e.target.closest('.el-item');
+    if (!item || e.target.closest('.el-item-del') || e.target.closest('.el-z-btn') || e.target.closest('.el-lock-btn')) return;
+    _dragSortIdx = parseInt(item.dataset.sel, 10);
+  });
+  document.getElementById('cfgContent').addEventListener('dragover', function(e) {
+    e.preventDefault();
+    var item = e.target.closest('.el-item');
+    if (item) {
+      document.querySelectorAll('.el-item').forEach(function(el) { el.classList.remove('drag-over'); });
+      item.classList.add('drag-over');
+    }
+  });
+  document.getElementById('cfgContent').addEventListener('drop', function(e) {
+    e.preventDefault();
+    document.querySelectorAll('.el-item').forEach(function(el) { el.classList.remove('drag-over'); });
+    var item = e.target.closest('.el-item');
+    if (!item || _dragSortIdx < 0) return;
+    var dropIdx = parseInt(item.dataset.sel, 10);
+    if (dropIdx === _dragSortIdx) return;
+    captureState();
+    var moved = _elements.splice(_dragSortIdx, 1)[0];
+    _elements.splice(dropIdx, 0, moved);
+    _selIdx = dropIdx; _dirty = true;
+    renderConfig();
+    toast('📐 已调整顺序', 'success');
+    _dragSortIdx = -1;
   });
 }
 

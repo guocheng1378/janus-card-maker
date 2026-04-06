@@ -233,9 +233,17 @@ JCM.selectTemplate = function (id) {
 
 // ─── Template Grid ────────────────────────────────────────────────
 function renderTplGrid() {
-  document.getElementById('tplGrid').innerHTML = JCM.TEMPLATES.map(function (t) {
+  var favs = JCM.getFavorites();
+  var sorted = JCM.TEMPLATES.slice().sort(function (a, b) {
+    var aFav = favs.indexOf(a.id) >= 0 ? 0 : 1;
+    var bFav = favs.indexOf(b.id) >= 0 ? 0 : 1;
+    return aFav - bFav;
+  });
+  document.getElementById('tplGrid').innerHTML = sorted.map(function (t) {
     var thumb = generateTplThumbnail(t);
+    var isFav = favs.indexOf(t.id) >= 0;
     return '<div class="tpl-card' + (_tpl && _tpl.id === t.id ? ' active' : '') + '" data-tpl="' + t.id + '">' +
+      '<button class="tpl-fav' + (isFav ? ' active' : '') + '" data-fav="' + t.id + '">' + (isFav ? '⭐' : '☆') + '</button>' +
       '<div class="tpl-thumb">' + thumb + '</div>' +
       '<div class="tpl-card-name">' + t.name + '</div>' +
       '<div class="tpl-card-desc">' + t.desc + '</div></div>';
@@ -292,6 +300,7 @@ function renderConfig() {
     '<button class="el-btn" data-add="progress"><span class="el-btn-icon">▰</span> 进度条</button>' +
     '<button class="el-btn" data-pick="image"><span class="el-btn-icon">🖼</span> 图片</button>' +
     '<button class="el-btn" data-pick="video"><span class="el-btn-icon">🎬</span> 视频</button>' +
+    '<button class="el-btn" data-add="lottie"><span class="el-btn-icon">🎭</span> Lottie</button>' +
     '<button class="el-btn" data-action="importZip" title="导入 MAML ZIP"><span class="el-btn-icon">📦</span> 导入ZIP</button>' +
     '</div>';
 
@@ -310,7 +319,7 @@ function renderConfig() {
       : (el.type === 'rectangle' && el.h <= 3 && el.radius >= 1) ? 'line'
       : el.type + ' #' + (i + 1);
     var inCam = JCM.isInCameraZone(el, device);
-    html += '<div class="el-item' + (_selIdx === i ? ' active' : '') + '" data-sel="' + i + '">' +
+    html += '<div class="el-item' + (_selIdx === i ? ' active' : '') + '" draggable="true" data-sel="' + i + '">' +
       '<span class="el-badge">' + el.type + '</span>' +
       '<span class="el-item-name">' + escH(label) + '</span>' +
       (inCam ? '<span title="在摄像头遮挡区内" style="color:#e17055;font-size:14px">⚠️</span>' : '') +
@@ -419,7 +428,13 @@ function renderField(f) {
     case 'textarea':
       return '<div class="field"><label>' + f.label + '</label><textarea rows="3" data-cfg="' + f.key + '">' + escH(String(v)) + '</textarea></div>';
     case 'color':
-      return '<div class="field field-color"><label>' + f.label + '</label><input type="color" value="' + v + '" data-cfg="' + f.key + '"><span class="color-val">' + v + '</span></div>';
+      var presets = JCM.COLOR_PRESETS || [];
+      var recent = (JCM.getRecentColors && JCM.getRecentColors()) || [];
+      var swatchHtml = '<div class="color-swatches">';
+      recent.forEach(function (c) { swatchHtml += '<span class="color-dot" style="background:' + c + '" data-cfg-color="' + f.key + '" data-color="' + c + '"></span>'; });
+      presets.forEach(function (c) { swatchHtml += '<span class="color-dot" style="background:' + c + '" data-cfg-color="' + f.key + '" data-color="' + c + '"></span>'; });
+      swatchHtml += '</div>';
+      return '<div class="field field-color"><label>' + f.label + '</label><input type="color" value="' + v + '" data-cfg="' + f.key + '"><span class="color-val">' + v + '</span>' + swatchHtml + '</div>';
     case 'range':
       return '<div class="field"><label>' + f.label + ': <strong>' + v + '</strong></label><input type="range" min="' + f.min + '" max="' + f.max + '" value="' + v + '" data-cfg="' + f.key + '"></div>';
     case 'select':
@@ -634,6 +649,18 @@ function generateCustomMAML(device) {
         lines.push('    <Rectangle x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 200) + '" h="' + (el.h || 8) + '" fillColor="' + (el.bgColor || '#333333') + '" cornerRadius="' + (el.radius || 4) + '" />');
         lines.push('    <Rectangle x="' + el.x + '" y="' + el.y + '" w="' + Math.round((el.w || 200) * (el.value || 60) / 100) + '" h="' + (el.h || 8) + '" fillColor="' + el.color + '" cornerRadius="' + (el.radius || 4) + '" />');
         break;
+      case 'lottie':
+        lines.push('    <Lottie src="lottie/' + JCM.escXml(el.src || el.fileName || '') + '" x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 120) + '" h="' + (el.h || 120) + '" speed="' + (el.speed || 1) + '" />');
+        break;
+    }
+    // 动画属性追加到当前元素（修改最后push的行）
+    if (el.animationName && lines.length > 0) {
+      var lastLine = lines[lines.length - 1];
+      if (lastLine.indexOf('/>') > 0) {
+        var anim = ' animationName="' + el.animationName + '" animationDuration="' + (el.animationDuration || 500) + '" animationDelay="' + (el.animationDelay || 0) + '" animationRepeat="' + (el.animationRepeat || 1) + '"';
+        if (el.animationInfinite) anim += ' animationInfinite="true"';
+        lines[lines.length - 1] = lastLine.replace(' />', anim + ' />');
+      }
     }
   });
   return lines.join('\n');
@@ -1648,6 +1675,113 @@ function setupEvents() {
       _pendingAdd = 'video'; _pendingReplace = -1;
       document.getElementById('fileVideoPick').dispatchEvent(new Event('change'));
     }
+  });
+
+  // ── 右键菜单 ──
+  var ctxMenu = document.getElementById('contextMenu');
+  var ctxIdx = -1;
+  document.getElementById('previewContent').addEventListener('contextmenu', function(e) {
+    var elTarget = e.target.closest('[data-el-idx]');
+    if (!elTarget) return;
+    e.preventDefault();
+    ctxIdx = parseInt(elTarget.dataset.elIdx, 10);
+    if (isNaN(ctxIdx)) return;
+    _selIdx = ctxIdx;
+    renderConfig();
+    ctxMenu.style.display = '';
+    ctxMenu.style.left = Math.min(e.clientX, window.innerWidth - 180) + 'px';
+    ctxMenu.style.top = Math.min(e.clientY, window.innerHeight - 250) + 'px';
+  });
+  document.addEventListener('click', function() { ctxMenu.style.display = 'none'; });
+  ctxMenu.addEventListener('click', function(e) {
+    var item = e.target.closest('.ctx-item');
+    if (!item || ctxIdx < 0) return;
+    var action = item.dataset.ctx;
+    ctxMenu.style.display = 'none';
+    switch(action) {
+      case 'duplicate':
+        captureState();
+        var clone = JSON.parse(JSON.stringify(_elements[ctxIdx]));
+        clone.x += 10; clone.y += 10;
+        _elements.push(clone); _selIdx = _elements.length - 1;
+        _dirty = true; renderConfig();
+        toast('✅ 已复制元素', 'success'); break;
+      case 'delete': JCM.removeElement(ctxIdx); break;
+      case 'lock':
+        _elements[ctxIdx].locked = !_elements[ctxIdx].locked;
+        renderConfig();
+        toast(_elements[ctxIdx].locked ? '🔒 已锁定' : '🔓 已解锁', 'info'); break;
+      case 'front':
+        captureState();
+        var el = _elements.splice(ctxIdx, 1)[0];
+        _elements.push(el); _selIdx = _elements.length - 1;
+        _dirty = true; renderConfig(); break;
+      case 'back':
+        captureState();
+        var el2 = _elements.splice(ctxIdx, 1)[0];
+        _elements.unshift(el2); _selIdx = 0;
+        _dirty = true; renderConfig(); break;
+      case 'align-left': JCM.alignElement(ctxIdx, 'left'); break;
+      case 'align-center': JCM.alignElement(ctxIdx, 'hcenter'); break;
+      case 'align-right': JCM.alignElement(ctxIdx, 'right'); break;
+    }
+  });
+
+  // ── 颜色面板点击 ──
+  document.getElementById('cfgContent').addEventListener('click', function(e) {
+    var colorDot = e.target.closest('.color-dot');
+    if (colorDot) {
+      var key = colorDot.dataset.cfgColor;
+      var color = colorDot.dataset.color;
+      _cfg[key] = color;
+      JCM.addRecentColor(color);
+      var input = document.querySelector('input[type="color"][data-cfg="' + key + '"]');
+      if (input) { input.value = color; var cv = input.nextElementSibling; if (cv) cv.textContent = color; }
+      _dirty = true; _autoPreview();
+      return;
+    }
+    // 模板收藏
+    var favBtn = e.target.closest('[data-fav]');
+    if (favBtn) {
+      e.stopPropagation();
+      var favId = favBtn.dataset.fav;
+      var isFav = JCM.toggleFavorite(favId);
+      favBtn.textContent = isFav ? '⭐' : '☆';
+      favBtn.classList.toggle('active', isFav);
+      toast(isFav ? '⭐ 已收藏' : '已取消收藏', 'info');
+      return;
+    }
+  });
+
+  // ── 元素列表拖拽排序 ──
+  var _dragSortIdx = -1;
+  document.getElementById('cfgContent').addEventListener('mousedown', function(e) {
+    var item = e.target.closest('.el-item');
+    if (!item || e.target.closest('.el-item-del') || e.target.closest('.el-z-btn') || e.target.closest('.el-lock-btn')) return;
+    _dragSortIdx = parseInt(item.dataset.sel, 10);
+  });
+  document.getElementById('cfgContent').addEventListener('dragover', function(e) {
+    e.preventDefault();
+    var item = e.target.closest('.el-item');
+    if (item) {
+      document.querySelectorAll('.el-item').forEach(function(el) { el.classList.remove('drag-over'); });
+      item.classList.add('drag-over');
+    }
+  });
+  document.getElementById('cfgContent').addEventListener('drop', function(e) {
+    e.preventDefault();
+    document.querySelectorAll('.el-item').forEach(function(el) { el.classList.remove('drag-over'); });
+    var item = e.target.closest('.el-item');
+    if (!item || _dragSortIdx < 0) return;
+    var dropIdx = parseInt(item.dataset.sel, 10);
+    if (dropIdx === _dragSortIdx) return;
+    captureState();
+    var moved = _elements.splice(_dragSortIdx, 1)[0];
+    _elements.splice(dropIdx, 0, moved);
+    _selIdx = dropIdx; _dirty = true;
+    renderConfig();
+    toast('📐 已调整顺序', 'success');
+    _dragSortIdx = -1;
   });
 }
 

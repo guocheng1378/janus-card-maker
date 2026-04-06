@@ -326,6 +326,19 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
       var ew = (el.w || 100) * self.scale, eh = (el.h || 100) * self.scale;
       rh = '<div data-resize-idx="' + i + '" style="position:absolute;left:' + (px + ew - 6) + 'px;top:' + (py + eh - 6) + 'px;width:10px;height:10px;background:#6c5ce7;border:1px solid #fff;border-radius:2px;cursor:nwse-resize;z-index:20"></div>';
     }
+    // Size label for selected element
+    var sizeLabel = '';
+    if (i === selIdx) {
+      var elW = el.w || (el.r ? el.r * 2 : 0) || 0;
+      var elH = el.h || (el.r ? el.r * 2 : 0) || 0;
+      var labelY = py + elH * self.scale + 4;
+      sizeLabel = '<div class="size-label" style="position:absolute;left:' + px + 'px;top:' + labelY + 'px;font-size:10px;color:var(--accent);background:rgba(108,92,231,0.15);padding:1px 6px;border-radius:3px;white-space:nowrap;z-index:20">x:' + el.x + ' y:' + el.y + ' · ' + elW + '×' + elH + '</div>';
+    }
+    // Animation badge
+    var animBadge = '';
+    if (el.animationName) {
+      animBadge = '<div style="position:absolute;left:' + px + 'px;top:' + (py - 14) + 'px;font-size:9px;color:#fdcb6e;background:rgba(253,203,110,0.15);padding:0 4px;border-radius:3px;z-index:20">🎬 ' + el.animationName + '</div>';
+    }
     switch (el.type) {
       case 'text': {
         var ta = el.textAlign && el.textAlign !== 'left' ? 'text-align:' + el.textAlign + ';' : '';
@@ -355,18 +368,18 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
       }
       case 'rectangle':
         var rectBg = el.fillColor2 ? 'background:linear-gradient(135deg,' + el.color + ',' + el.fillColor2 + ')' : 'background:' + el.color;
-        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + el.w * self.scale + 'px;height:' + el.h * self.scale + 'px;' + rectBg + ';border-radius:' + (el.radius || 0) * self.scale + 'px;' + op + dc + '"></div>' + rh;
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + el.w * self.scale + 'px;height:' + el.h * self.scale + 'px;' + rectBg + ';border-radius:' + (el.radius || 0) * self.scale + 'px;' + op + dc + '"></div>' + rh + sizeLabel + animBadge;
       case 'circle':
         return '<div data-el-idx="' + i + '" style="position:absolute;left:' + (self.camW + (el.x - el.r) * self.scale) + 'px;top:' + (el.y - el.r) * self.scale + 'px;width:' + el.r * 2 * self.scale + 'px;height:' + el.r * 2 * self.scale + 'px;background:' + el.color + ';border-radius:50%;' + op + dc + '"></div>';
       case 'image': {
         var fi = el.fileName ? files[el.fileName] : null;
-        if (fi) return '<img data-el-idx="' + i + '" src="' + fi.dataUrl + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 100) * self.scale + 'px;height:' + (el.h || 100) * self.scale + 'px;object-fit:cover;border-radius:2px;' + dc + '">' + rh;
-        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 100) * self.scale + 'px;height:' + (el.h || 100) * self.scale + 'px;background:#222;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#666;' + dc + '">🖼</div>' + rh;
+        if (fi) return '<img data-el-idx="' + i + '" src="' + fi.dataUrl + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 100) * self.scale + 'px;height:' + (el.h || 100) * self.scale + 'px;object-fit:cover;border-radius:2px;' + dc + '">' + rh + sizeLabel + animBadge;
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 100) * self.scale + 'px;height:' + (el.h || 100) * self.scale + 'px;background:#222;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#666;' + dc + '">🖼</div>' + rh + sizeLabel + animBadge;
       }
       case 'video': {
         var fi2 = el.fileName ? files[el.fileName] : null;
-        if (fi2) return '<video data-el-idx="' + i + '" src="' + fi2.dataUrl + '" muted loop autoplay style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 240) * self.scale + 'px;height:' + (el.h || 135) * self.scale + 'px;object-fit:cover;border-radius:2px;' + dc + '"></video>' + rh;
-        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 240) * self.scale + 'px;height:' + (el.h || 135) * self.scale + 'px;background:#1a1a2e;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#555;' + dc + '">🎬</div>' + rh;
+        if (fi2) return '<video data-el-idx="' + i + '" src="' + fi2.dataUrl + '" muted loop autoplay style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 240) * self.scale + 'px;height:' + (el.h || 135) * self.scale + 'px;object-fit:cover;border-radius:2px;' + dc + '"></video>' + rh + sizeLabel + animBadge;
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 240) * self.scale + 'px;height:' + (el.h || 135) * self.scale + 'px;background:#1a1a2e;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#555;' + dc + '">🎬</div>' + rh + sizeLabel + animBadge;
       }
       case 'arc': {
         var arcR = el.r || 40;
@@ -390,9 +403,12 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
       case 'progress': {
         var pw = (el.w || 200) * self.scale, ph = (el.h || 8) * self.scale;
         var pv = (el.value || 60) / 100;
-        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + (self.camW + el.x * self.scale) + 'px;top:' + (el.y * self.scale) + 'px;width:' + pw + 'px;height:' + ph + 'px;background:' + (el.bgColor || '#333') + ';border-radius:' + ((el.radius || 4) * self.scale) + 'px;' + dc + '"><div style="width:' + (pv * 100) + '%;height:100%;background:' + el.color + ';border-radius:inherit"></div></div>' + rh;
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + (self.camW + el.x * self.scale) + 'px;top:' + (el.y * self.scale) + 'px;width:' + pw + 'px;height:' + ph + 'px;background:' + (el.bgColor || '#333') + ';border-radius:' + ((el.radius || 4) * self.scale) + 'px;' + dc + '"><div style="width:' + (pv * 100) + '%;height:100%;background:' + el.color + ';border-radius:inherit"></div></div>' + rh + sizeLabel + animBadge;
       }
-      default: return '';
+      case 'lottie': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + (self.camW + el.x * self.scale) + 'px;top:' + (el.y * self.scale) + 'px;width:' + ((el.w || 120) * self.scale) + 'px;height:' + ((el.h || 120) * self.scale) + 'px;background:var(--surface2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text2);border:1px dashed var(--border)' + dc + '"' + sa + '>🎭 Lottie</div>' + rh + sizeLabel + animBadge;
+      }
+      default: return sizeLabel + animBadge;
     }
   }).join('');
 };

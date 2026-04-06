@@ -7,6 +7,7 @@ JCM.ElementDefaults = {
   line: function () { return { type: 'rectangle', x: 10, y: 100, w: 200, h: 2, color: '#555555', radius: 1, opacity: 60, _isLine: true, locked: false }; },
   arc: function () { return { type: 'arc', x: 50, y: 50, r: 40, startAngle: 0, endAngle: 270, color: '#6c5ce7', strokeWidth: 6, locked: false }; },
   progress: function () { return { type: 'progress', x: 10, y: 100, w: 200, h: 8, color: '#6c5ce7', bgColor: '#333333', value: 60, radius: 4, locked: false }; },
+  lottie: function () { return { type: 'lottie', x: 50, y: 50, w: 120, h: 120, fileName: '', speed: 1, locked: false }; },
 };
 
 JCM.isInCameraZone = function (el, device) {
@@ -134,7 +135,32 @@ JCM.renderElementEditor = function (el, idx, device) {
       colorField('背景色', el.bgColor || '#333333', 'bgColor', idx) +
       field('圆角', '<input type="number" value="' + (el.radius || 4) + '" data-prop="radius" data-idx="' + idx + '">') +
       '</div>';
+  } else if (el.type === 'lottie') {
+    html += '<div class="config-grid">' +
+      field('X', '<input type="number" value="' + el.x + '" data-prop="x" data-idx="' + idx + '">') +
+      field('Y', '<input type="number" value="' + el.y + '" data-prop="y" data-idx="' + idx + '">') +
+      field('宽', '<input type="number" value="' + (el.w || 120) + '" data-prop="w" data-idx="' + idx + '">') +
+      field('高', '<input type="number" value="' + (el.h || 120) + '" data-prop="h" data-idx="' + idx + '">') +
+      field('速度', '<input type="range" min="0.1" max="3" step="0.1" value="' + (el.speed || 1) + '" data-prop="speed" data-idx="' + idx + '">') +
+      '</div>';
   }
+
+  // 动画配置（所有元素通用）
+  html += '<div class="config-section" style="margin-top:12px"><div class="config-section-title"><span>▸</span> 动画</div><div class="config-grid">';
+  html += '<div class="field"><label>动画类型</label><select data-prop="animationName" data-idx="' + idx + '">' +
+    '<option value=""' + (!el.animationName ? ' selected' : '') + '>无</option>' +
+    '<option value="alpha"' + (el.animationName === 'alpha' ? ' selected' : '') + '>淡入淡出</option>' +
+    '<option value="slideTop"' + (el.animationName === 'slideTop' ? ' selected' : '') + '>从上滑入</option>' +
+    '<option value="slideBottom"' + (el.animationName === 'slideBottom' ? ' selected' : '') + '>从下滑入</option>' +
+    '<option value="slideLeft"' + (el.animationName === 'slideLeft' ? ' selected' : '') + '>从左滑入</option>' +
+    '<option value="slideRight"' + (el.animationName === 'slideRight' ? ' selected' : '') + '>从右滑入</option>' +
+    '<option value="scale"' + (el.animationName === 'scale' ? ' selected' : '') + '>缩放</option>' +
+    '<option value="rotate"' + (el.animationName === 'rotate' ? ' selected' : '') + '>旋转</option></select></div>';
+  html += '<div class="field"><label>时长(ms): <strong>' + (el.animationDuration || 500) + '</strong></label><input type="range" min="100" max="3000" step="100" value="' + (el.animationDuration || 500) + '" data-prop="animationDuration" data-idx="' + idx + '"></div>';
+  html += '<div class="field"><label>延迟(ms): <strong>' + (el.animationDelay || 0) + '</strong></label><input type="range" min="0" max="5000" step="100" value="' + (el.animationDelay || 0) + '" data-prop="animationDelay" data-idx="' + idx + '"></div>';
+  html += '<div class="field"><label>循环次数</label><input type="number" min="1" max="999" value="' + (el.animationRepeat || 1) + '" data-prop="animationRepeat" data-idx="' + idx + '" style="width:80px"></div>';
+  html += '<label class="check-label"><input type="checkbox" data-prop="animationInfinite" data-idx="' + idx + '"' + (el.animationInfinite ? ' checked' : '') + '> 无限循环</label>';
+  html += '</div></div>';
 
   html += '</div>';
   return html;
