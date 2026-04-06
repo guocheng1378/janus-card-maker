@@ -361,6 +361,7 @@ function renderConfig() {
     '<div class="el-toolbar">' +
     '<button class="el-btn" data-action="exportTemplate"><span class="el-btn-icon">💾</span> 导出配置</button>' +
     '<button class="el-btn" data-action="importTemplate"><span class="el-btn-icon">📂</span> 导入配置</button>' +
+    '<button class="el-btn" data-action="shareTemplate" style="color:var(--green)"><span class="el-btn-icon">🔗</span> 分享链接</button>' +
     '</div></div>';
 
   // Asset manager — show when there are uploaded files
@@ -682,6 +683,100 @@ JCM.toggleFullscreen = function () {
     el.requestFullscreen().catch(function () {
       toast('浏览器不支持全屏', 'error');
     });
+  }
+};
+
+// ─── Build APK via GitHub Actions ─────────────────────────────────
+JCM.triggerBuild = function () {
+  var token = localStorage.getItem('jcm-gh-token');
+  if (!token) {
+    token = prompt('输入 GitHub Personal Access Token（需 repo 权限，仅保存在本地）：');
+    if (!token) return;
+    localStorage.setItem('jcm-gh-token', token);
+  }
+
+  toast('🚀 正在触发 APK 构建...', 'info');
+
+  fetch('https://api.github.com/repos/guocheng1378/janus-card-maker/actions/workflows/build.yml/dispatches', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'token ' + token,
+      'Accept': 'application/vnd.github+json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ ref: 'main' }),
+  }).then(function (res) {
+    if (res.status === 204) {
+      toast('✅ APK 构建已触发！查看 GitHub Actions 进度', 'success');
+    } else if (res.status === 401) {
+      localStorage.removeItem('jcm-gh-token');
+      toast('❌ Token 无效或已过期，请重新输入', 'error');
+    } else {
+      toast('❌ 触发失败: HTTP ' + res.status, 'error');
+    }
+  }).catch(function (e) {
+    toast('❌ 网络错误: ' + e.message, 'error');
+  });
+};
+
+JCM.clearToken = function () {
+  localStorage.removeItem('jcm-gh-token');
+  toast('🔑 Token 已清除', 'success');
+};
+
+// ─── Template Sharing via URL ─────────────────────────────────────
+JCM.shareTemplate = function () {
+  if (!_tpl) return toast('请先选择模板', 'error');
+  var data = {
+    t: _tpl.id,
+    c: _cfg,
+    e: _tpl.id === 'custom' ? _elements : undefined,
+  };
+  var json = JSON.stringify(data);
+  var encoded = btoa(unescape(encodeURIComponent(json)));
+  var url = location.origin + location.pathname + '#share=' + encoded;
+
+  if (url.length > 8000) {
+    toast('⚠️ 模板数据过大，无法通过 URL 分享', 'warning');
+    return;
+  }
+
+  navigator.clipboard.writeText(url).then(function () {
+    toast('📋 分享链接已复制！发送给朋友即可导入', 'success');
+  }).catch(function () {
+    prompt('复制以下分享链接：', url);
+  });
+};
+
+// 检查 URL 中的分享数据
+JCM.checkShareURL = function () {
+  var hash = location.hash;
+  if (hash.indexOf('#share=') !== 0) return;
+  try {
+    var encoded = hash.substring(7);
+    var json = decodeURIComponent(escape(atob(encoded)));
+    var data = JSON.parse(json);
+    var tpl = JCM.TEMPLATES.find(function (t) { return t.id === data.t; });
+    if (!tpl) return;
+
+    _tpl = tpl;
+    _cfg = {};
+    tpl.config.forEach(function (g) { g.fields.forEach(function (f) {
+      _cfg[f.key] = data.c[f.key] !== undefined ? data.c[f.key] : f.default;
+    }); });
+    if (data.e) _elements = data.e;
+    _dirty = true;
+    _history = [];
+    _redoStack = [];
+    JCM.uploadedFiles = {};
+
+    renderTplGrid();
+    JCM.goStep(1);
+    toast('✅ 已导入分享模板: ' + tpl.name, 'success');
+    // Clear hash
+    history.replaceState(null, '', location.pathname);
+  } catch (e) {
+    console.warn('Share URL parse failed:', e);
   }
 };
 
@@ -1262,6 +1357,7 @@ function setupEvents() {
       if (a === 'importZip') JCM.handleImportZip();
       else if (a === 'exportTemplate') JCM.handleExportTemplate();
       else if (a === 'importTemplate') JCM.handleImportTemplate();
+      else if (a === 'shareTemplate') JCM.shareTemplate();
       return;
     }
     // Replace asset
@@ -1452,6 +1548,8 @@ JCM.initUI = function () {
   initTheme();
   renderTplGrid();
   setupEvents();
+  // 检查 URL 分享
+  JCM.checkShareURL();
   // Init slider position after layout
   requestAnimationFrame(function () { moveStepSlider(0); });
   window.addEventListener('resize', function () { moveStepSlider(_step); });
