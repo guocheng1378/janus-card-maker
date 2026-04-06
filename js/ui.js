@@ -555,6 +555,7 @@ function renderPreview() {
     });
   }
   document.getElementById('codeContent').value = maml;
+  updateCodeEditor();
   _dirty = false;
 }
 
@@ -683,6 +684,135 @@ JCM.copyXML = function () {
     toast('📋 XML 已复制', 'success');
   });
 };
+
+// ─── Code Editor ──────────────────────────────────────────────────
+function highlightXML(code) {
+  return code
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/(&lt;!--[\s\S]*?--&gt;)/g, '<span class="comment">$1</span>')
+    .replace(/(&lt;\/?)([\w:.-]+)/g, '$1<span class="tag">$2</span>')
+    .replace(/([\w:.-]+)(=)(&quot;[^&]*&quot;|&#39;[^&]*&#39;)/g,
+      '<span class="attr-name">$1</span>$2<span class="attr-val">$3</span>')
+    .replace(/(&lt;[?!][^&]*?&gt;)/g, '<span class="entity">$1</span>')
+    .replace(/(&lt;|&gt;|\/&gt;)/g, '<span class="bracket">$1</span>');
+}
+
+function updateCodeGutter() {
+  var textarea = document.getElementById('codeContent');
+  var gutter = document.getElementById('codeGutter');
+  if (!textarea || !gutter) return;
+  var lines = textarea.value.split('\n');
+  var html = '';
+  for (var i = 1; i <= lines.length; i++) html += '<span>' + i + '</span>';
+  gutter.innerHTML = html;
+}
+
+function updateCodeHighlight() {
+  var textarea = document.getElementById('codeContent');
+  var highlight = document.getElementById('codeHighlight');
+  if (!textarea || !highlight) return;
+  highlight.innerHTML = highlightXML(textarea.value) + '\n';
+}
+
+function updateCodeEditor() {
+  updateCodeGutter();
+  updateCodeHighlight();
+}
+
+function syncCodeScroll() {
+  var textarea = document.getElementById('codeContent');
+  var highlight = document.getElementById('codeHighlight');
+  var gutter = document.getElementById('codeGutter');
+  var body = document.getElementById('codeEditor');
+  if (!textarea || !highlight || !gutter || !body) return;
+  // Scroll the body container
+  body.querySelector('.code-body').scrollTop = textarea.scrollTop;
+  body.querySelector('.code-body').scrollLeft = textarea.scrollLeft;
+  highlight.style.transform = 'translate(' + (-textarea.scrollLeft) + 'px,' + (-textarea.scrollTop) + 'px)';
+  gutter.style.transform = 'translateY(' + (-textarea.scrollTop) + 'px)';
+}
+
+JCM.formatXML = function () {
+  var textarea = document.getElementById('codeContent');
+  if (!textarea) return;
+  var xml = textarea.value;
+  if (!xml || xml.indexOf('<') < 0) return toast('没有可格式化的 XML', 'error');
+
+  // Simple XML formatter
+  var formatted = '';
+  var indent = 0;
+  var lines = xml.replace(/>\s*</g, '>\n<').split('\n');
+  lines.forEach(function (line) {
+    line = line.trim();
+    if (!line) return;
+    if (line.indexOf('</') === 0 && indent > 0) indent--;
+    formatted += '  '.repeat(indent) + line + '\n';
+    if (line.indexOf('<') === 0 && line.indexOf('</') !== 0 &&
+        line.indexOf('/>') < 0 && line.indexOf('<?') < 0 &&
+        line.indexOf('<!--') < 0) {
+      indent++;
+    }
+  });
+  textarea.value = formatted.trim();
+  updateCodeEditor();
+  toast('🔧 XML 已格式化', 'success');
+};
+
+function setupCodeEditor() {
+  var textarea = document.getElementById('codeContent');
+  if (!textarea) return;
+
+  // Tab key = insert 2 spaces
+  textarea.addEventListener('keydown', function (e) {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      var start = this.selectionStart;
+      var end = this.selectionEnd;
+      if (e.shiftKey) {
+        // Outdent: remove 2 spaces before cursor line
+        var lineStart = this.value.lastIndexOf('\n', start - 1) + 1;
+        var lineText = this.value.substring(lineStart, start);
+        if (lineText.indexOf('  ') === 0) {
+          this.value = this.value.substring(0, lineStart) + this.value.substring(lineStart + 2);
+          this.selectionStart = this.selectionEnd = Math.max(lineStart, start - 2);
+        }
+      } else {
+        this.value = this.value.substring(0, start) + '  ' + this.value.substring(end);
+        this.selectionStart = this.selectionEnd = start + 2;
+      }
+      updateCodeEditor();
+    }
+    // Auto-close tags: typing < adds >
+    if (e.key === '<' && !e.ctrlKey && !e.metaKey) {
+      // Don't auto-close if it looks like a closing tag
+    }
+    // Enter = auto-indent
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      var pos = this.selectionStart;
+      var before = this.value.substring(0, pos);
+      var after = this.value.substring(pos);
+      var currentLine = before.substring(before.lastIndexOf('\n') + 1);
+      var currentIndent = currentLine.match(/^(\s*)/)[1];
+      var extraIndent = '';
+      // If previous char is > and next char is </, keep same indent
+      var lastChar = before.trim().slice(-1);
+      var nextChars = after.trim().substring(0, 2);
+      if (lastChar === '>' && nextChars !== '</') {
+        extraIndent = '  ';
+      }
+      this.value = before + '\n' + currentIndent + extraIndent + after;
+      this.selectionStart = this.selectionEnd = pos + 1 + currentIndent.length + extraIndent.length;
+      updateCodeEditor();
+    }
+  });
+
+  textarea.addEventListener('input', updateCodeEditor);
+  textarea.addEventListener('scroll', syncCodeScroll);
+
+  // Initial render
+  updateCodeEditor();
+}
 
 // ─── Fullscreen Preview ───────────────────────────────────────────
 JCM.toggleFullscreen = function () {
@@ -1686,6 +1816,7 @@ JCM.initUI = function () {
   initTheme();
   renderTplGrid();
   setupEvents();
+  setupCodeEditor();
   // 检查 URL 分享
   JCM.checkShareURL();
   // Init slider position after layout
