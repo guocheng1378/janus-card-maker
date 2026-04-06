@@ -521,10 +521,10 @@ JCM.exportSVG = function (cardName, cfg, elements, uploadedFiles) {
   var a = document.createElement('a');
   a.href = url;
   a.download = (cardName || 'card') + '.svg';
+  a.style.display = 'none';
   document.body.appendChild(a);
   a.click();
-  document.body.removeChild(a);
-  setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
+  setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 10000);
   return Promise.resolve();
 };
 
@@ -533,9 +533,12 @@ JCM.exportTemplateJSON = function (tplId, cfg, elements) {
   var data = JSON.stringify({ templateId: tplId, config: cfg, elements: elements || [] }, null, 2);
   var blob = new Blob([data], { type: 'application/json' });
   var a = document.createElement('a');
+  a.style.display = 'none';
   a.href = URL.createObjectURL(blob);
   a.download = (cfg.cardName || 'template') + '.json';
+  document.body.appendChild(a);
   a.click();
+  setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 10000);
 };
 
 JCM.importTemplateJSON = function (file) {
