@@ -1,10 +1,12 @@
 // ─── Editor: 自定义元素编辑 ──────────────────────────────────────
 
 JCM.ElementDefaults = {
-  text: function () { return { type: 'text', text: '新文字', x: 10, y: 60, size: 24, color: '#ffffff', fontFamily: 'default', textAlign: 'left', bold: false, multiLine: false, w: 200, shadow: 'none', opacity: 100, textGradient: 'none', gradientColor2: '#ff6b6b', textStroke: 0, textStrokeColor: '#000000' }; },
-  rectangle: function () { return { type: 'rectangle', x: 10, y: 60, w: 100, h: 40, color: '#333333', radius: 0, opacity: 100, fillColor2: '', blur: 0 }; },
-  circle: function () { return { type: 'circle', x: 50, y: 100, r: 30, color: '#6c5ce7', opacity: 100 }; },
-  line: function () { return { type: 'rectangle', x: 10, y: 100, w: 200, h: 2, color: '#555555', radius: 1, opacity: 60, _isLine: true }; },
+  text: function () { return { type: 'text', text: '新文字', x: 10, y: 60, size: 24, color: '#ffffff', fontFamily: 'default', textAlign: 'left', bold: false, multiLine: false, w: 200, shadow: 'none', opacity: 100, textGradient: 'none', gradientColor2: '#ff6b6b', textStroke: 0, textStrokeColor: '#000000', locked: false }; },
+  rectangle: function () { return { type: 'rectangle', x: 10, y: 60, w: 100, h: 40, color: '#333333', radius: 0, opacity: 100, fillColor2: '', blur: 0, locked: false }; },
+  circle: function () { return { type: 'circle', x: 50, y: 100, r: 30, color: '#6c5ce7', opacity: 100, locked: false }; },
+  line: function () { return { type: 'rectangle', x: 10, y: 100, w: 200, h: 2, color: '#555555', radius: 1, opacity: 60, _isLine: true, locked: false }; },
+  arc: function () { return { type: 'arc', x: 50, y: 50, r: 40, startAngle: 0, endAngle: 270, color: '#6c5ce7', strokeWidth: 6, locked: false }; },
+  progress: function () { return { type: 'progress', x: 10, y: 100, w: 200, h: 8, color: '#6c5ce7', bgColor: '#333333', value: 60, radius: 4, locked: false }; },
 };
 
 JCM.isInCameraZone = function (el, device) {
@@ -110,6 +112,27 @@ JCM.renderElementEditor = function (el, idx, device) {
       field('半径', '<input type="number" value="' + el.r + '" data-prop="r" data-idx="' + idx + '">') +
       colorField('颜色', el.color || '#6c5ce7', 'color', idx) +
       field('透明度', '<input type="range" min="0" max="100" value="' + (el.opacity !== undefined ? el.opacity : 100) + '" data-prop="opacity" data-idx="' + idx + '">') +
+      '</div>';
+  } else if (el.type === 'arc') {
+    html += '<div class="config-grid">' +
+      field('中心 X', '<input type="number" value="' + el.x + '" data-prop="x" data-idx="' + idx + '">') +
+      field('中心 Y', '<input type="number" value="' + el.y + '" data-prop="y" data-idx="' + idx + '">') +
+      field('半径', '<input type="number" value="' + (el.r || 40) + '" data-prop="r" data-idx="' + idx + '">') +
+      field('起始角度', '<input type="number" value="' + (el.startAngle || 0) + '" data-prop="startAngle" data-idx="' + idx + '">') +
+      field('结束角度', '<input type="number" value="' + (el.endAngle || 270) + '" data-prop="endAngle" data-idx="' + idx + '">') +
+      colorField('颜色', el.color || '#6c5ce7', 'color', idx) +
+      field('线宽', '<input type="number" value="' + (el.strokeWidth || 6) + '" data-prop="strokeWidth" data-idx="' + idx + '">') +
+      '</div>';
+  } else if (el.type === 'progress') {
+    html += '<div class="config-grid">' +
+      field('X', '<input type="number" value="' + el.x + '" data-prop="x" data-idx="' + idx + '">') +
+      field('Y', '<input type="number" value="' + el.y + '" data-prop="y" data-idx="' + idx + '">') +
+      field('宽', '<input type="number" value="' + (el.w || 200) + '" data-prop="w" data-idx="' + idx + '">') +
+      field('高', '<input type="number" value="' + (el.h || 8) + '" data-prop="h" data-idx="' + idx + '">') +
+      field('进度', '<input type="range" min="0" max="100" value="' + (el.value || 60) + '" data-prop="value" data-idx="' + idx + '">') +
+      colorField('前景色', el.color || '#6c5ce7', 'color', idx) +
+      colorField('背景色', el.bgColor || '#333333', 'bgColor', idx) +
+      field('圆角', '<input type="number" value="' + (el.radius || 4) + '" data-prop="radius" data-idx="' + idx + '">') +
       '</div>';
   }
 

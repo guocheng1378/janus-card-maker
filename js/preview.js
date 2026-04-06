@@ -322,7 +322,7 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
     else if (el.shadow === 'glow') sh = 'text-shadow:0 0 8px ' + el.color + ',0 0 16px ' + el.color + ';';
     // Resize handle for selected elements
     var rh = '';
-    if (i === selIdx && (el.type === 'rectangle' || el.type === 'image' || el.type === 'video')) {
+    if (i === selIdx && (el.type === 'rectangle' || el.type === 'image' || el.type === 'video' || el.type === 'progress')) {
       var ew = (el.w || 100) * self.scale, eh = (el.h || 100) * self.scale;
       rh = '<div data-resize-idx="' + i + '" style="position:absolute;left:' + (px + ew - 6) + 'px;top:' + (py + eh - 6) + 'px;width:10px;height:10px;background:#6c5ce7;border:1px solid #fff;border-radius:2px;cursor:nwse-resize;z-index:20"></div>';
     }
@@ -367,6 +367,30 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
         var fi2 = el.fileName ? files[el.fileName] : null;
         if (fi2) return '<video data-el-idx="' + i + '" src="' + fi2.dataUrl + '" muted loop autoplay style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 240) * self.scale + 'px;height:' + (el.h || 135) * self.scale + 'px;object-fit:cover;border-radius:2px;' + dc + '"></video>' + rh;
         return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 240) * self.scale + 'px;height:' + (el.h || 135) * self.scale + 'px;background:#1a1a2e;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#555;' + dc + '">🎬</div>' + rh;
+      }
+      case 'arc': {
+        var arcR = el.r || 40;
+        var startA = (el.startAngle || 0) - 90;
+        var endA = (el.endAngle || 270) - 90;
+        var arcSize = arcR * 2 * self.scale;
+        var arcSw = (el.strokeWidth || 6) * self.scale;
+        var arcCx = arcR * self.scale;
+        var arcCy = arcR * self.scale;
+        var startRad = startA * Math.PI / 180;
+        var endRad = endA * Math.PI / 180;
+        var x1 = arcCx + arcR * self.scale * 0.45 * Math.cos(startRad);
+        var y1 = arcCy + arcR * self.scale * 0.45 * Math.sin(startRad);
+        var x2 = arcCx + arcR * self.scale * 0.45 * Math.cos(endRad);
+        var y2 = arcCy + arcR * self.scale * 0.45 * Math.sin(endRad);
+        var largeArc = (endA - startA > 180 || endA - startA < -180) ? 1 : 0;
+        var svgArc = '<svg style="position:absolute;left:' + (self.camW + el.x * self.scale) + 'px;top:' + (el.y * self.scale) + 'px;width:' + arcSize + 'px;height:' + arcSize + 'px;' + dc + '" viewBox="0 0 ' + arcSize + ' ' + arcSize + '">' +
+          '<path d="M' + x1 + ',' + y1 + ' A' + (arcR * self.scale * 0.45) + ',' + (arcR * self.scale * 0.45) + ' 0 ' + largeArc + ' 1 ' + x2 + ',' + y2 + '" fill="none" stroke="' + el.color + '" stroke-width="' + arcSw + '" stroke-linecap="round"/></svg>';
+        return svgArc;
+      }
+      case 'progress': {
+        var pw = (el.w || 200) * self.scale, ph = (el.h || 8) * self.scale;
+        var pv = (el.value || 60) / 100;
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + (self.camW + el.x * self.scale) + 'px;top:' + (el.y * self.scale) + 'px;width:' + pw + 'px;height:' + ph + 'px;background:' + (el.bgColor || '#333') + ';border-radius:' + ((el.radius || 4) * self.scale) + 'px;' + dc + '"><div style="width:' + (pv * 100) + '%;height:100%;background:' + el.color + ';border-radius:inherit"></div></div>' + rh;
       }
       default: return '';
     }

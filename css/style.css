@@ -469,3 +469,42 @@ kbd{
   .config-live-right{width:100%;padding:16px;flex:1;min-height:200px}
   .config-preview-phone{width:260px;height:156px}
 }
+
+/* ─── Template Search ─── */
+.tpl-search { padding: 0 32px 16px; }
+.tpl-search input {
+  width: 100%; padding: 10px 16px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text);
+  font-size: 14px; outline: none; transition: var(--transition);
+}
+.tpl-search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+
+/* ─── Preview Grid Overlay ─── */
+.preview-grid-overlay {
+  position: absolute; inset: 0;
+  pointer-events: none; z-index: 5;
+  background-image:
+    linear-gradient(rgba(108,92,231,0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(108,92,231,0.12) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* ─── Draft Recovery ─── */
+.draft-recovery {
+  position: fixed; top: calc(60px + var(--safe-top, 0px)); right: 16px;
+  background: var(--surface); border: 1px solid var(--accent);
+  border-radius: var(--radius); padding: 16px 20px; z-index: 200;
+  box-shadow: var(--shadow); max-width: 320px;
+  animation: fadeIn .3s ease;
+}
+.draft-recovery-title { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+.draft-recovery-desc { font-size: 12px; color: var(--text2); margin-bottom: 12px; }
+.draft-recovery-btns { display: flex; gap: 8px; }
+.draft-recovery-btns .btn { font-size: 12px; padding: 6px 14px; }
+
+/* ─── Lock button in element list ─── */
+.el-lock-btn {
+  background: none; border: none; cursor: pointer; font-size: 14px;
+  padding: 2px 4px; flex-shrink: 0;
+}

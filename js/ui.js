@@ -288,6 +288,8 @@ function renderConfig() {
     '<button class="el-btn" data-add="rectangle"><span class="el-btn-icon">▢</span> 矩形</button>' +
     '<button class="el-btn" data-add="circle"><span class="el-btn-icon">○</span> 圆形</button>' +
     '<button class="el-btn" data-add="line"><span class="el-btn-icon">─</span> 线条</button>' +
+    '<button class="el-btn" data-add="arc"><span class="el-btn-icon">◠</span> 弧形</button>' +
+    '<button class="el-btn" data-add="progress"><span class="el-btn-icon">▰</span> 进度条</button>' +
     '<button class="el-btn" data-pick="image"><span class="el-btn-icon">🖼</span> 图片</button>' +
     '<button class="el-btn" data-pick="video"><span class="el-btn-icon">🎬</span> 视频</button>' +
     '<button class="el-btn" data-action="importZip" title="导入 MAML ZIP"><span class="el-btn-icon">📦</span> 导入ZIP</button>' +
@@ -312,6 +314,7 @@ function renderConfig() {
       '<span class="el-badge">' + el.type + '</span>' +
       '<span class="el-item-name">' + escH(label) + '</span>' +
       (inCam ? '<span title="在摄像头遮挡区内" style="color:#e17055;font-size:14px">⚠️</span>' : '') +
+      '<button class="el-lock-btn" data-lock="' + i + '" title="锁定/解锁">' + (el.locked ? '🔒' : '🔓') + '</button>' +
       '<span class="el-z-btns">' +
       '<button class="el-z-btn" data-z="up" data-zi="' + i + '" title="上移一层">↑</button>' +
       '<button class="el-z-btn" data-z="down" data-zi="' + i + '" title="下移一层">↓</button>' +
@@ -405,6 +408,7 @@ function renderConfig() {
 
   // Trigger live preview update after config rebuild
   if (_step === 1) renderLivePreview();
+  autoSave();
 }
 
 function renderField(f) {
@@ -621,6 +625,13 @@ function generateCustomMAML(device) {
       }
       case 'video':
         lines.push('    <Video src="videos/' + JCM.escXml(el.src || el.fileName || '') + '" x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 240) + '" h="' + (el.h || 135) + '" autoPlay="true" loop="true" />');
+        break;
+      case 'arc':
+        lines.push('    <Arc x="' + el.x + '" y="' + el.y + '" r="' + (el.r || 40) + '" startAngle="' + (el.startAngle || 0) + '" endAngle="' + (el.endAngle || 270) + '" color="' + el.color + '" strokeWidth="' + (el.strokeWidth || 6) + '" />');
+        break;
+      case 'progress':
+        lines.push('    <Rectangle x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 200) + '" h="' + (el.h || 8) + '" fillColor="' + (el.bgColor || '#333333') + '" cornerRadius="' + (el.radius || 4) + '" />');
+        lines.push('    <Rectangle x="' + el.x + '" y="' + el.y + '" w="' + Math.round((el.w || 200) * (el.value || 60) / 100) + '" h="' + (el.h || 8) + '" fillColor="' + el.color + '" cornerRadius="' + (el.radius || 4) + '" />');
         break;
     }
   });
@@ -1151,6 +1162,7 @@ function onPreviewPointerDown(e) {
   if (!el) return;
   var idx = parseInt(el.dataset.elIdx, 10);
   if (isNaN(idx) || idx >= _elements.length) return;
+  if (_elements[idx].locked) return; // Locked elements cannot be dragged
 
   e.preventDefault();
   var pos = getPointerPos(e);
@@ -1320,6 +1332,7 @@ function setupEvents() {
       _dirty = true;
     }
     _autoPreview();
+    autoSave();
   });
 
   document.getElementById('cfgContent').addEventListener('change', function (e) {
@@ -1347,6 +1360,17 @@ function setupEvents() {
     if (del) { e.stopPropagation(); JCM.removeElement(Number(del.dataset.del)); return; }
     var zBtn = e.target.closest('.el-z-btn');
     if (zBtn) { e.stopPropagation(); JCM.moveElementZ(Number(zBtn.dataset.zi), zBtn.dataset.z); return; }
+    var lockBtn = e.target.closest('[data-lock]');
+    if (lockBtn) {
+      e.stopPropagation();
+      var lockIdx = Number(lockBtn.dataset.lock);
+      if (lockIdx >= 0 && lockIdx < _elements.length) {
+        _elements[lockIdx].locked = !_elements[lockIdx].locked;
+        renderConfig();
+        toast(_elements[lockIdx].locked ? '🔒 已锁定' : '🔓 已解锁', 'info');
+      }
+      return;
+    }
     var addBtn = e.target.closest('[data-add]');
     if (addBtn) { JCM.addElement(addBtn.dataset.add); return; }
     var pickBtn = e.target.closest('[data-pick]');
@@ -1474,7 +1498,121 @@ function setupEvents() {
       toast('📋 已粘贴', 'success');
     }
   });
+
+  // Drag & Drop file upload
+  var content = document.querySelector('.content');
+  content.addEventListener('dragover', function(e) { e.preventDefault(); e.stopPropagation(); });
+  content.addEventListener('drop', function(e) {
+    e.preventDefault(); e.stopPropagation();
+    var files = e.dataTransfer.files;
+    if (!files.length) return;
+    var file = files[0];
+    if (file.type.indexOf('image/') === 0) {
+      var dt = new DataTransfer(); dt.items.add(file);
+      document.getElementById('fileImagePick').files = dt.files;
+      _pendingAdd = 'image'; _pendingReplace = -1;
+      document.getElementById('fileImagePick').dispatchEvent(new Event('change'));
+    } else if (file.type.indexOf('video/') === 0) {
+      var dt = new DataTransfer(); dt.items.add(file);
+      document.getElementById('fileVideoPick').files = dt.files;
+      _pendingAdd = 'video'; _pendingReplace = -1;
+      document.getElementById('fileVideoPick').dispatchEvent(new Event('change'));
+    }
+  });
 }
+
+// ─── Auto-save (debounced) ────────────────────────────────────────
+var _autoSaveTimer = null;
+function autoSave() {
+  clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(function () {
+    try {
+      var draft = {
+        tplId: _tpl ? _tpl.id : null,
+        cfg: _cfg,
+        elements: _elements,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('jcm-draft', JSON.stringify(draft));
+    } catch (e) { }
+  }, 2000);
+}
+
+function showDraftRecovery(d) {
+  var tpl = JCM.TEMPLATES.find(function (t) { return t.id === d.tplId; });
+  var name = tpl ? tpl.name : d.tplId;
+  var date = new Date(d.timestamp);
+  var timeStr = date.toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+  var div = document.createElement('div');
+  div.className = 'draft-recovery';
+  div.innerHTML = '<div class="draft-recovery-title">📄 发现未保存的草稿</div>' +
+    '<div class="draft-recovery-desc">模板: ' + escH(name) + ' · ' + timeStr + '</div>' +
+    '<div class="draft-recovery-btns">' +
+    '<button class="btn btn-primary" id="draftRecoverBtn">恢复</button>' +
+    '<button class="btn btn-secondary" id="draftDiscardBtn">丢弃</button>' +
+    '</div>';
+  document.body.appendChild(div);
+
+  document.getElementById('draftRecoverBtn').onclick = function () {
+    var _tpl2 = JCM.TEMPLATES.find(function (t) { return t.id === d.tplId; });
+    if (!_tpl2) { toast('找不到对应模板', 'error'); div.remove(); return; }
+    _tpl = _tpl2;
+    _cfg = d.cfg || {};
+    _elements = d.elements || [];
+    _dirty = true;
+    _history = [];
+    _redoStack = [];
+    renderTplGrid();
+    JCM.goStep(1);
+    toast('✅ 草稿已恢复', 'success');
+    div.remove();
+  };
+  document.getElementById('draftDiscardBtn').onclick = function () {
+    localStorage.removeItem('jcm-draft');
+    div.remove();
+  };
+}
+
+// ─── History Panel ────────────────────────────────────────────────
+JCM.toggleHistory = function () {
+  var modal = document.getElementById('historyModal');
+  if (!modal) return;
+  if (modal.style.display === 'none') {
+    var list = document.getElementById('historyList');
+    var labels = JCM.getHistory();
+    if (labels.length === 0) {
+      list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3)">暂无操作历史</div>';
+    } else {
+      list.innerHTML = '<div class="shortcut-list">' + labels.map(function (l, i) {
+        return '<div class="shortcut-item" style="cursor:pointer" onclick="JCM.undoTo(' + (labels.length - i) + ');JCM.toggleHistory()"><span>' + (i + 1) + '.</span><span>' + escH(l) + '</span></div>';
+      }).join('') + '</div>';
+    }
+    modal.style.display = '';
+  } else {
+    modal.style.display = 'none';
+  }
+};
+
+// ─── Grid Overlay Toggle ─────────────────────────────────────────
+JCM.toggleGrid = function () {
+  var cb = document.getElementById('showGrid');
+  var overlay = document.getElementById('previewGridOverlay');
+  if (cb && overlay) overlay.style.display = cb.checked ? '' : 'none';
+};
+
+// ─── Template Filter ─────────────────────────────────────────────
+JCM.filterTemplates = function (query) {
+  var cards = document.querySelectorAll('.tpl-card');
+  query = (query || '').toLowerCase();
+  cards.forEach(function (card) {
+    var nameEl = card.querySelector('.tpl-card-name');
+    var descEl = card.querySelector('.tpl-card-desc');
+    var name = nameEl ? nameEl.textContent.toLowerCase() : '';
+    var desc = descEl ? descEl.textContent.toLowerCase() : '';
+    card.style.display = (!query || name.indexOf(query) >= 0 || desc.indexOf(query) >= 0) ? '' : 'none';
+  });
+};
 
 // ─── Toast (queue, supports multiple simultaneous) ────────────────
 var _toastQueue = [];
@@ -1553,6 +1691,26 @@ JCM.initUI = function () {
   // Init slider position after layout
   requestAnimationFrame(function () { moveStepSlider(0); });
   window.addEventListener('resize', function () { moveStepSlider(_step); });
+  // Save draft on page unload
+  window.addEventListener('beforeunload', function () {
+    try {
+      var draft = {
+        tplId: _tpl ? _tpl.id : null,
+        cfg: _cfg,
+        elements: _elements,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('jcm-draft', JSON.stringify(draft));
+    } catch (e) { }
+  });
+  // Check for unsaved draft
+  try {
+    var draft = localStorage.getItem('jcm-draft');
+    if (draft) {
+      var d = JSON.parse(draft);
+      if (d.tplId) showDraftRecovery(d);
+    }
+  } catch (e) { }
 };
 
 // Expose internal helpers for inline use
