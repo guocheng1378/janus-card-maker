@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jcm-v4';
+const CACHE_NAME = 'jcm-v5';
 const ASSETS = [
   './',
   './index.html',
@@ -14,6 +14,8 @@ const ASSETS = [
   './js/ui.js',
   './js/app.js',
   './lib/jszip.min.js',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
 ];
 
 self.addEventListener('install', e => {

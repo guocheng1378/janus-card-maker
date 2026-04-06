@@ -2,12 +2,50 @@
 <html lang="zh-CN" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Janus 卡片制作器</title>
-<meta name="description" content="为小米背屏（SubScreen）制作 MAML 卡片模板的免费在线工具。">
+<meta name="description" content="为小米背屏（SubScreen）制作 MAML 卡片模板的免费在线工具。支持 15+ 预设模板，自定义元素，一键导出 ZIP。">
 <meta property="og:title" content="Janus 卡片制作器">
 <meta property="og:description" content="为小米背屏制作 MAML 卡片模板的免费在线工具">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://guocheng1378.github.io/janus-card-maker/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Janus 卡片制作器">
+<meta name="twitter:description" content="为小米背屏制作 MAML 卡片模板的免费在线工具">
 <script>try{var t=localStorage.getItem('jcm-theme');if(t){document.documentElement.setAttribute('data-theme',t);window.__themeBtn=t==='dark'?'🌙':'☀️'}}catch(e){}</script>
+<script>
+(function(){
+  function setSafeArea(){
+    var top=0, bottom=0;
+    try{
+      top=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-top)'))||0;
+      bottom=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-bottom)'))||0;
+    }catch(e){}
+    if(!top){
+      var d=document.createElement('div');
+      d.style.cssText='position:fixed;top:0;left:0;right:0;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);pointer-events:none;z-index:-1;height:0;width:0;overflow:hidden';
+      document.body.appendChild(d);
+      var r=d.getBoundingClientRect();
+      top=r.height;
+      document.body.removeChild(d);
+    }
+    if(!top){
+      if(/iPhone|iPad|iPod/.test(navigator.userAgent)) top=44;
+      else if(/Android/.test(navigator.userAgent)) top=24;
+    }
+    if(!bottom&&/iPhone/.test(navigator.userAgent)&&window.screen.height>=812) bottom=34;
+    if(top>0) document.documentElement.style.setProperty('--safe-top',top+'px');
+    if(bottom>0) document.documentElement.style.setProperty('--safe-bottom',bottom+'px');
+  }
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',setSafeArea);
+  }else{
+    setSafeArea();
+  }
+  window.addEventListener('resize',function(){setTimeout(setSafeArea,200)});
+  window.addEventListener('orientationchange',function(){setTimeout(setSafeArea,300)});
+})();
+</script>
 <style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 [data-theme=dark]{
   --bg:#08080d;--surface:#111118;--surface2:#1a1a24;--surface3:#222230;
@@ -248,22 +286,61 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
 .preview-device-label{font-size:11px;color:var(--text3);text-align:center}
 .preview-side{display:flex;flex-direction:column;gap:16px}
 .preview-side h3{font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px}
-.xml-preview{
-  flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-  overflow:auto;max-height:400px;
+/* ─── Code Editor ─── */
+.code-editor{
+  flex:1;display:flex;flex-direction:column;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;max-height:420px;
+  font-family:'SF Mono',Monaco,'Cascadia Code','Fira Code',monospace;
 }
-.xml-preview pre{
-  padding:16px;font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-all;
-  color:var(--accent2);font-family:'SF Mono',Monaco,'Cascadia Code',monospace;
+.code-toolbar{
+  display:flex;align-items:center;gap:8px;padding:6px 12px;
+  background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;
 }
-.xml-preview textarea{
-  width:100%;height:100%;min-height:200px;padding:16px;font-size:12px;line-height:1.6;
-  white-space:pre-wrap;word-break:break-all;color:var(--accent2);
-  font-family:'SF Mono',Monaco,'Cascadia Code',monospace;
+.code-lang{
+  font-size:11px;color:var(--text3);background:var(--surface3);padding:2px 8px;
+  border-radius:4px;font-weight:600;letter-spacing:0.5px;
+}
+.code-btn{
+  font-size:11px;color:var(--text2);background:none;border:1px solid var(--border);
+  border-radius:4px;padding:3px 8px;cursor:pointer;transition:var(--transition);
+  font-family:inherit;
+}
+.code-btn:hover{color:var(--text);border-color:var(--accent);background:var(--accent-glow)}
+.code-body{
+  flex:1;position:relative;overflow:auto;
+}
+.code-body::-webkit-scrollbar{width:6px;height:6px}
+.code-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.code-body::-webkit-scrollbar-corner{background:transparent}
+.code-gutter{
+  position:absolute;left:0;top:0;width:44px;padding:12px 0;
+  text-align:right;font-size:12px;line-height:1.65;color:var(--text3);
+  user-select:none;pointer-events:none;z-index:2;
+  background:var(--surface);border-right:1px solid var(--border);
+}
+.code-gutter span{display:block;padding-right:10px}
+.code-highlight{
+  position:absolute;left:44px;top:0;right:0;padding:12px 16px;
+  font-size:12px;line-height:1.65;white-space:pre;color:var(--accent2);
+  pointer-events:none;z-index:1;
+}
+.code-body textarea{
+  position:relative;z-index:3;display:block;
+  width:100%;min-height:200px;padding:12px 16px 12px 52px;
+  font-size:12px;line-height:1.65;color:transparent;
+  caret-color:var(--text);
+  font-family:inherit;letter-spacing:0;
   background:transparent;border:none;outline:none;resize:vertical;
+  tab-size:2;-moz-tab-size:2;
 }
-.xml-preview::-webkit-scrollbar{width:5px}
-.xml-preview::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+/* Syntax highlight colors */
+.code-highlight .tag{color:#e06c75}
+.code-highlight .attr-name{color:#d19a66}
+.code-highlight .attr-val{color:#98c379}
+.code-highlight .comment{color:#5c6370;font-style:italic}
+.code-highlight .bracket{color:#abb2bf}
+.code-highlight .entity{color:#56b6c2}
 .preview-actions{display:flex;gap:10px;flex-wrap:wrap}
 
 /* ─── Buttons ─── */
@@ -312,7 +389,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
 .toast.error{background:var(--red);color:#fff}
 .toast.info{background:var(--accent);color:#fff}
 .toast.warning{background:var(--orange);color:#1a1a2e}
-
 
 /* ─── Theme Toggle ─── */
 .theme-toggle{
@@ -479,6 +555,45 @@ kbd{
   .config-live-right{width:100%;padding:16px;flex:1;min-height:200px}
   .config-preview-phone{width:260px;height:156px}
 }
+
+/* ─── Template Search ─── */
+.tpl-search { padding: 0 32px 16px; }
+.tpl-search input {
+  width: 100%; padding: 10px 16px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text);
+  font-size: 14px; outline: none; transition: var(--transition);
+}
+.tpl-search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+
+/* ─── Preview Grid Overlay ─── */
+.preview-grid-overlay {
+  position: absolute; inset: 0;
+  pointer-events: none; z-index: 5;
+  background-image:
+    linear-gradient(rgba(108,92,231,0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(108,92,231,0.12) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* ─── Draft Recovery ─── */
+.draft-recovery {
+  position: fixed; top: calc(60px + var(--safe-top, 0px)); right: 16px;
+  background: var(--surface); border: 1px solid var(--accent);
+  border-radius: var(--radius); padding: 16px 20px; z-index: 200;
+  box-shadow: var(--shadow); max-width: 320px;
+  animation: fadeIn .3s ease;
+}
+.draft-recovery-title { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+.draft-recovery-desc { font-size: 12px; color: var(--text2); margin-bottom: 12px; }
+.draft-recovery-btns { display: flex; gap: 8px; }
+.draft-recovery-btns .btn { font-size: 12px; padding: 6px 14px; }
+
+/* ─── Lock button in element list ─── */
+.el-lock-btn {
+  background: none; border: none; cursor: pointer; font-size: 14px;
+  padding: 2px 4px; flex-shrink: 0;
+}
 </style>
 </head>
 <body>
@@ -487,6 +602,7 @@ kbd{
 <input type="file" id="fileVideoPick" accept="video/*" style="display:none">
 
 <div class="app">
+  <!-- Top Bar -->
   <div class="topbar">
     <div class="topbar-left">
       <h1><span>🃏</span> Janus 卡片制作器</h1>
@@ -495,9 +611,13 @@ kbd{
     <div class="topbar-right">
       <button class="theme-toggle" id="themeToggle" onclick="JCM.toggleTheme()" title="切换主题">🌙</button>
       <button class="theme-toggle" id="helpBtn" onclick="JCM.toggleHelp()" title="快捷键帮助">⌨️</button>
-      <a class="theme-toggle" href="https://github.com/guocheng1378/janus-card-maker" target="_blank" title="GitHub">⭐</a>
+      <button class="theme-toggle" id="historyBtn" onclick="JCM.toggleHistory()" title="操作历史">📜</button>
+      <a class="theme-toggle github-link" href="https://github.com/guocheng1378/janus-card-maker" target="_blank" title="GitHub">
+        <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      </a>
     </div>
   </div>
+  <!-- Step Tabs -->
   <div class="stepper">
     <div class="steps" id="stepIndicator">
       <div class="step-tab active" data-step="0" onclick="JCM.goStep(0)">
@@ -516,24 +636,62 @@ kbd{
     </div>
   </div>
 
+  <!-- Content -->
   <div class="content">
+    <!-- Page 1: Template Selection -->
     <div class="page page-tpl active" id="page0">
       <div class="page-title">选择卡片模板</div>
       <div class="page-subtitle">从预设模板开始，或选择自定义从零创建</div>
+      <div class="tpl-search"><input type="text" id="tplSearch" placeholder="🔍 搜索模板..." oninput="JCM.filterTemplates(this.value)"></div>
       <div class="tpl-grid" id="tplGrid"></div>
     </div>
 
-    <div class="page page-config" id="page1">
-      <div class="config-header">
-        <span class="tpl-icon" id="cfgIcon"></span>
-        <div>
-          <h2 id="cfgTitle">配置</h2>
-          <p id="cfgDesc">调整参数以自定义卡片</p>
+    <!-- Page 2: Configuration with Live Preview -->
+    <div class="page page-config-live" id="page1">
+      <div class="config-live-left">
+        <div class="config-header">
+          <span class="tpl-icon" id="cfgIcon"></span>
+          <div>
+            <h2 id="cfgTitle">配置</h2>
+            <p id="cfgDesc">调整参数以自定义卡片</p>
+          </div>
+        </div>
+        <div class="config-live-device-row">
+          <label>机型</label>
+          <select id="cfgDeviceSelect">
+            <option value="p2">Pro Max — 976×596</option>
+            <option value="q200">Pro — 904×572</option>
+            <option value="q100">标准版 — 840×520</option>
+            <option value="ultra">Ultra — 1020×620</option>
+          </select>
+          <label class="check-label">
+            <input type="checkbox" id="cfgShowCamera" checked> 摄像头
+          </label>
+        </div>
+        <div id="cfgContent"></div>
+      </div>
+      <div class="config-live-right">
+        <div class="config-live-preview-label"><span>📱</span> 实时预览</div>
+        <div class="preview-phone config-preview-phone">
+          <div class="preview-screen">
+            <div class="preview-camera" id="cfgPreviewCamera"></div>
+            <div class="preview-content" id="cfgPreviewContent">
+              <div class="preview-placeholder">
+                <span>📱</span>
+                <p>修改参数即可实时预览</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="preview-device-label" id="cfgDeviceLabel">Pro Max — 976 × 596</div>
+        <div class="config-live-export-row">
+          <button class="btn btn-secondary" onclick="JCM.goStep(2)"><span class="btn-icon">🔍</span> 全屏预览</button>
+          <button class="btn btn-export" onclick="JCM.handleExport()"><span class="btn-icon">📦</span> 导出 ZIP</button>
         </div>
       </div>
-      <div id="cfgContent"></div>
     </div>
 
+    <!-- Page 3: Preview & Export -->
     <div class="page page-preview" id="page2">
       <div class="device-row">
         <label>机型</label>
@@ -546,11 +704,21 @@ kbd{
         <label class="check-label">
           <input type="checkbox" id="showCamera" checked> 摄像头遮挡区
         </label>
+        <label class="check-label">
+          <input type="checkbox" id="showGrid" onchange="JCM.toggleGrid()"> 网格
+        </label>
+        <div class="zoom-controls">
+          <button onclick="JCM.zoomOut()" title="缩小">−</button>
+          <span class="zoom-label" id="zoomLabel">100%</span>
+          <button onclick="JCM.zoomIn()" title="放大">+</button>
+          <button onclick="JCM.zoomReset()" title="重置" style="font-size:11px">↺</button>
+        </div>
       </div>
       <div class="preview-layout">
         <div class="preview-phone-wrap">
           <div class="preview-phone">
             <div class="preview-screen">
+              <div class="preview-grid-overlay" id="previewGridOverlay" style="display:none"></div>
               <div class="preview-camera" id="previewCamera"></div>
               <div class="preview-content" id="previewContent">
                 <div class="preview-placeholder">
@@ -564,17 +732,37 @@ kbd{
         </div>
         <div class="preview-side">
           <h3>📄 MAML XML</h3>
-          <div class="xml-preview"><pre id="codeContent">选择模板并配置后，点击「生成预览」查看 XML</pre></div>
+          <div class="code-editor" id="codeEditor">
+            <div class="code-toolbar">
+              <span class="code-lang">XML</span>
+              <button class="code-btn" onclick="JCM.formatXML()" title="格式化">🔧 格式化</button>
+              <button class="code-btn" onclick="JCM.copyXML()" title="复制">📋 复制</button>
+            </div>
+            <div class="code-body">
+              <div class="code-gutter" id="codeGutter"></div>
+              <div class="code-highlight" id="codeHighlight"></div>
+              <textarea id="codeContent" spellcheck="false" wrap="off">选择模板并配置后，点击「生成预览」查看 XML</textarea>
+            </div>
+          </div>
           <div class="preview-actions">
             <button class="btn btn-secondary" onclick="JCM.renderPreview()"><span class="btn-icon">🔄</span> 生成预览</button>
+            <button class="btn btn-secondary" onclick="JCM.copyXML()"><span class="btn-icon">📋</span> 复制 XML</button>
             <button class="btn btn-export" onclick="JCM.handleExport()"><span class="btn-icon">📦</span> 导出 ZIP</button>
             <button class="btn btn-secondary" onclick="JCM.handleExportPNG()"><span class="btn-icon">🖼</span> 导出 PNG</button>
+          </div>
+          <div class="batch-export-bar">
+            <span style="font-size:11px;color:var(--text2)">批量导出：</span>
+            <button class="btn btn-secondary" onclick="JCM.handleBatchExport()"><span class="btn-icon">📦</span> 全部机型 ZIP</button>
+            <button class="btn btn-secondary" onclick="JCM.handleUniversalExport()"><span class="btn-icon">📱</span> 通用卡片</button>
+            <button class="btn btn-secondary" onclick="JCM.toggleFullscreen()"><span class="btn-icon">⛶</span> 全屏预览</button>
+            <button class="btn btn-secondary" onclick="JCM.triggerBuild()" style="color:var(--green)"><span class="btn-icon">🤖</span> 构建 APK</button>
           </div>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- Bottom Bar -->
   <div class="bottombar">
     <div class="bottombar-left">
       <button class="btn btn-back" id="btnBack" onclick="JCM.prevStep()" style="display:none">
@@ -610,8 +798,20 @@ kbd{
   </div>
 </div>
 
+<div class="modal-overlay" id="historyModal" style="display:none" onclick="JCM.toggleHistory()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3>📜 操作历史</h3>
+      <button class="modal-close" onclick="JCM.toggleHistory()">✕</button>
+    </div>
+    <div class="modal-body" id="historyList"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
+<!-- JS Modules (loaded in order) -->
+<!-- Inlined by build.js -->
 <script>/*!
 
 JSZip v3.10.1 - A JavaScript class for generating and reading zip files
@@ -836,8 +1036,6 @@ JCM._validateMAMLRegex = function (xml) {
   }
   return { valid: errors.length === 0, errors: errors };
 };
-
-// ─── Templates: 模板定义 + MAML 生成 ──────────────────────────────
 
 JCM.TEMPLATES = [
   // ─── 时钟 ───
@@ -1859,7 +2057,7 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
     else if (el.shadow === 'glow') sh = 'text-shadow:0 0 8px ' + el.color + ',0 0 16px ' + el.color + ';';
     // Resize handle for selected elements
     var rh = '';
-    if (i === selIdx && (el.type === 'rectangle' || el.type === 'image' || el.type === 'video')) {
+    if (i === selIdx && (el.type === 'rectangle' || el.type === 'image' || el.type === 'video' || el.type === 'progress')) {
       var ew = (el.w || 100) * self.scale, eh = (el.h || 100) * self.scale;
       rh = '<div data-resize-idx="' + i + '" style="position:absolute;left:' + (px + ew - 6) + 'px;top:' + (py + eh - 6) + 'px;width:10px;height:10px;background:#6c5ce7;border:1px solid #fff;border-radius:2px;cursor:nwse-resize;z-index:20"></div>';
     }
@@ -1905,6 +2103,30 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
         if (fi2) return '<video data-el-idx="' + i + '" src="' + fi2.dataUrl + '" muted loop autoplay style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 240) * self.scale + 'px;height:' + (el.h || 135) * self.scale + 'px;object-fit:cover;border-radius:2px;' + dc + '"></video>' + rh;
         return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 240) * self.scale + 'px;height:' + (el.h || 135) * self.scale + 'px;background:#1a1a2e;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#555;' + dc + '">🎬</div>' + rh;
       }
+      case 'arc': {
+        var arcR = el.r || 40;
+        var startA = (el.startAngle || 0) - 90;
+        var endA = (el.endAngle || 270) - 90;
+        var arcSize = arcR * 2 * self.scale;
+        var arcSw = (el.strokeWidth || 6) * self.scale;
+        var arcCx = arcR * self.scale;
+        var arcCy = arcR * self.scale;
+        var startRad = startA * Math.PI / 180;
+        var endRad = endA * Math.PI / 180;
+        var x1 = arcCx + arcR * self.scale * 0.45 * Math.cos(startRad);
+        var y1 = arcCy + arcR * self.scale * 0.45 * Math.sin(startRad);
+        var x2 = arcCx + arcR * self.scale * 0.45 * Math.cos(endRad);
+        var y2 = arcCy + arcR * self.scale * 0.45 * Math.sin(endRad);
+        var largeArc = (endA - startA > 180 || endA - startA < -180) ? 1 : 0;
+        var svgArc = '<svg style="position:absolute;left:' + (self.camW + el.x * self.scale) + 'px;top:' + (el.y * self.scale) + 'px;width:' + arcSize + 'px;height:' + arcSize + 'px;' + dc + '" viewBox="0 0 ' + arcSize + ' ' + arcSize + '">' +
+          '<path d="M' + x1 + ',' + y1 + ' A' + (arcR * self.scale * 0.45) + ',' + (arcR * self.scale * 0.45) + ' 0 ' + largeArc + ' 1 ' + x2 + ',' + y2 + '" fill="none" stroke="' + el.color + '" stroke-width="' + arcSw + '" stroke-linecap="round"/></svg>';
+        return svgArc;
+      }
+      case 'progress': {
+        var pw = (el.w || 200) * self.scale, ph = (el.h || 8) * self.scale;
+        var pv = (el.value || 60) / 100;
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + (self.camW + el.x * self.scale) + 'px;top:' + (el.y * self.scale) + 'px;width:' + pw + 'px;height:' + ph + 'px;background:' + (el.bgColor || '#333') + ';border-radius:' + ((el.radius || 4) * self.scale) + 'px;' + dc + '"><div style="width:' + (pv * 100) + '%;height:100%;background:' + el.color + ';border-radius:inherit"></div></div>' + rh;
+      }
       default: return '';
     }
   }).join('');
@@ -1915,10 +2137,12 @@ JCM.PreviewRenderer = PreviewRenderer;
 // ─── Editor: 自定义元素编辑 ──────────────────────────────────────
 
 JCM.ElementDefaults = {
-  text: function () { return { type: 'text', text: '新文字', x: 10, y: 60, size: 24, color: '#ffffff', fontFamily: 'default', textAlign: 'left', bold: false, multiLine: false, w: 200, shadow: 'none', opacity: 100, textGradient: 'none', gradientColor2: '#ff6b6b', textStroke: 0, textStrokeColor: '#000000' }; },
-  rectangle: function () { return { type: 'rectangle', x: 10, y: 60, w: 100, h: 40, color: '#333333', radius: 0, opacity: 100, fillColor2: '', blur: 0 }; },
-  circle: function () { return { type: 'circle', x: 50, y: 100, r: 30, color: '#6c5ce7', opacity: 100 }; },
-  line: function () { return { type: 'rectangle', x: 10, y: 100, w: 200, h: 2, color: '#555555', radius: 1, opacity: 60, _isLine: true }; },
+  text: function () { return { type: 'text', text: '新文字', x: 10, y: 60, size: 24, color: '#ffffff', fontFamily: 'default', textAlign: 'left', bold: false, multiLine: false, w: 200, shadow: 'none', opacity: 100, textGradient: 'none', gradientColor2: '#ff6b6b', textStroke: 0, textStrokeColor: '#000000', locked: false }; },
+  rectangle: function () { return { type: 'rectangle', x: 10, y: 60, w: 100, h: 40, color: '#333333', radius: 0, opacity: 100, fillColor2: '', blur: 0, locked: false }; },
+  circle: function () { return { type: 'circle', x: 50, y: 100, r: 30, color: '#6c5ce7', opacity: 100, locked: false }; },
+  line: function () { return { type: 'rectangle', x: 10, y: 100, w: 200, h: 2, color: '#555555', radius: 1, opacity: 60, _isLine: true, locked: false }; },
+  arc: function () { return { type: 'arc', x: 50, y: 50, r: 40, startAngle: 0, endAngle: 270, color: '#6c5ce7', strokeWidth: 6, locked: false }; },
+  progress: function () { return { type: 'progress', x: 10, y: 100, w: 200, h: 8, color: '#6c5ce7', bgColor: '#333333', value: 60, radius: 4, locked: false }; },
 };
 
 JCM.isInCameraZone = function (el, device) {
@@ -2024,6 +2248,27 @@ JCM.renderElementEditor = function (el, idx, device) {
       field('半径', '<input type="number" value="' + el.r + '" data-prop="r" data-idx="' + idx + '">') +
       colorField('颜色', el.color || '#6c5ce7', 'color', idx) +
       field('透明度', '<input type="range" min="0" max="100" value="' + (el.opacity !== undefined ? el.opacity : 100) + '" data-prop="opacity" data-idx="' + idx + '">') +
+      '</div>';
+  } else if (el.type === 'arc') {
+    html += '<div class="config-grid">' +
+      field('中心 X', '<input type="number" value="' + el.x + '" data-prop="x" data-idx="' + idx + '">') +
+      field('中心 Y', '<input type="number" value="' + el.y + '" data-prop="y" data-idx="' + idx + '">') +
+      field('半径', '<input type="number" value="' + (el.r || 40) + '" data-prop="r" data-idx="' + idx + '">') +
+      field('起始角度', '<input type="number" value="' + (el.startAngle || 0) + '" data-prop="startAngle" data-idx="' + idx + '">') +
+      field('结束角度', '<input type="number" value="' + (el.endAngle || 270) + '" data-prop="endAngle" data-idx="' + idx + '">') +
+      colorField('颜色', el.color || '#6c5ce7', 'color', idx) +
+      field('线宽', '<input type="number" value="' + (el.strokeWidth || 6) + '" data-prop="strokeWidth" data-idx="' + idx + '">') +
+      '</div>';
+  } else if (el.type === 'progress') {
+    html += '<div class="config-grid">' +
+      field('X', '<input type="number" value="' + el.x + '" data-prop="x" data-idx="' + idx + '">') +
+      field('Y', '<input type="number" value="' + el.y + '" data-prop="y" data-idx="' + idx + '">') +
+      field('宽', '<input type="number" value="' + (el.w || 200) + '" data-prop="w" data-idx="' + idx + '">') +
+      field('高', '<input type="number" value="' + (el.h || 8) + '" data-prop="h" data-idx="' + idx + '">') +
+      field('进度', '<input type="range" min="0" max="100" value="' + (el.value || 60) + '" data-prop="value" data-idx="' + idx + '">') +
+      colorField('前景色', el.color || '#6c5ce7', 'color', idx) +
+      colorField('背景色', el.bgColor || '#333333', 'bgColor', idx) +
+      field('圆角', '<input type="number" value="' + (el.radius || 4) + '" data-prop="radius" data-idx="' + idx + '">') +
       '</div>';
   }
 
@@ -2407,6 +2652,166 @@ JCM.importTemplateJSON = function (file) {
   });
 };
 
+// ─── Transcode: 浏览器端视频转码 (FFmpeg.wasm) ──────────────────────
+
+JCM._ffmpegLoaded = false;
+JCM._ffmpegLoading = false;
+JCM._ffmpeg = null;
+
+// 检测是否需要转码
+JCM.needsTranscode = function (file) {
+  // GIF 要转（作为视频处理时需要标准 MP4）
+  if (file.type === 'image/gif') return true;
+  // MP4 容器跳过（假定 H.264，用户可手动强制转码）
+  if (file.type === 'video/mp4') return false;
+  // 其他视频格式（mov, webm, avi, mkv 等）必须转码
+  if (file.type.indexOf('video/') === 0) return true;
+  return false;
+};
+
+// 强制转码指定素材（用于 MP4 编码不兼容的情况）
+JCM.forceTranscodeAsset = function (fname) {
+  var fi = JCM.uploadedFiles[fname];
+  if (!fi) return Promise.reject(new Error('素材不存在'));
+
+  var isVideo = fi.mimeType && fi.mimeType.indexOf('video/') === 0;
+  if (!isVideo) return Promise.reject(new Error('不是视频文件'));
+
+  // 从 ArrayBuffer 重建 File 对象
+  var ext = fname.split('.').pop().toLowerCase() || 'mp4';
+  var mime = fi.mimeType || ('video/' + ext);
+  var blob = new Blob([fi.data], { type: mime });
+  var file = new File([blob], fi.originalName || fname, { type: mime });
+
+  toast('🔄 正在强制转码为 H.264...', 'info');
+
+  return JCM.transcodeToH264(file, function (pct) {
+    toast('🔄 转码中 ' + pct + '%...', 'info');
+  }).then(function (transcoded) {
+    return new Promise(function (resolve) {
+      var reader = new FileReader();
+      reader.onload = function (ev) {
+        var buf = ev.target.result;
+        var blobUrl = URL.createObjectURL(new Blob([buf], { type: 'video/mp4' }));
+        JCM.uploadedFiles[fname] = {
+          data: buf,
+          mimeType: 'video/mp4',
+          dataUrl: blobUrl,
+          originalName: transcoded.name
+        };
+        toast('✅ 转码完成: ' + transcoded.name, 'success');
+        resolve();
+      };
+      reader.readAsArrayBuffer(transcoded);
+    });
+  }).catch(function (e) {
+    toast('❌ 转码失败: ' + e.message, 'error');
+  });
+};
+
+// 加载 FFmpeg.wasm（按需加载，首次约 25MB）
+JCM._loadFFmpeg = function () {
+  if (JCM._ffmpegLoaded && JCM._ffmpeg) return Promise.resolve(JCM._ffmpeg);
+  if (JCM._ffmpegLoading) {
+    return new Promise(function (resolve, reject) {
+      var check = setInterval(function () {
+        if (JCM._ffmpegLoaded && JCM._ffmpeg) { clearInterval(check); resolve(JCM._ffmpeg); }
+      }, 200);
+      setTimeout(function () { clearInterval(check); reject(new Error('加载超时')); }, 60000);
+    });
+  }
+
+  JCM._ffmpegLoading = true;
+
+  return new Promise(function (resolve, reject) {
+    // 动态加载 FFmpeg.wasm 脚本
+    if (typeof FFmpegWASM === 'undefined') {
+      var s1 = document.createElement('script');
+      s1.src = 'https://unpkg.com/@ffmpeg/umd@0.12.10/dist/ffmpeg.js';
+      s1.onload = function () { initFFmpeg().then(resolve).catch(reject); };
+      s1.onerror = function () { reject(new Error('无法加载 FFmpeg 脚本')); };
+      document.head.appendChild(s1);
+    } else {
+      initFFmpeg().then(resolve).catch(reject);
+    }
+  });
+
+  function initFFmpeg() {
+    var ffmpeg = new FFmpegWASM.FFmpeg();
+    return ffmpeg.load({
+      coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.js',
+      wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.wasm'
+    }).then(function () {
+      JCM._ffmpeg = ffmpeg;
+      JCM._ffmpegLoaded = true;
+      JCM._ffmpegLoading = false;
+      return ffmpeg;
+    }).catch(function (e) {
+      JCM._ffmpegLoading = false;
+      throw e;
+    });
+  }
+};
+
+// 转码视频为 MP4 (H.264)
+JCM.transcodeToH264 = function (file, onProgress) {
+  var ffmpeg;
+  var inputName;
+
+  return JCM._loadFFmpeg().then(function (ff) {
+    ffmpeg = ff;
+
+    // 进度回调
+    if (onProgress) {
+      var handler = function (e) { onProgress(Math.round((e.progress || 0) * 100)); };
+      ffmpeg.on('progress', handler);
+    }
+
+    // 写入源文件
+    var ext = file.name.split('.').pop().toLowerCase() || 'mp4';
+    inputName = 'input.' + ext;
+
+    return new Response(file).arrayBuffer();
+  }).then(function (buf) {
+    return ffmpeg.writeFile(inputName, new Uint8Array(buf));
+  }).then(function () {
+    return ffmpeg.exec([
+      '-i', inputName,
+      '-c:v', 'libx264',
+      '-preset', 'fast',
+      '-crf', '28',
+      '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+      '-c:a', 'aac',
+      '-b:a', '128k',
+      '-movflags', '+faststart',
+      '-y',
+      'output.mp4'
+    ]);
+  }).then(function (exitCode) {
+    if (exitCode !== 0) throw new Error('转码失败 (exit ' + exitCode + ')');
+    return ffmpeg.readFile('output.mp4');
+  }).then(function (data) {
+    // 清理临时文件
+    try { ffmpeg.deleteFile(inputName); } catch (e) {}
+    try { ffmpeg.deleteFile('output.mp4'); } catch (e) {}
+    try { ffmpeg.terminate(); } catch (e) {}
+    JCM._ffmpegLoaded = false;
+    JCM._ffmpeg = null;
+
+    if (data.length < 1024) throw new Error('转码输出异常');
+
+    var blob = new Blob([data.buffer], { type: 'video/mp4' });
+    // 强制使用 .mp4 扩展名（不管原始格式是什么）
+    var baseName = file.name.replace(/\.[^.]+$/, '');
+    return new File([blob], baseName + '.mp4', { type: 'video/mp4' });
+  }).catch(function (e) {
+    try { ffmpeg.terminate(); } catch (_) {}
+    JCM._ffmpegLoaded = false;
+    JCM._ffmpeg = null;
+    throw e;
+  });
+};
+
 // ─── UI: 页面导航 + 配置渲染 + 拖拽 + 撤销 + 所有新功能 ───────────
 
 // ─── State ────────────────────────────────────────────────────────
@@ -2697,6 +3102,8 @@ function renderConfig() {
     '<button class="el-btn" data-add="rectangle"><span class="el-btn-icon">▢</span> 矩形</button>' +
     '<button class="el-btn" data-add="circle"><span class="el-btn-icon">○</span> 圆形</button>' +
     '<button class="el-btn" data-add="line"><span class="el-btn-icon">─</span> 线条</button>' +
+    '<button class="el-btn" data-add="arc"><span class="el-btn-icon">◠</span> 弧形</button>' +
+    '<button class="el-btn" data-add="progress"><span class="el-btn-icon">▰</span> 进度条</button>' +
     '<button class="el-btn" data-pick="image"><span class="el-btn-icon">🖼</span> 图片</button>' +
     '<button class="el-btn" data-pick="video"><span class="el-btn-icon">🎬</span> 视频</button>' +
     '<button class="el-btn" data-action="importZip" title="导入 MAML ZIP"><span class="el-btn-icon">📦</span> 导入ZIP</button>' +
@@ -2721,6 +3128,7 @@ function renderConfig() {
       '<span class="el-badge">' + el.type + '</span>' +
       '<span class="el-item-name">' + escH(label) + '</span>' +
       (inCam ? '<span title="在摄像头遮挡区内" style="color:#e17055;font-size:14px">⚠️</span>' : '') +
+      '<button class="el-lock-btn" data-lock="' + i + '" title="锁定/解锁">' + (el.locked ? '🔒' : '🔓') + '</button>' +
       '<span class="el-z-btns">' +
       '<button class="el-z-btn" data-z="up" data-zi="' + i + '" title="上移一层">↑</button>' +
       '<button class="el-z-btn" data-z="down" data-zi="' + i + '" title="下移一层">↓</button>' +
@@ -2814,6 +3222,7 @@ function renderConfig() {
 
   // Trigger live preview update after config rebuild
   if (_step === 1) renderLivePreview();
+  autoSave();
 }
 
 function renderField(f) {
@@ -2960,6 +3369,7 @@ function renderPreview() {
     });
   }
   document.getElementById('codeContent').value = maml;
+  updateCodeEditor();
   _dirty = false;
 }
 
@@ -3031,6 +3441,13 @@ function generateCustomMAML(device) {
       case 'video':
         lines.push('    <Video src="videos/' + JCM.escXml(el.src || el.fileName || '') + '" x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 240) + '" h="' + (el.h || 135) + '" autoPlay="true" loop="true" />');
         break;
+      case 'arc':
+        lines.push('    <Arc x="' + el.x + '" y="' + el.y + '" r="' + (el.r || 40) + '" startAngle="' + (el.startAngle || 0) + '" endAngle="' + (el.endAngle || 270) + '" color="' + el.color + '" strokeWidth="' + (el.strokeWidth || 6) + '" />');
+        break;
+      case 'progress':
+        lines.push('    <Rectangle x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 200) + '" h="' + (el.h || 8) + '" fillColor="' + (el.bgColor || '#333333') + '" cornerRadius="' + (el.radius || 4) + '" />');
+        lines.push('    <Rectangle x="' + el.x + '" y="' + el.y + '" w="' + Math.round((el.w || 200) * (el.value || 60) / 100) + '" h="' + (el.h || 8) + '" fillColor="' + el.color + '" cornerRadius="' + (el.radius || 4) + '" />');
+        break;
     }
   });
   return lines.join('\n');
@@ -3081,6 +3498,135 @@ JCM.copyXML = function () {
     toast('📋 XML 已复制', 'success');
   });
 };
+
+// ─── Code Editor ──────────────────────────────────────────────────
+function highlightXML(code) {
+  return code
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/(&lt;!--[\s\S]*?--&gt;)/g, '<span class="comment">$1</span>')
+    .replace(/(&lt;\/?)([\w:.-]+)/g, '$1<span class="tag">$2</span>')
+    .replace(/([\w:.-]+)(=)(&quot;[^&]*&quot;|&#39;[^&]*&#39;)/g,
+      '<span class="attr-name">$1</span>$2<span class="attr-val">$3</span>')
+    .replace(/(&lt;[?!][^&]*?&gt;)/g, '<span class="entity">$1</span>')
+    .replace(/(&lt;|&gt;|\/&gt;)/g, '<span class="bracket">$1</span>');
+}
+
+function updateCodeGutter() {
+  var textarea = document.getElementById('codeContent');
+  var gutter = document.getElementById('codeGutter');
+  if (!textarea || !gutter) return;
+  var lines = textarea.value.split('\n');
+  var html = '';
+  for (var i = 1; i <= lines.length; i++) html += '<span>' + i + '</span>';
+  gutter.innerHTML = html;
+}
+
+function updateCodeHighlight() {
+  var textarea = document.getElementById('codeContent');
+  var highlight = document.getElementById('codeHighlight');
+  if (!textarea || !highlight) return;
+  highlight.innerHTML = highlightXML(textarea.value) + '\n';
+}
+
+function updateCodeEditor() {
+  updateCodeGutter();
+  updateCodeHighlight();
+}
+
+function syncCodeScroll() {
+  var textarea = document.getElementById('codeContent');
+  var highlight = document.getElementById('codeHighlight');
+  var gutter = document.getElementById('codeGutter');
+  var body = document.getElementById('codeEditor');
+  if (!textarea || !highlight || !gutter || !body) return;
+  // Scroll the body container
+  body.querySelector('.code-body').scrollTop = textarea.scrollTop;
+  body.querySelector('.code-body').scrollLeft = textarea.scrollLeft;
+  highlight.style.transform = 'translate(' + (-textarea.scrollLeft) + 'px,' + (-textarea.scrollTop) + 'px)';
+  gutter.style.transform = 'translateY(' + (-textarea.scrollTop) + 'px)';
+}
+
+JCM.formatXML = function () {
+  var textarea = document.getElementById('codeContent');
+  if (!textarea) return;
+  var xml = textarea.value;
+  if (!xml || xml.indexOf('<') < 0) return toast('没有可格式化的 XML', 'error');
+
+  // Simple XML formatter
+  var formatted = '';
+  var indent = 0;
+  var lines = xml.replace(/>\s*</g, '>\n<').split('\n');
+  lines.forEach(function (line) {
+    line = line.trim();
+    if (!line) return;
+    if (line.indexOf('</') === 0 && indent > 0) indent--;
+    formatted += '  '.repeat(indent) + line + '\n';
+    if (line.indexOf('<') === 0 && line.indexOf('</') !== 0 &&
+        line.indexOf('/>') < 0 && line.indexOf('<?') < 0 &&
+        line.indexOf('<!--') < 0) {
+      indent++;
+    }
+  });
+  textarea.value = formatted.trim();
+  updateCodeEditor();
+  toast('🔧 XML 已格式化', 'success');
+};
+
+function setupCodeEditor() {
+  var textarea = document.getElementById('codeContent');
+  if (!textarea) return;
+
+  // Tab key = insert 2 spaces
+  textarea.addEventListener('keydown', function (e) {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      var start = this.selectionStart;
+      var end = this.selectionEnd;
+      if (e.shiftKey) {
+        // Outdent: remove 2 spaces before cursor line
+        var lineStart = this.value.lastIndexOf('\n', start - 1) + 1;
+        var lineText = this.value.substring(lineStart, start);
+        if (lineText.indexOf('  ') === 0) {
+          this.value = this.value.substring(0, lineStart) + this.value.substring(lineStart + 2);
+          this.selectionStart = this.selectionEnd = Math.max(lineStart, start - 2);
+        }
+      } else {
+        this.value = this.value.substring(0, start) + '  ' + this.value.substring(end);
+        this.selectionStart = this.selectionEnd = start + 2;
+      }
+      updateCodeEditor();
+    }
+    // Auto-close tags: typing < adds >
+    if (e.key === '<' && !e.ctrlKey && !e.metaKey) {
+      // Don't auto-close if it looks like a closing tag
+    }
+    // Enter = auto-indent
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      var pos = this.selectionStart;
+      var before = this.value.substring(0, pos);
+      var after = this.value.substring(pos);
+      var currentLine = before.substring(before.lastIndexOf('\n') + 1);
+      var currentIndent = currentLine.match(/^(\s*)/)[1];
+      var extraIndent = '';
+      // If previous char is > and next char is </, keep same indent
+      var lastChar = before.trim().slice(-1);
+      var nextChars = after.trim().substring(0, 2);
+      if (lastChar === '>' && nextChars !== '</') {
+        extraIndent = '  ';
+      }
+      this.value = before + '\n' + currentIndent + extraIndent + after;
+      this.selectionStart = this.selectionEnd = pos + 1 + currentIndent.length + extraIndent.length;
+      updateCodeEditor();
+    }
+  });
+
+  textarea.addEventListener('input', updateCodeEditor);
+  textarea.addEventListener('scroll', syncCodeScroll);
+
+  // Initial render
+  updateCodeEditor();
+}
 
 // ─── Fullscreen Preview ───────────────────────────────────────────
 JCM.toggleFullscreen = function () {
@@ -3560,6 +4106,7 @@ function onPreviewPointerDown(e) {
   if (!el) return;
   var idx = parseInt(el.dataset.elIdx, 10);
   if (isNaN(idx) || idx >= _elements.length) return;
+  if (_elements[idx].locked) return; // Locked elements cannot be dragged
 
   e.preventDefault();
   var pos = getPointerPos(e);
@@ -3729,6 +4276,7 @@ function setupEvents() {
       _dirty = true;
     }
     _autoPreview();
+    autoSave();
   });
 
   document.getElementById('cfgContent').addEventListener('change', function (e) {
@@ -3756,6 +4304,17 @@ function setupEvents() {
     if (del) { e.stopPropagation(); JCM.removeElement(Number(del.dataset.del)); return; }
     var zBtn = e.target.closest('.el-z-btn');
     if (zBtn) { e.stopPropagation(); JCM.moveElementZ(Number(zBtn.dataset.zi), zBtn.dataset.z); return; }
+    var lockBtn = e.target.closest('[data-lock]');
+    if (lockBtn) {
+      e.stopPropagation();
+      var lockIdx = Number(lockBtn.dataset.lock);
+      if (lockIdx >= 0 && lockIdx < _elements.length) {
+        _elements[lockIdx].locked = !_elements[lockIdx].locked;
+        renderConfig();
+        toast(_elements[lockIdx].locked ? '🔒 已锁定' : '🔓 已解锁', 'info');
+      }
+      return;
+    }
     var addBtn = e.target.closest('[data-add]');
     if (addBtn) { JCM.addElement(addBtn.dataset.add); return; }
     var pickBtn = e.target.closest('[data-pick]');
@@ -3883,7 +4442,121 @@ function setupEvents() {
       toast('📋 已粘贴', 'success');
     }
   });
+
+  // Drag & Drop file upload
+  var content = document.querySelector('.content');
+  content.addEventListener('dragover', function(e) { e.preventDefault(); e.stopPropagation(); });
+  content.addEventListener('drop', function(e) {
+    e.preventDefault(); e.stopPropagation();
+    var files = e.dataTransfer.files;
+    if (!files.length) return;
+    var file = files[0];
+    if (file.type.indexOf('image/') === 0) {
+      var dt = new DataTransfer(); dt.items.add(file);
+      document.getElementById('fileImagePick').files = dt.files;
+      _pendingAdd = 'image'; _pendingReplace = -1;
+      document.getElementById('fileImagePick').dispatchEvent(new Event('change'));
+    } else if (file.type.indexOf('video/') === 0) {
+      var dt = new DataTransfer(); dt.items.add(file);
+      document.getElementById('fileVideoPick').files = dt.files;
+      _pendingAdd = 'video'; _pendingReplace = -1;
+      document.getElementById('fileVideoPick').dispatchEvent(new Event('change'));
+    }
+  });
 }
+
+// ─── Auto-save (debounced) ────────────────────────────────────────
+var _autoSaveTimer = null;
+function autoSave() {
+  clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(function () {
+    try {
+      var draft = {
+        tplId: _tpl ? _tpl.id : null,
+        cfg: _cfg,
+        elements: _elements,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('jcm-draft', JSON.stringify(draft));
+    } catch (e) { }
+  }, 2000);
+}
+
+function showDraftRecovery(d) {
+  var tpl = JCM.TEMPLATES.find(function (t) { return t.id === d.tplId; });
+  var name = tpl ? tpl.name : d.tplId;
+  var date = new Date(d.timestamp);
+  var timeStr = date.toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+  var div = document.createElement('div');
+  div.className = 'draft-recovery';
+  div.innerHTML = '<div class="draft-recovery-title">📄 发现未保存的草稿</div>' +
+    '<div class="draft-recovery-desc">模板: ' + escH(name) + ' · ' + timeStr + '</div>' +
+    '<div class="draft-recovery-btns">' +
+    '<button class="btn btn-primary" id="draftRecoverBtn">恢复</button>' +
+    '<button class="btn btn-secondary" id="draftDiscardBtn">丢弃</button>' +
+    '</div>';
+  document.body.appendChild(div);
+
+  document.getElementById('draftRecoverBtn').onclick = function () {
+    var _tpl2 = JCM.TEMPLATES.find(function (t) { return t.id === d.tplId; });
+    if (!_tpl2) { toast('找不到对应模板', 'error'); div.remove(); return; }
+    _tpl = _tpl2;
+    _cfg = d.cfg || {};
+    _elements = d.elements || [];
+    _dirty = true;
+    _history = [];
+    _redoStack = [];
+    renderTplGrid();
+    JCM.goStep(1);
+    toast('✅ 草稿已恢复', 'success');
+    div.remove();
+  };
+  document.getElementById('draftDiscardBtn').onclick = function () {
+    localStorage.removeItem('jcm-draft');
+    div.remove();
+  };
+}
+
+// ─── History Panel ────────────────────────────────────────────────
+JCM.toggleHistory = function () {
+  var modal = document.getElementById('historyModal');
+  if (!modal) return;
+  if (modal.style.display === 'none') {
+    var list = document.getElementById('historyList');
+    var labels = JCM.getHistory();
+    if (labels.length === 0) {
+      list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3)">暂无操作历史</div>';
+    } else {
+      list.innerHTML = '<div class="shortcut-list">' + labels.map(function (l, i) {
+        return '<div class="shortcut-item" style="cursor:pointer" onclick="JCM.undoTo(' + (labels.length - i) + ');JCM.toggleHistory()"><span>' + (i + 1) + '.</span><span>' + escH(l) + '</span></div>';
+      }).join('') + '</div>';
+    }
+    modal.style.display = '';
+  } else {
+    modal.style.display = 'none';
+  }
+};
+
+// ─── Grid Overlay Toggle ─────────────────────────────────────────
+JCM.toggleGrid = function () {
+  var cb = document.getElementById('showGrid');
+  var overlay = document.getElementById('previewGridOverlay');
+  if (cb && overlay) overlay.style.display = cb.checked ? '' : 'none';
+};
+
+// ─── Template Filter ─────────────────────────────────────────────
+JCM.filterTemplates = function (query) {
+  var cards = document.querySelectorAll('.tpl-card');
+  query = (query || '').toLowerCase();
+  cards.forEach(function (card) {
+    var nameEl = card.querySelector('.tpl-card-name');
+    var descEl = card.querySelector('.tpl-card-desc');
+    var name = nameEl ? nameEl.textContent.toLowerCase() : '';
+    var desc = descEl ? descEl.textContent.toLowerCase() : '';
+    card.style.display = (!query || name.indexOf(query) >= 0 || desc.indexOf(query) >= 0) ? '' : 'none';
+  });
+};
 
 // ─── Toast (queue, supports multiple simultaneous) ────────────────
 var _toastQueue = [];
@@ -3957,11 +4630,32 @@ JCM.initUI = function () {
   initTheme();
   renderTplGrid();
   setupEvents();
+  setupCodeEditor();
   // 检查 URL 分享
   JCM.checkShareURL();
   // Init slider position after layout
   requestAnimationFrame(function () { moveStepSlider(0); });
   window.addEventListener('resize', function () { moveStepSlider(_step); });
+  // Save draft on page unload
+  window.addEventListener('beforeunload', function () {
+    try {
+      var draft = {
+        tplId: _tpl ? _tpl.id : null,
+        cfg: _cfg,
+        elements: _elements,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('jcm-draft', JSON.stringify(draft));
+    } catch (e) { }
+  });
+  // Check for unsaved draft
+  try {
+    var draft = localStorage.getItem('jcm-draft');
+    if (draft) {
+      var d = JSON.parse(draft);
+      if (d.tplId) showDraftRecovery(d);
+    }
+  } catch (e) { }
 };
 
 // Expose internal helpers for inline use
