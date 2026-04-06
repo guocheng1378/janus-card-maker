@@ -641,6 +641,38 @@ kbd{
 }
 .autosave-indicator.show{opacity:1;transform:translateY(0)}
 
+/* ─── Background Upload Button ─── */
+.bg-upload-btn{
+  width:32px;height:32px;border-radius:6px;border:1px solid var(--border);
+  background:var(--surface2);cursor:pointer;font-size:14px;
+  display:flex;align-items:center;justify-content:center;transition:var(--transition);flex-shrink:0;
+}
+.bg-upload-btn:hover{border-color:var(--accent);background:var(--accent-glow)}
+
+/* ─── Toast Undo Button ─── */
+.toast-undo{
+  background:none;border:1px solid rgba(255,255,255,0.3);color:inherit;
+  font-size:11px;padding:2px 8px;border-radius:4px;cursor:pointer;
+  margin-left:8px;opacity:0.8;transition:var(--transition);font-family:inherit;
+}
+.toast-undo:hover{opacity:1;background:rgba(255,255,255,0.15)}
+
+/* ─── Config Section Collapse ─── */
+.config-section-title{cursor:pointer;user-select:none}
+.config-section-title:hover{color:var(--accent)}
+.config-section-title::after{
+  content:'▾';float:right;font-size:10px;transition:transform .2s;
+}
+.config-section-title.collapsed::after{transform:rotate(-90deg)}
+
+/* ─── Smart Alignment Guide Lines ─── */
+.align-guide{
+  position:absolute;z-index:25;pointer-events:none;
+  background:var(--accent);opacity:0.6;
+}
+.align-guide-h{height:1px;width:100%;left:0}
+.align-guide-v{width:1px;height:100%;top:0}
+
 /* ─── Template Category Tabs ─── */
 .tpl-categories{
   display:flex;gap:6px;padding:0 20px 12px;flex-wrap:wrap;
@@ -1213,7 +1245,7 @@ JCM.TEMPLATES = [
       { group: '基本', fields: [
         { key: 'cardName', label: '卡片名称', type: 'text', default: '时钟卡片' },
         { key: 'bgColor', label: '背景颜色', type: 'color', default: '#000000' },
-        { key: 'bgImage', label: '背景图 URL（可选）', type: 'text', default: '' },
+        { key: 'bgImage', label: '背景图 URL 或上传', type: 'text', default: '' },
       ]},
       { group: '样式', fields: [
         { key: 'timeColor', label: '时间颜色', type: 'color', default: '#ffffff' },
@@ -1252,7 +1284,7 @@ JCM.TEMPLATES = [
       { group: '基本', fields: [
         { key: 'cardName', label: '卡片名称', type: 'text', default: '名言卡片' },
         { key: 'bgColor', label: '背景颜色', type: 'color', default: '#1a1a2e' },
-        { key: 'bgImage', label: '背景图 URL（可选）', type: 'text', default: '' },
+        { key: 'bgImage', label: '背景图 URL 或上传', type: 'text', default: '' },
       ]},
       { group: '内容', fields: [
         { key: 'text', label: '文字内容', type: 'textarea', default: 'Stay hungry.\nStay foolish.' },
@@ -1283,7 +1315,7 @@ JCM.TEMPLATES = [
       { group: '基本', fields: [
         { key: 'cardName', label: '卡片名称', type: 'text', default: '电池卡片' },
         { key: 'bgColor', label: '背景颜色', type: 'color', default: '#0d1117' },
-        { key: 'bgImage', label: '背景图 URL（可选）', type: 'text', default: '' },
+        { key: 'bgImage', label: '背景图 URL 或上传', type: 'text', default: '' },
       ]},
       { group: '样式', fields: [
         { key: 'barColor', label: '电量条颜色', type: 'color', default: '#00b894' },
@@ -1317,7 +1349,7 @@ JCM.TEMPLATES = [
       { group: '基本', fields: [
         { key: 'cardName', label: '卡片名称', type: 'text', default: '状态卡片' },
         { key: 'bgColor', label: '背景颜色', type: 'color', default: '#0f0f1a' },
-        { key: 'bgImage', label: '背景图 URL（可选）', type: 'text', default: '' },
+        { key: 'bgImage', label: '背景图 URL 或上传', type: 'text', default: '' },
         { key: 'title', label: '标题', type: 'text', default: '系统状态' },
       ]},
       { group: '项目', fields: [
@@ -1357,7 +1389,7 @@ JCM.TEMPLATES = [
       { group: '基本', fields: [
         { key: 'cardName', label: '卡片名称', type: 'text', default: '倒计时卡片' },
         { key: 'bgColor', label: '背景颜色', type: 'color', default: '#1a0a2e' },
-        { key: 'bgImage', label: '背景图 URL（可选）', type: 'text', default: '' },
+        { key: 'bgImage', label: '背景图 URL 或上传', type: 'text', default: '' },
       ]},
       { group: '内容', fields: [
         { key: 'eventName', label: '事件名称', type: 'text', default: '距离新年' },
@@ -1403,7 +1435,7 @@ JCM.TEMPLATES = [
       { group: '基本', fields: [
         { key: 'cardName', label: '卡片名称', type: 'text', default: '音乐卡片' },
         { key: 'bgColor', label: '背景颜色', type: 'color', default: '#0a0a0a' },
-        { key: 'bgImage', label: '背景图 URL（可选）', type: 'text', default: '' },
+        { key: 'bgImage', label: '背景图 URL 或上传', type: 'text', default: '' },
       ]},
       { group: '内容', fields: [
         { key: 'songName', label: '歌曲名称', type: 'text', default: '歌曲名称' },
@@ -1471,7 +1503,7 @@ JCM.TEMPLATES = [
       { group: '基本', fields: [
         { key: 'cardName', label: '卡片名称', type: 'text', default: '天气卡片' },
         { key: 'bgColor', label: '背景颜色', type: 'color', default: '#0a1628' },
-        { key: 'bgImage', label: '背景图 URL（可选）', type: 'text', default: '' },
+        { key: 'bgImage', label: '背景图 URL 或上传', type: 'text', default: '' },
       ]},
       { group: '天气', fields: [
         { key: 'city', label: '城市', type: 'text', default: '北京' },
@@ -1504,7 +1536,7 @@ JCM.TEMPLATES = [
       { group: '基本', fields: [
         { key: 'cardName', label: '卡片名称', type: 'text', default: '步数卡片' },
         { key: 'bgColor', label: '背景颜色', type: 'color', default: '#0a0a1a' },
-        { key: 'bgImage', label: '背景图 URL（可选）', type: 'text', default: '' },
+        { key: 'bgImage', label: '背景图 URL 或上传', type: 'text', default: '' },
       ]},
       { group: '样式', fields: [
         { key: 'goal', label: '目标步数', type: 'text', default: '10000' },
@@ -1543,7 +1575,7 @@ JCM.TEMPLATES = [
       { group: '基本', fields: [
         { key: 'cardName', label: '卡片名称', type: 'text', default: '日历卡片' },
         { key: 'bgColor', label: '背景颜色', type: 'color', default: '#0f0f1a' },
-        { key: 'bgImage', label: '背景图 URL（可选）', type: 'text', default: '' },
+        { key: 'bgImage', label: '背景图 URL 或上传', type: 'text', default: '' },
       ]},
       { group: '样式', fields: [
         { key: 'dayColor', label: '日期颜色', type: 'color', default: '#ffffff' },
@@ -1583,7 +1615,7 @@ JCM.TEMPLATES = [
       { group: '基本', fields: [
         { key: 'cardName', label: '卡片名称', type: 'text', default: '双时钟' },
         { key: 'bgColor', label: '背景颜色', type: 'color', default: '#000000' },
-        { key: 'bgImage', label: '背景图 URL（可选）', type: 'text', default: '' },
+        { key: 'bgImage', label: '背景图 URL 或上传', type: 'text', default: '' },
       ]},
       { group: '城市 1', fields: [
         { key: 'city1', label: '城市名', type: 'text', default: '北京' },
@@ -1639,7 +1671,7 @@ JCM.TEMPLATES = [
       { group: '基本', fields: [
         { key: 'cardName', label: '卡片名称', type: 'text', default: '每日一句' },
         { key: 'bgColor', label: '背景颜色', type: 'color', default: '#0a0a1a' },
-        { key: 'bgImage', label: '背景图 URL（可选）', type: 'text', default: '' },
+        { key: 'bgImage', label: '背景图 URL 或上传', type: 'text', default: '' },
       ]},
       { group: '语录 (每天轮换一条)', fields: [
         { key: 'quote1', label: '语录 1', type: 'textarea', default: '生活不止眼前的苟且\n还有诗和远方' },
@@ -1704,7 +1736,7 @@ JCM.TEMPLATES = [
       { group: '基本', fields: [
         { key: 'cardName', label: '卡片名称', type: 'text', default: '环形进度' },
         { key: 'bgColor', label: '背景颜色', type: 'color', default: '#0a0a1a' },
-        { key: 'bgImage', label: '背景图 URL（可选）', type: 'text', default: '' },
+        { key: 'bgImage', label: '背景图 URL 或上传', type: 'text', default: '' },
       ]},
       { group: '数据源', fields: [
         { key: 'source', label: '数据来源', type: 'select', options: [
@@ -1754,7 +1786,7 @@ JCM.TEMPLATES = [
       { group: '基本', fields: [
         { key: 'cardName', label: '卡片名称', type: 'text', default: '仪表盘' },
         { key: 'bgColor', label: '背景颜色', type: 'color', default: '#0a0e1a' },
-        { key: 'bgImage', label: '背景图 URL（可选）', type: 'text', default: '' },
+        { key: 'bgImage', label: '背景图 URL 或上传', type: 'text', default: '' },
       ]},
       { group: '样式', fields: [
         { key: 'timeColor', label: '时间颜色', type: 'color', default: '#ffffff' },
@@ -1799,7 +1831,7 @@ JCM.TEMPLATES = [
       { group: '基本', fields: [
         { key: 'cardName', label: '卡片名称', type: 'text', default: '图片卡片' },
         { key: 'bgColor', label: '背景颜色', type: 'color', default: '#000000' },
-        { key: 'bgImage', label: '背景图 URL（可选）', type: 'text', default: '' },
+        { key: 'bgImage', label: '背景图 URL 或上传', type: 'text', default: '' },
       ]},
     ],
     gen: function (c) {
@@ -1817,7 +1849,7 @@ JCM.TEMPLATES = [
       { group: '基本', fields: [
         { key: 'cardName', label: '卡片名称', type: 'text', default: '自定义卡片' },
         { key: 'bgColor', label: '背景颜色', type: 'color', default: '#000000' },
-        { key: 'bgImage', label: '背景图 URL（可选）', type: 'text', default: '' },
+        { key: 'bgImage', label: '背景图 URL 或上传', type: 'text', default: '' },
         { key: 'bgPattern', label: '背景图案', type: 'select', options: [
           { v: 'solid', l: '纯色' },
           { v: 'dots', l: '点阵' },
@@ -1843,7 +1875,7 @@ JCM.TEMPLATES = [
       { group: '基本', fields: [
         { key: 'cardName', label: '卡片名称', type: 'text', default: '天气卡片' },
         { key: 'bgColor', label: '背景颜色', type: 'color', default: '#0a1628' },
-        { key: 'bgImage', label: '背景图 URL（可选）', type: 'text', default: '' },
+        { key: 'bgImage', label: '背景图 URL 或上传', type: 'text', default: '' },
       ]},
       { group: '样式', fields: [
         { key: 'timeColor', label: '时间颜色', type: 'color', default: '#ffffff' },
@@ -1890,7 +1922,7 @@ JCM.TEMPLATES = [
       { group: '基本', fields: [
         { key: 'cardName', label: '卡片名称', type: 'text', default: '音乐卡片' },
         { key: 'bgColor', label: '背景颜色', type: 'color', default: '#1a1a2e' },
-        { key: 'bgImage', label: '背景图 URL（可选）', type: 'text', default: '' },
+        { key: 'bgImage', label: '背景图 URL 或上传', type: 'text', default: '' },
       ]},
       { group: '样式', fields: [
         { key: 'titleColor', label: '歌名颜色', type: 'color', default: '#ffffff' },
@@ -3461,6 +3493,9 @@ function renderField(f) {
   var v = _cfg[f.key];
   switch (f.type) {
     case 'text':
+      if (f.key === 'bgImage') {
+        return '<div class="field"><label>' + f.label + '</label><div style="display:flex;gap:6px"><input type="text" value="' + escH(String(v)) + '" data-cfg="' + f.key + '" placeholder="https://... 或点击上传" style="flex:1"><button class="bg-upload-btn" data-bg-upload title="上传背景图">📁</button></div></div>';
+      }
       return '<div class="field"><label>' + f.label + '</label><input type="text" value="' + escH(String(v)) + '" data-cfg="' + f.key + '"></div>';
     case 'textarea':
       return '<div class="field"><label>' + f.label + '</label><textarea rows="3" data-cfg="' + f.key + '">' + escH(String(v)) + '</textarea></div>';
@@ -3510,6 +3545,7 @@ JCM.removeElement = function (idx) {
   if (_selIdx >= _elements.length) _selIdx = _elements.length - 1;
   _dirty = true;
   renderConfig();
+  toast('🗑️ 已删除', 'success', undo);
 };
 
 JCM.moveElementZ = function (idx, dir) {
@@ -4464,9 +4500,16 @@ function applySmartAlign(nx, ny) {
   var elCY = ny + elH / 2;
   var snapThreshold = 6;
   var device = _dragging.device;
+  var guides = [];
 
-  if (Math.abs(elCX - device.width / 2) < snapThreshold) nx = Math.round(device.width / 2 - elW / 2);
-  if (Math.abs(elCY - device.height / 2) < snapThreshold) ny = Math.round(device.height / 2 - elH / 2);
+  if (Math.abs(elCX - device.width / 2) < snapThreshold) {
+    nx = Math.round(device.width / 2 - elW / 2);
+    guides.push({ type: 'v', pos: device.width / 2 });
+  }
+  if (Math.abs(elCY - device.height / 2) < snapThreshold) {
+    ny = Math.round(device.height / 2 - elH / 2);
+    guides.push({ type: 'h', pos: device.height / 2 });
+  }
 
   for (var i = 0; i < _elements.length; i++) {
     if (i === _dragging.idx) continue;
@@ -4476,14 +4519,14 @@ function applySmartAlign(nx, ny) {
     var oCX = other.x + oW / 2;
     var oCY = other.y + oH / 2;
 
-    if (Math.abs(nx - other.x) < snapThreshold) nx = other.x;
-    if (Math.abs(nx + elW - (other.x + oW)) < snapThreshold) nx = other.x + oW - elW;
-    if (Math.abs(elCX - oCX) < snapThreshold) nx = Math.round(oCX - elW / 2);
-    if (Math.abs(ny - other.y) < snapThreshold) ny = other.y;
-    if (Math.abs(ny + elH - (other.y + oH)) < snapThreshold) ny = other.y + oH - elH;
-    if (Math.abs(elCY - oCY) < snapThreshold) ny = Math.round(oCY - elH / 2);
+    if (Math.abs(nx - other.x) < snapThreshold) { nx = other.x; guides.push({ type: 'v', pos: other.x }); }
+    if (Math.abs(nx + elW - (other.x + oW)) < snapThreshold) { nx = other.x + oW - elW; guides.push({ type: 'v', pos: other.x + oW }); }
+    if (Math.abs(elCX - oCX) < snapThreshold) { nx = Math.round(oCX - elW / 2); guides.push({ type: 'v', pos: oCX }); }
+    if (Math.abs(ny - other.y) < snapThreshold) { ny = other.y; guides.push({ type: 'h', pos: other.y }); }
+    if (Math.abs(ny + elH - (other.y + oH)) < snapThreshold) { ny = other.y + oH - elH; guides.push({ type: 'h', pos: other.y + oH }); }
+    if (Math.abs(elCY - oCY) < snapThreshold) { ny = Math.round(oCY - elH / 2); guides.push({ type: 'h', pos: oCY }); }
   }
-  return { x: nx, y: ny };
+  return { x: nx, y: ny, guides: guides };
 }
 
 function onPreviewMouseMove(e) {
@@ -4510,11 +4553,32 @@ function onPreviewMouseMove(e) {
     _elements[_dragging.idx].x = Math.max(0, Math.min(aligned.x, _dragging.device.width - 10));
     _elements[_dragging.idx].y = Math.max(0, Math.min(aligned.y, _dragging.device.height - 10));
     renderPreview();
+    // Render guide lines
+    renderGuideLines(aligned.guides || [], _dragging.scale);
   });
+}
+
+function renderGuideLines(guides, scale) {
+  var screen = document.querySelector('.preview-screen');
+  if (!screen) return;
+  // Remove old guides
+  screen.querySelectorAll('.align-guide').forEach(function (g) { g.remove(); });
+  guides.forEach(function (g) {
+    var div = document.createElement('div');
+    div.className = 'align-guide ' + (g.type === 'h' ? 'align-guide-h' : 'align-guide-v');
+    if (g.type === 'h') div.style.top = (g.pos * scale) + 'px';
+    else div.style.left = (g.pos * scale) + 'px';
+    screen.appendChild(div);
+  });
+}
+
+function clearGuideLines() {
+  document.querySelectorAll('.align-guide').forEach(function (g) { g.remove() });
 }
 
 function onPreviewMouseUp() {
   _dragging = null;
+  clearGuideLines();
   document.removeEventListener('mousemove', onPreviewMouseMove);
   document.removeEventListener('mouseup', onPreviewMouseUp);
   document.removeEventListener('touchmove', onPreviewMouseMove);
@@ -4858,6 +4922,39 @@ function setupEvents() {
       toast(isFav ? '⭐ 已收藏' : '已取消收藏', 'info');
       return;
     }
+    // 背景图上传
+    var bgBtn = e.target.closest('[data-bg-upload]');
+    if (bgBtn) {
+      e.stopPropagation();
+      var bgInput = document.createElement('input');
+      bgInput.type = 'file'; bgInput.accept = 'image/*';
+      bgInput.onchange = function () {
+        var file = bgInput.files && bgInput.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function (ev) {
+          _cfg.bgImage = ev.target.result;
+          var textInput = document.querySelector('[data-cfg="bgImage"]');
+          if (textInput) textInput.value = '(本地图片: ' + file.name + ')';
+          _dirty = true; _autoPreview();
+          toast('🖼️ 背景图已设置', 'success');
+        };
+        reader.readAsDataURL(file);
+      };
+      bgInput.click();
+      return;
+    }
+    // 配置区折叠
+    var sectionTitle = e.target.closest('.config-section-title');
+    if (sectionTitle) {
+      var section = sectionTitle.parentElement;
+      var grid = section.querySelector('.config-grid');
+      if (grid) {
+        var collapsed = grid.style.display === 'none';
+        grid.style.display = collapsed ? '' : 'none';
+        sectionTitle.classList.toggle('collapsed', !collapsed);
+      }
+    }
   });
 
   // ── 元素列表拖拽排序 ──
@@ -5061,12 +5158,23 @@ JCM.filterTemplates = function (query) {
 var _toastQueue = [];
 var _toastId = 0;
 
-function toast(msg, type) {
+function toast(msg, type, undoFn) {
   var id = 'toast-' + (++_toastId);
   var el = document.createElement('div');
   el.id = id;
   el.className = 'toast ' + (type || 'success');
-  el.textContent = msg;
+  if (undoFn) {
+    el.innerHTML = '<span>' + escH(msg) + '</span> <button class="toast-undo" onclick="this.parentElement._undo()">↩ 撤销</button>';
+    el._undo = function () {
+      undoFn();
+      el.classList.remove('show');
+      setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 300);
+      _toastQueue = _toastQueue.filter(function (t) { return t !== id; });
+      repositionToasts();
+    };
+  } else {
+    el.textContent = msg;
+  }
   document.body.appendChild(el);
 
   var offset = _toastQueue.length * 52;
@@ -5079,13 +5187,16 @@ function toast(msg, type) {
     setTimeout(function () {
       if (el.parentNode) el.parentNode.removeChild(el);
       _toastQueue = _toastQueue.filter(function (t) { return t !== id; });
-      // Reposition remaining toasts
-      _toastQueue.forEach(function (tid, i) {
-        var t = document.getElementById(tid);
-        if (t) t.style.bottom = (80 + i * 52) + 'px';
-      });
+      repositionToasts();
     }, 300);
-  }, 2500);
+  }, undoFn ? 5000 : 2500);
+}
+
+function repositionToasts() {
+  _toastQueue.forEach(function (tid, i) {
+    var t = document.getElementById(tid);
+    if (t) t.style.bottom = (80 + i * 52) + 'px';
+  });
 }
 
 function escH(s) { return JCM.escHtml(s); }

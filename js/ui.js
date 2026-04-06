@@ -425,6 +425,9 @@ function renderField(f) {
   var v = _cfg[f.key];
   switch (f.type) {
     case 'text':
+      if (f.key === 'bgImage') {
+        return '<div class="field"><label>' + f.label + '</label><div style="display:flex;gap:6px"><input type="text" value="' + escH(String(v)) + '" data-cfg="' + f.key + '" placeholder="https://... 或点击上传" style="flex:1"><button class="bg-upload-btn" data-bg-upload title="上传背景图">📁</button></div></div>';
+      }
       return '<div class="field"><label>' + f.label + '</label><input type="text" value="' + escH(String(v)) + '" data-cfg="' + f.key + '"></div>';
     case 'textarea':
       return '<div class="field"><label>' + f.label + '</label><textarea rows="3" data-cfg="' + f.key + '">' + escH(String(v)) + '</textarea></div>';
@@ -474,6 +477,7 @@ JCM.removeElement = function (idx) {
   if (_selIdx >= _elements.length) _selIdx = _elements.length - 1;
   _dirty = true;
   renderConfig();
+  toast('🗑️ 已删除', 'success', undo);
 };
 
 JCM.moveElementZ = function (idx, dir) {
@@ -1428,9 +1432,16 @@ function applySmartAlign(nx, ny) {
   var elCY = ny + elH / 2;
   var snapThreshold = 6;
   var device = _dragging.device;
+  var guides = [];
 
-  if (Math.abs(elCX - device.width / 2) < snapThreshold) nx = Math.round(device.width / 2 - elW / 2);
-  if (Math.abs(elCY - device.height / 2) < snapThreshold) ny = Math.round(device.height / 2 - elH / 2);
+  if (Math.abs(elCX - device.width / 2) < snapThreshold) {
+    nx = Math.round(device.width / 2 - elW / 2);
+    guides.push({ type: 'v', pos: device.width / 2 });
+  }
+  if (Math.abs(elCY - device.height / 2) < snapThreshold) {
+    ny = Math.round(device.height / 2 - elH / 2);
+    guides.push({ type: 'h', pos: device.height / 2 });
+  }
 
   for (var i = 0; i < _elements.length; i++) {
     if (i === _dragging.idx) continue;
@@ -1440,14 +1451,14 @@ function applySmartAlign(nx, ny) {
     var oCX = other.x + oW / 2;
     var oCY = other.y + oH / 2;
 
-    if (Math.abs(nx - other.x) < snapThreshold) nx = other.x;
-    if (Math.abs(nx + elW - (other.x + oW)) < snapThreshold) nx = other.x + oW - elW;
-    if (Math.abs(elCX - oCX) < snapThreshold) nx = Math.round(oCX - elW / 2);
-    if (Math.abs(ny - other.y) < snapThreshold) ny = other.y;
-    if (Math.abs(ny + elH - (other.y + oH)) < snapThreshold) ny = other.y + oH - elH;
-    if (Math.abs(elCY - oCY) < snapThreshold) ny = Math.round(oCY - elH / 2);
+    if (Math.abs(nx - other.x) < snapThreshold) { nx = other.x; guides.push({ type: 'v', pos: other.x }); }
+    if (Math.abs(nx + elW - (other.x + oW)) < snapThreshold) { nx = other.x + oW - elW; guides.push({ type: 'v', pos: other.x + oW }); }
+    if (Math.abs(elCX - oCX) < snapThreshold) { nx = Math.round(oCX - elW / 2); guides.push({ type: 'v', pos: oCX }); }
+    if (Math.abs(ny - other.y) < snapThreshold) { ny = other.y; guides.push({ type: 'h', pos: other.y }); }
+    if (Math.abs(ny + elH - (other.y + oH)) < snapThreshold) { ny = other.y + oH - elH; guides.push({ type: 'h', pos: other.y + oH }); }
+    if (Math.abs(elCY - oCY) < snapThreshold) { ny = Math.round(oCY - elH / 2); guides.push({ type: 'h', pos: oCY }); }
   }
-  return { x: nx, y: ny };
+  return { x: nx, y: ny, guides: guides };
 }
 
 function onPreviewMouseMove(e) {
@@ -1474,11 +1485,32 @@ function onPreviewMouseMove(e) {
     _elements[_dragging.idx].x = Math.max(0, Math.min(aligned.x, _dragging.device.width - 10));
     _elements[_dragging.idx].y = Math.max(0, Math.min(aligned.y, _dragging.device.height - 10));
     renderPreview();
+    // Render guide lines
+    renderGuideLines(aligned.guides || [], _dragging.scale);
   });
+}
+
+function renderGuideLines(guides, scale) {
+  var screen = document.querySelector('.preview-screen');
+  if (!screen) return;
+  // Remove old guides
+  screen.querySelectorAll('.align-guide').forEach(function (g) { g.remove(); });
+  guides.forEach(function (g) {
+    var div = document.createElement('div');
+    div.className = 'align-guide ' + (g.type === 'h' ? 'align-guide-h' : 'align-guide-v');
+    if (g.type === 'h') div.style.top = (g.pos * scale) + 'px';
+    else div.style.left = (g.pos * scale) + 'px';
+    screen.appendChild(div);
+  });
+}
+
+function clearGuideLines() {
+  document.querySelectorAll('.align-guide').forEach(function (g) { g.remove() });
 }
 
 function onPreviewMouseUp() {
   _dragging = null;
+  clearGuideLines();
   document.removeEventListener('mousemove', onPreviewMouseMove);
   document.removeEventListener('mouseup', onPreviewMouseUp);
   document.removeEventListener('touchmove', onPreviewMouseMove);
@@ -1822,6 +1854,39 @@ function setupEvents() {
       toast(isFav ? '⭐ 已收藏' : '已取消收藏', 'info');
       return;
     }
+    // 背景图上传
+    var bgBtn = e.target.closest('[data-bg-upload]');
+    if (bgBtn) {
+      e.stopPropagation();
+      var bgInput = document.createElement('input');
+      bgInput.type = 'file'; bgInput.accept = 'image/*';
+      bgInput.onchange = function () {
+        var file = bgInput.files && bgInput.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function (ev) {
+          _cfg.bgImage = ev.target.result;
+          var textInput = document.querySelector('[data-cfg="bgImage"]');
+          if (textInput) textInput.value = '(本地图片: ' + file.name + ')';
+          _dirty = true; _autoPreview();
+          toast('🖼️ 背景图已设置', 'success');
+        };
+        reader.readAsDataURL(file);
+      };
+      bgInput.click();
+      return;
+    }
+    // 配置区折叠
+    var sectionTitle = e.target.closest('.config-section-title');
+    if (sectionTitle) {
+      var section = sectionTitle.parentElement;
+      var grid = section.querySelector('.config-grid');
+      if (grid) {
+        var collapsed = grid.style.display === 'none';
+        grid.style.display = collapsed ? '' : 'none';
+        sectionTitle.classList.toggle('collapsed', !collapsed);
+      }
+    }
   });
 
   // ── 元素列表拖拽排序 ──
@@ -2025,12 +2090,23 @@ JCM.filterTemplates = function (query) {
 var _toastQueue = [];
 var _toastId = 0;
 
-function toast(msg, type) {
+function toast(msg, type, undoFn) {
   var id = 'toast-' + (++_toastId);
   var el = document.createElement('div');
   el.id = id;
   el.className = 'toast ' + (type || 'success');
-  el.textContent = msg;
+  if (undoFn) {
+    el.innerHTML = '<span>' + escH(msg) + '</span> <button class="toast-undo" onclick="this.parentElement._undo()">↩ 撤销</button>';
+    el._undo = function () {
+      undoFn();
+      el.classList.remove('show');
+      setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 300);
+      _toastQueue = _toastQueue.filter(function (t) { return t !== id; });
+      repositionToasts();
+    };
+  } else {
+    el.textContent = msg;
+  }
   document.body.appendChild(el);
 
   var offset = _toastQueue.length * 52;
@@ -2043,13 +2119,16 @@ function toast(msg, type) {
     setTimeout(function () {
       if (el.parentNode) el.parentNode.removeChild(el);
       _toastQueue = _toastQueue.filter(function (t) { return t !== id; });
-      // Reposition remaining toasts
-      _toastQueue.forEach(function (tid, i) {
-        var t = document.getElementById(tid);
-        if (t) t.style.bottom = (80 + i * 52) + 'px';
-      });
+      repositionToasts();
     }, 300);
-  }, 2500);
+  }, undoFn ? 5000 : 2500);
+}
+
+function repositionToasts() {
+  _toastQueue.forEach(function (tid, i) {
+    var t = document.getElementById(tid);
+    if (t) t.style.bottom = (80 + i * 52) + 'px';
+  });
 }
 
 function escH(s) { return JCM.escHtml(s); }

@@ -594,6 +594,38 @@ kbd{
 }
 .autosave-indicator.show{opacity:1;transform:translateY(0)}
 
+/* ─── Background Upload Button ─── */
+.bg-upload-btn{
+  width:32px;height:32px;border-radius:6px;border:1px solid var(--border);
+  background:var(--surface2);cursor:pointer;font-size:14px;
+  display:flex;align-items:center;justify-content:center;transition:var(--transition);flex-shrink:0;
+}
+.bg-upload-btn:hover{border-color:var(--accent);background:var(--accent-glow)}
+
+/* ─── Toast Undo Button ─── */
+.toast-undo{
+  background:none;border:1px solid rgba(255,255,255,0.3);color:inherit;
+  font-size:11px;padding:2px 8px;border-radius:4px;cursor:pointer;
+  margin-left:8px;opacity:0.8;transition:var(--transition);font-family:inherit;
+}
+.toast-undo:hover{opacity:1;background:rgba(255,255,255,0.15)}
+
+/* ─── Config Section Collapse ─── */
+.config-section-title{cursor:pointer;user-select:none}
+.config-section-title:hover{color:var(--accent)}
+.config-section-title::after{
+  content:'▾';float:right;font-size:10px;transition:transform .2s;
+}
+.config-section-title.collapsed::after{transform:rotate(-90deg)}
+
+/* ─── Smart Alignment Guide Lines ─── */
+.align-guide{
+  position:absolute;z-index:25;pointer-events:none;
+  background:var(--accent);opacity:0.6;
+}
+.align-guide-h{height:1px;width:100%;left:0}
+.align-guide-v{width:1px;height:100%;top:0}
+
 /* ─── Template Category Tabs ─── */
 .tpl-categories{
   display:flex;gap:6px;padding:0 20px 12px;flex-wrap:wrap;
