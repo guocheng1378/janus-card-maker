@@ -1,7 +1,7 @@
 // ─── Editor: 自定义元素编辑 ──────────────────────────────────────
 
 JCM.ElementDefaults = {
-  text: function () { return { type: 'text', text: '新文字', x: 10, y: 60, size: 24, color: '#ffffff', textAlign: 'left', bold: false, multiLine: false, w: 200, shadow: 'none', opacity: 100, textGradient: 'none', textStroke: 0, textStrokeColor: '#000000' }; },
+  text: function () { return { type: 'text', text: '新文字', x: 10, y: 60, size: 24, color: '#ffffff', fontFamily: 'default', textAlign: 'left', bold: false, multiLine: false, w: 200, shadow: 'none', opacity: 100, textGradient: 'none', gradientColor2: '#ff6b6b', textStroke: 0, textStrokeColor: '#000000' }; },
   rectangle: function () { return { type: 'rectangle', x: 10, y: 60, w: 100, h: 40, color: '#333333', radius: 0, opacity: 100, fillColor2: '' }; },
   circle: function () { return { type: 'circle', x: 50, y: 100, r: 30, color: '#6c5ce7', opacity: 100 }; },
   line: function () { return { type: 'rectangle', x: 10, y: 100, w: 200, h: 2, color: '#555555', radius: 1, opacity: 60, _isLine: true }; },
@@ -49,6 +49,16 @@ JCM.renderElementEditor = function (el, idx, device) {
       field('文字', '<input type="text" value="' + esc(el.text || '') + '" data-prop="text" data-idx="' + idx + '">', true) +
       field('字号', '<input type="number" value="' + el.size + '" data-prop="size" data-idx="' + idx + '">') +
       colorField('颜色', el.color || '#ffffff', 'color', idx) +
+      field('字体', '<select data-prop="fontFamily" data-idx="' + idx + '">' +
+        '<option value="default"' + (!el.fontFamily || el.fontFamily === 'default' ? ' selected' : '') + '>默认</option>' +
+        '<option value="mipro-normal"' + (el.fontFamily === 'mipro-normal' ? ' selected' : '') + '>Mi Pro 常规</option>' +
+        '<option value="mipro-demibold"' + (el.fontFamily === 'mipro-demibold' ? ' selected' : '') + '>Mi Pro 半粗</option>' +
+        '<option value="mipro-bold"' + (el.fontFamily === 'mipro-bold' ? ' selected' : '') + '>Mi Pro 粗体</option>' +
+        '<option value="mipro-light"' + (el.fontFamily === 'mipro-light' ? ' selected' : '') + '>Mi Pro 细体</option>' +
+        '<option value="mibright"' + (el.fontFamily === 'mibright' ? ' selected' : '') + '>Mi Bright</option>' +
+        '<option value="noto-sans-sc"' + (el.fontFamily === 'noto-sans-sc' ? ' selected' : '') + '>Noto Sans SC</option>' +
+        '<option value="roboto"' + (el.fontFamily === 'roboto' ? ' selected' : '') + '>Roboto</option>' +
+        '<option value="monospace"' + (el.fontFamily === 'monospace' ? ' selected' : '') + '>等宽</option></select>') +
       field('渐变', '<select data-prop="textGradient" data-idx="' + idx + '">' +
         '<option value="none"' + (!el.textGradient || el.textGradient === 'none' ? ' selected' : '') + '>无</option>' +
         '<option value="sunset"' + (el.textGradient === 'sunset' ? ' selected' : '') + '>日落</option>' +

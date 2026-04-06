@@ -187,11 +187,34 @@ JCM.selectTemplate = function (id) {
 // ─── Template Grid ────────────────────────────────────────────────
 function renderTplGrid() {
   document.getElementById('tplGrid').innerHTML = JCM.TEMPLATES.map(function (t) {
+    var thumb = generateTplThumbnail(t);
     return '<div class="tpl-card' + (_tpl && _tpl.id === t.id ? ' active' : '') + '" data-tpl="' + t.id + '">' +
-      '<span class="tpl-icon">' + t.icon + '</span>' +
+      '<div class="tpl-thumb">' + thumb + '</div>' +
       '<div class="tpl-card-name">' + t.name + '</div>' +
       '<div class="tpl-card-desc">' + t.desc + '</div></div>';
   }).join('');
+}
+
+// ─── Template Thumbnails ──────────────────────────────────────────
+function generateTplThumbnail(tpl) {
+  var cfg = {};
+  tpl.config.forEach(function (g) { g.fields.forEach(function (f) { cfg[f.key] = f.default; }); });
+  var s = 0.22; // thumbnail scale
+  var w = 420 * s, h = 252 * s;
+  var bg = cfg.bgColor || '#000';
+  var cx = cfg.cameraZoneRatio ? 0 : w * 0.3;
+  var safeW = w - cx;
+
+  try {
+    var r = new JCM.PreviewRenderer({ width: 976, height: 596, cameraZoneRatio: 0.3 }, false);
+    var html = renderTemplatePreview({ width: 976, height: 596, cameraZoneRatio: 0.3 }, false, tpl, cfg);
+    // Scale down the thumbnail
+    return '<div style="width:' + w + 'px;height:' + h + 'px;border-radius:6px;overflow:hidden;position:relative;transform:scale(1);flex-shrink:0">' +
+      '<div style="position:absolute;left:0;top:0;width:' + (976 * s) + 'px;height:' + (596 * s) + 'px;transform-origin:top left;transform:scale(' + s + ')">' +
+      html + '</div></div>';
+  } catch (e) {
+    return '<div class="tpl-thumb-fallback">' + tpl.icon + '</div>';
+  }
 }
 
 // ─── Config Rendering ─────────────────────────────────────────────
@@ -473,7 +496,7 @@ function renderPreview() {
     extraElements: _elements,
     uploadedFiles: JCM.uploadedFiles,
   });
-  document.getElementById('codeContent').textContent = maml;
+  document.getElementById('codeContent').value = maml;
   _dirty = false;
 }
 
@@ -567,6 +590,34 @@ JCM.handleExportPNG = function () {
   JCM.exportPNG(_cfg.cardName || 'card')
     .then(function () { toast('✅ PNG 已导出', 'success'); })
     .catch(function (e) { toast('导出失败: ' + e.message, 'error'); });
+};
+
+// ─── Copy XML ─────────────────────────────────────────────────────
+JCM.copyXML = function () {
+  var textarea = document.getElementById('codeContent');
+  var text = textarea ? textarea.value : '';
+  if (!text || text.indexOf('<Widget') < 0) return toast('请先生成预览', 'error');
+  navigator.clipboard.writeText(text).then(function () {
+    toast('📋 XML 已复制到剪贴板', 'success');
+  }).catch(function () {
+    // Fallback
+    textarea.select();
+    document.execCommand('copy');
+    toast('📋 XML 已复制', 'success');
+  });
+};
+
+// ─── Fullscreen Preview ───────────────────────────────────────────
+JCM.toggleFullscreen = function () {
+  var el = document.querySelector('#page2 .preview-phone');
+  if (!el) return;
+  if (document.fullscreenElement) {
+    document.exitFullscreen();
+  } else {
+    el.requestFullscreen().catch(function () {
+      toast('浏览器不支持全屏', 'error');
+    });
+  }
 };
 
 // ─── Zoom Controls ────────────────────────────────────────────────

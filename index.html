@@ -47,6 +47,8 @@
 })();
 </script>
 <link rel="stylesheet" href="css/style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#6c5ce7">
 </head>
 <body>
 
@@ -178,15 +180,18 @@
         </div>
         <div class="preview-side">
           <h3>📄 MAML XML</h3>
-          <div class="xml-preview"><pre id="codeContent">选择模板并配置后，点击「生成预览」查看 XML</pre></div>
+          <div class="xml-preview"><textarea id="codeContent" spellcheck="false">选择模板并配置后，点击「生成预览」查看 XML</textarea></div>
           <div class="preview-actions">
             <button class="btn btn-secondary" onclick="JCM.renderPreview()"><span class="btn-icon">🔄</span> 生成预览</button>
+            <button class="btn btn-secondary" onclick="JCM.copyXML()"><span class="btn-icon">📋</span> 复制 XML</button>
             <button class="btn btn-export" onclick="JCM.handleExport()"><span class="btn-icon">📦</span> 导出 ZIP</button>
             <button class="btn btn-secondary" onclick="JCM.handleExportPNG()"><span class="btn-icon">🖼</span> 导出 PNG</button>
           </div>
           <div class="batch-export-bar">
             <span style="font-size:11px;color:var(--text2)">批量导出：</span>
             <button class="btn btn-secondary" onclick="JCM.handleBatchExport()"><span class="btn-icon">📦</span> 全部机型 ZIP</button>
+            <button class="btn btn-secondary" onclick="JCM.handleUniversalExport()"><span class="btn-icon">📱</span> 通用卡片</button>
+            <button class="btn btn-secondary" onclick="JCM.toggleFullscreen()"><span class="btn-icon">⛶</span> 全屏预览</button>
           </div>
         </div>
       </div>
