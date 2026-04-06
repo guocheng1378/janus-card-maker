@@ -3,6 +3,7 @@ import { generateAutoDetectMAML } from '../devices.js';
 
 export default {
   id: 'music', icon: '🎵', name: '音乐信息卡片', desc: '显示歌曲名和歌手',
+  updater: 'DateTime.Minute',
   config: [
     { group: '基本', fields: [
       { key: 'cardName', label: '卡片名称', type: 'text', default: '音乐卡片' },

@@ -87,6 +87,11 @@ function generateCustomMAML() {
         var w = el.multiLine || (el.textAlign && el.textAlign !== 'left') ? ' w="' + (el.w || 200) + '"' : '';
         var b = el.bold ? ' bold="true"' : '';
         var ff = el.fontFamily && el.fontFamily !== 'default' ? ' fontFamily="' + el.fontFamily + '"' : '';
+        var alpha = (el.opacity !== undefined && el.opacity !== 100) ? ' alpha="' + (el.opacity / 100).toFixed(2) + '"' : '';
+        var sh = '';
+        if (el.shadow === 'light') sh = ' shadow="1" shadowColor="#000000"';
+        else if (el.shadow === 'dark') sh = ' shadow="3" shadowColor="#000000"';
+        else if (el.shadow === 'glow') sh = ' shadow="4" shadowColor="' + (el.color || '#ffffff') + '"';
         var tg = '';
         if (el.textGradient && el.textGradient !== 'none') {
           var gradColors = { sunset: '#ff6b6b,#feca57', ocean: '#0984e3,#00cec9', neon: '#ff00ff,#00ffff', gold: '#f39c12,#fdcb6e', aurora: '#6c5ce7,#00b894' };
@@ -97,18 +102,20 @@ function generateCustomMAML() {
         if (el.textStroke && el.textStroke > 0) ts = ' stroke="' + el.textStroke + '" strokeColor="' + (el.textStrokeColor || '#000000') + '"';
         var rot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
         var lh = el.multiLine && el.lineHeight && el.lineHeight !== 1.4 ? ' lineHeight="' + el.lineHeight + '"' : '';
-        lines.push('    <Text text="' + escXml(el.text || '') + '" x="' + el.x + '" y="' + el.y + '" size="' + el.size + '" color="' + el.color + '"' + w + a + ml + b + ff + tg + ts + rot + lh + ' />');
+        lines.push('    <Text text="' + escXml(el.text || '') + '" x="' + el.x + '" y="' + el.y + '" size="' + el.size + '" color="' + el.color + '"' + w + a + ml + b + ff + alpha + sh + tg + ts + rot + lh + ' />');
         break;
       }
       case 'rectangle': {
+        var rectAlpha = (el.opacity !== undefined && el.opacity !== 100) ? ' alpha="' + (el.opacity / 100).toFixed(2) + '"' : '';
         var rectFill = el.fillColor2 ? ' fillColor="' + el.color + '" fillColor2="' + el.fillColor2 + '"' : ' fillColor="' + el.color + '"';
         var rectRot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
         var rectBlur = el.blur ? ' blur="' + el.blur + '"' : '';
-        lines.push('    <Rectangle x="' + el.x + '" y="' + el.y + '" w="' + el.w + '" h="' + el.h + '"' + rectFill + (el.radius ? ' cornerRadius="' + el.radius + '"' : '') + rectRot + rectBlur + ' />');
+        lines.push('    <Rectangle x="' + el.x + '" y="' + el.y + '" w="' + el.w + '" h="' + el.h + '"' + rectFill + (el.radius ? ' cornerRadius="' + el.radius + '"' : '') + rectAlpha + rectRot + rectBlur + ' />');
         break;
       }
       case 'circle':
-        lines.push('    <Circle x="' + el.x + '" y="' + el.y + '" r="' + el.r + '" fillColor="' + el.color + '"' + (el.rotation ? ' rotation="' + el.rotation + '"' : '') + ' />');
+        var circAlpha = (el.opacity !== undefined && el.opacity !== 100) ? ' alpha="' + (el.opacity / 100).toFixed(2) + '"' : '';
+        lines.push('    <Circle x="' + el.x + '" y="' + el.y + '" r="' + el.r + '" fillColor="' + el.color + '"' + circAlpha + (el.rotation ? ' rotation="' + el.rotation + '"' : '') + ' />');
         break;
       case 'image': {
         var imgSrc = el.src || el.fileName || '';
@@ -644,7 +651,7 @@ function removeElement(idx) {
     var stillUsed = S.elements.some(function (e, i) { return i !== idx && e.fileName === el.fileName; });
     if (!stillUsed) {
       var fi = S.uploadedFiles[el.fileName];
-      if (fi && fi.dataUrl && fi.dataUrl.indexOf('blob:') === 0) try { URL.revokeObjectURL(f.dataUrl); } catch (e) {}
+      if (fi && fi.dataUrl && fi.dataUrl.indexOf('blob:') === 0) try { URL.revokeObjectURL(fi.dataUrl); } catch (e) {}
       delete S.uploadedFiles[el.fileName];
     }
   }
@@ -723,13 +730,13 @@ function handleExport() {
 
 function handleExportPNG() {
   var p = toastProgress('正在导出 PNG...');
-  JCM.exportPNG(S.cfg.cardName || 'card')
+  JCM.exportPNG(S.cfg.cardName || 'card', S.cfg, S.elements, S.tpl, S.uploadedFiles)
     .then(function () { p.close('✅ PNG 已导出', 'success'); })
     .catch(function (e) { p.close('导出失败: ' + e.message, 'error'); });
 }
 
 function handleExportSVG() {
-  JCM.exportSVG(S.cfg.cardName || 'card')
+  JCM.exportSVG(S.cfg.cardName || 'card', S.cfg, S.elements, S.uploadedFiles)
     .then(function () { toast('✅ SVG 已导出', 'success'); })
     .catch(function (e) { toast('导出失败: ' + e.message, 'error'); });
 }
@@ -962,7 +969,7 @@ function triggerBuild() {
     headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
     body: JSON.stringify({ ref: 'main' }),
   }).then(function (res) {
-    if (res.status === 24) toast('✅ APK 构建已触发！', 'success');
+    if (res.status === 204) toast('✅ APK 构建已触发！', 'success');
     else if (res.status === 401) { localStorage.removeItem('jcm-gh-token'); toast('❌ Token 无效', 'error'); }
     else toast('❌ 触发失败: HTTP ' + res.status, 'error');
   }).catch(function (e) { toast('❌ 网络错误: ' + e.message, 'error'); });

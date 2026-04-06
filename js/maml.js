@@ -45,10 +45,6 @@ function renderEl(el, files) {
       return p + '<Text ' + t + ' x="' + el.x + '" y="' + el.y + '" size="' + el.size + '" color="' + el.color + '"' + w + a + ml + b + ff + alphaAttr(el) + sh + tg + ts + rot + lh + ' />';
     }
     case 'rectangle': {
-      if (el.h <= 3 && el.radius >= 1) {
-        var lineRot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
-        return p + '<Line x="' + el.x + '" y="' + el.y + '" w="' + el.w + '" h="' + el.h + '" fillColor="' + el.color + '" cornerRadius="' + el.radius + '"' + alphaAttr(el) + lineRot + ' />';
-      }
       var rectRot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
       var blur = el.blur ? ' blur="' + el.blur + '"' : '';
       if (el.fillColor2) {

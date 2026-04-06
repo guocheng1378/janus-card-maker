@@ -177,8 +177,8 @@ JCM.importZip = function (file) {
       }
 
       // 背景图检测：查找第一个全屏 Image 元素
-      var bgImgMatch = xml.match(/<Image\s+[^>]*x="0"[^>]*y="0"[^>]*w="#view_width"[^>]*h="#view_height"[^>]*src="([^"]*)"[^>]*\/?>/i) ||
-                        xml.match(/<Image\s+[^>]*src="([^"]*)"[^>]*x="0"[^>]*y="0"[^>]*w="#view_width"[^>]*h="#view_height"[^>]*\/?>/i);
+      var bgImgMatch = xml.match(/<Image\s+src="([^"]*)"[^>]*x="0"[^>]*y="0"[^>]*w="#view_width"[^>]*h="#view_height"[^>]*\/?>/i) ||
+                        xml.match(/<Image\s+[^>]*x="0"[^>]*y="0"[^>]*w="#view_width"[^>]*h="#view_height"[^>]*src="([^"]*)"[^>]*\/?>/i);
       if (bgImgMatch) {
         result.bgImageSrc = bgImgMatch[1];
       }
@@ -241,7 +241,7 @@ function parseXmlAttrs(str) {
 }
 
 // ─── Export PNG (Canvas-based, no external CSS dependency) ─────────
-JCM.exportPNG = function (cardName) {
+JCM.exportPNG = function (cardName, cfg, elements, tpl, uploadedFiles) {
   var el = document.querySelector('.preview-screen');
   if (!el) return Promise.reject(new Error('预览区域不存在'));
 
@@ -254,13 +254,13 @@ JCM.exportPNG = function (cardName) {
   ctx.scale(scale, scale);
 
   // Draw background
-  var bgColor = _cfg.bgColor || '#000000';
+  var bgColor = cfg.bgColor || '#000000';
   ctx.fillStyle = bgColor;
   ctx.fillRect(0, 0, device.width, device.height);
 
   // Draw background image if set
   var bgImgPromise = Promise.resolve();
-  if (_cfg.bgImage) {
+  if (cfg.bgImage) {
     bgImgPromise = new Promise(function (resolve) {
       var bgImg = new Image();
       bgImg.crossOrigin = 'anonymous';
@@ -269,15 +269,15 @@ JCM.exportPNG = function (cardName) {
         resolve();
       };
       bgImg.onerror = function () { resolve(); };
-      bgImg.src = _cfg.bgImage;
+      bgImg.src = cfg.bgImage;
     });
   }
 
   return bgImgPromise.then(function () {
 
   // Draw background patterns for custom template
-  if (_tpl && _tpl.id === 'custom') {
-    var pat = _cfg.bgPattern || 'solid';
+  if (tpl && tpl.id === 'custom') {
+    var pat = cfg.bgPattern || 'solid';
     if (pat === 'dots') {
       ctx.fillStyle = 'rgba(255,255,255,0.08)';
       for (var dx = 10; dx < device.width; dx += 20) {
@@ -293,18 +293,18 @@ JCM.exportPNG = function (cardName) {
     } else if (pat === 'gradient') {
       var grd = ctx.createLinearGradient(0, 0, device.width, device.height);
       grd.addColorStop(0, bgColor);
-      grd.addColorStop(1, _cfg.bgColor2 || '#1a1a2e');
+      grd.addColorStop(1, cfg.bgColor2 || '#1a1a2e');
       ctx.fillStyle = grd;
       ctx.fillRect(0, 0, device.width, device.height);
     }
   }
 
   // Draw template-specific backgrounds
-  if (_tpl && _tpl.id === 'gradient') {
-    ctx.fillStyle = _cfg.bgColor1 || '#667eea';
+  if (tpl && tpl.id === 'gradient') {
+    ctx.fillStyle = cfg.bgColor1 || '#667eea';
     ctx.fillRect(0, 0, device.width / 2, device.height);
     ctx.globalAlpha = 0.7;
-    ctx.fillStyle = _cfg.bgColor2 || '#764ba2';
+    ctx.fillStyle = cfg.bgColor2 || '#764ba2';
     ctx.fillRect(device.width / 2, 0, device.width / 2, device.height);
     ctx.globalAlpha = 1;
   }
@@ -314,10 +314,10 @@ JCM.exportPNG = function (cardName) {
   var imageLoaders = [];
 
   // 预加载所有图片元素
-  if (_elements) {
-    _elements.forEach(function (el) {
+  if (elements) {
+    elements.forEach(function (el) {
       if (el.type !== 'image') return;
-      var fi = el.fileName ? JCM.uploadedFiles[el.fileName] : null;
+      var fi = el.fileName ? uploadedFiles[el.fileName] : null;
       if (!fi || !fi.dataUrl) return;
       imageLoaders.push(new Promise(function (resolve) {
         var img = new Image();
@@ -335,8 +335,8 @@ JCM.exportPNG = function (cardName) {
     });
 
     // 绘制所有元素
-    if (_elements) {
-      _elements.forEach(function (el) {
+    if (elements) {
+      elements.forEach(function (el) {
         ctx.save();
         var opacity = (el.opacity !== undefined ? el.opacity : 100) / 100;
         ctx.globalAlpha = opacity;
@@ -443,8 +443,8 @@ function drawRoundRect(ctx, x, y, w, h, r) {
 }
 
 // ─── Export SVG ────────────────────────────────────────────────────
-JCM.exportSVG = function (cardName) {
-  if (!_elements || _elements.length === 0) {
+JCM.exportSVG = function (cardName, cfg, elements, uploadedFiles) {
+  if (!elements || elements.length === 0) {
     return Promise.reject(new Error('没有可导出的元素'));
   }
   var device = JCM.getSelectedDevice ? JCM.getSelectedDevice() : { width: 976, height: 596, cameraZoneRatio: 0.3 };
@@ -455,9 +455,9 @@ JCM.exportSVG = function (cardName) {
   // Defs for gradients
   var defs = [];
 
-  svgParts.push('<rect width="100%" height="100%" fill="' + (_cfg.bgColor || '#000000') + '"/>');
+  svgParts.push('<rect width="100%" height="100%" fill="' + (cfg.bgColor || '#000000') + '"/>');
 
-  _elements.forEach(function (el) {
+  elements.forEach(function (el) {
     var opacity = (el.opacity !== undefined ? el.opacity : 100) / 100;
     var opAttr = opacity < 1 ? ' opacity="' + opacity + '"' : '';
     var rotAttr = el.rotation ? ' transform="rotate(' + el.rotation + ' ' + (el.x + (el.w || 0) / 2) + ' ' + (el.y + (el.h || 0) / 2) + ')"' : '';
@@ -496,7 +496,7 @@ JCM.exportSVG = function (cardName) {
         svgParts.push('<circle cx="' + el.x + '" cy="' + el.y + '" r="' + el.r + '" fill="' + el.color + '"' + opAttr + '/>');
         break;
       case 'image':
-        var fi = el.fileName ? JCM.uploadedFiles[el.fileName] : null;
+        var fi = el.fileName ? uploadedFiles[el.fileName] : null;
         if (fi && fi.dataUrl) {
           svgParts.push('<image x="' + el.x + '" y="' + el.y + '" width="' + (el.w || 100) + '" height="' + (el.h || 100) + '" href="' + fi.dataUrl + '"' + opAttr + '/>');
         }

@@ -31,9 +31,9 @@ export default {
     if (quotes.length === 0) quotes = ['每日一句'];
 
     // Build ifelse chain
-    var textExpr = '\'' + escXml(quotes[quotes.length - 1]).replace(/\n/g, '\\\\n') + '\'';
+    var textExpr = '\'' + escXml(quotes[quotes.length - 1]).replace(/\n/g, '\\n') + '\'';
     for (var i = quotes.length - 2; i >= 0; i--) {
-      textExpr = 'ifelse((#dayIdx == ' + i + '), \'' + escXml(quotes[i]).replace(/\n/g, '\\\\n') + '\', ' + textExpr + ')';
+      textExpr = 'ifelse((#dayIdx == ' + i + '), \'' + escXml(quotes[i]).replace(/\n/g, '\\n') + '\', ' + textExpr + ')';
     }
 
     return [
