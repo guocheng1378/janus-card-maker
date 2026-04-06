@@ -144,8 +144,9 @@ function validateMAMLRegex(xml) {
     errors.push('标签开闭不匹配 (开:' + openCount + ' 闭:' + closeTags.length + ' 自闭:' + selfCloseCount + ')');
   }
   if (!xml.match(/name="/)) errors.push('缺少 name 属性');
-  if (xml.match(/="[^"]*[&<][^"]*"/)) {
-    errors.push('属性值中存在未转义的 & 或 < 字符');
+  // 检查属性值中是否有未转义的 &（MAML 表达式含 <=, >=，不检查 <）
+  if (xml.match(/="[^"]*(?:&[^a-zA-Z#;]|&[a-zA-Z]+(?:[^;a-zA-Z]|"[^"]*$))[^"]*"/)) {
+    errors.push('属性值中存在未转义的 & 字符');
   }
   return { valid: errors.length === 0, errors: errors };
 }
