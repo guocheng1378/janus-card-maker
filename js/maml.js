@@ -1,6 +1,6 @@
 // ─── MAML: XML 生成 + 转义 + 校验 ──────────────────────────────────
 
-JCM.escXml = function (s) {
+export function escXml(s) {
   return String(s)
     .replace(/&/g, '&amp;')
     .replace(/"/g, '&quot;')
@@ -8,38 +8,7 @@ JCM.escXml = function (s) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/\n/g, '&#10;');
-};
-
-JCM.generateMAML = function (opts) {
-  var lines = [];
-  var attrs = 'screenWidth="' + opts.device.width + '" frameRate="0" scaleByDensity="false"';
-  if (opts.updater) attrs += ' useVariableUpdater="' + opts.updater + '"';
-  attrs += ' name="' + JCM.escXml(opts.cardName) + '"';
-  lines.push('<Widget ' + attrs + '>');
-
-  // 背景图：插入到 innerXml 最前面（在 <Rectangle> 背景之上）
-  var innerXml = opts.innerXml;
-  if (opts.bgImage) {
-    var bgImgLine = '  <Image src="' + JCM.escXml(opts.bgImage) + '" x="0" y="0" w="#view_width" h="#view_height" />';
-    if (innerXml.indexOf('<Rectangle') >= 0) {
-      innerXml = innerXml.replace(/(  <Rectangle w="#view_width"[^>]*>)/, bgImgLine + '\n$1');
-    } else {
-      innerXml = bgImgLine + '\n' + innerXml;
-    }
-  }
-  lines.push(innerXml);
-
-  if (opts.extraElements.length > 0) {
-    lines.push('  <Group x="#marginL" y="0">');
-    opts.extraElements.forEach(function (el) {
-      lines.push(renderEl(el, opts.uploadedFiles));
-    });
-    lines.push('  </Group>');
-  }
-
-  lines.push('</Widget>');
-  return lines.join('\n');
-};
+}
 
 function alphaAttr(el) {
   return (el.opacity !== undefined && el.opacity !== 100)
@@ -51,7 +20,7 @@ function renderEl(el, files) {
   var p = '    ';
   switch (el.type) {
     case 'text': {
-      var t = 'text="' + JCM.escXml(el.text || '') + '"';
+      var t = 'text="' + escXml(el.text || '') + '"';
       var a = el.textAlign && el.textAlign !== 'left' ? ' textAlign="' + el.textAlign + '"' : '';
       var ml = el.multiLine ? ' multiLine="true"' : '';
       var w = el.multiLine || (el.textAlign && el.textAlign !== 'left') ? ' w="' + (el.w || 200) + '"' : '';
@@ -94,16 +63,13 @@ function renderEl(el, files) {
       var srcFile = el.src || el.fileName || '';
       var folder = srcFile && files[srcFile] && files[srcFile].mimeType.indexOf('video/') === 0 ? 'videos' : 'images';
       var fitAttr = el.fit && el.fit !== 'cover' ? ' fitMode="' + el.fit + '"' : '';
-      return p + '<Image src="' + folder + '/' + JCM.escXml(srcFile) + '" x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 100) + '" h="' + (el.h || 100) + '"' + fitAttr + ' />';
+      return p + '<Image src="' + folder + '/' + escXml(srcFile) + '" x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 100) + '" h="' + (el.h || 100) + '"' + fitAttr + ' />';
     }
     case 'video':
-      return p + '<Video src="videos/' + JCM.escXml(el.src || el.fileName || '') + '" x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 240) + '" h="' + (el.h || 135) + '" autoPlay="true" loop="true" />';
-    case 'arc': {
-      // 弧形用两个圆形模拟（外圆 - 内圆裁切）
-      var ar = el.r || 40;
+      return p + '<Video src="videos/' + escXml(el.src || el.fileName || '') + '" x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 240) + '" h="' + (el.h || 135) + '" autoPlay="true" loop="true" />';
+    case 'arc':
       return p + '<!-- Arc: MAML 不原生支持 <Arc>，用 Circle 模拟 -->\n' +
-        p + '<Circle x="' + el.x + '" y="' + el.y + '" r="' + ar + '" fillColor="' + el.color + '" />';
-    }
+        p + '<Circle x="' + el.x + '" y="' + el.y + '" r="' + (el.r || 40) + '" fillColor="' + el.color + '" />';
     case 'progress': {
       var pw = el.w || 200;
       var ph = el.h || 8;
@@ -114,60 +80,78 @@ function renderEl(el, files) {
         p + '<Rectangle x="' + el.x + '" y="' + el.y + '" w="' + barW + '" h="' + ph + '" fillColor="' + el.color + '" cornerRadius="' + pr + '" />';
     }
     case 'lottie':
-      // Lottie 不被 MAML 支持，输出注释占位
       return p + '<!-- Lottie 动画: MAML 引擎不支持此格式，请替换为 Image/Video -->';
     default:
       return '';
   }
 }
 
-// ─── XML 校验 ────────────────────────────────────────────────────
-JCM.validateMAML = function (xml) {
+export function generateMAML(opts) {
+  var lines = [];
+  var attrs = 'screenWidth="' + opts.device.width + '" frameRate="0" scaleByDensity="false"';
+  if (opts.updater) attrs += ' useVariableUpdater="' + opts.updater + '"';
+  attrs += ' name="' + escXml(opts.cardName) + '"';
+  lines.push('<Widget ' + attrs + '>');
+
+  var innerXml = opts.innerXml;
+  if (opts.bgImage) {
+    var bgImgLine = '  <Image src="' + escXml(opts.bgImage) + '" x="0" y="0" w="#view_width" h="#view_height" />';
+    if (innerXml.indexOf('<Rectangle') >= 0) {
+      innerXml = innerXml.replace(/(  <Rectangle w="#view_width"[^>]*>)/, bgImgLine + '\n$1');
+    } else {
+      innerXml = bgImgLine + '\n' + innerXml;
+    }
+  }
+  lines.push(innerXml);
+
+  if (opts.extraElements.length > 0) {
+    lines.push('  <Group x="#marginL" y="0">');
+    opts.extraElements.forEach(function (el) {
+      lines.push(renderEl(el, opts.uploadedFiles));
+    });
+    lines.push('  </Group>');
+  }
+
+  lines.push('</Widget>');
+  return lines.join('\n');
+}
+
+export function validateMAML(xml) {
   var errors = [];
 
-  // Use DOMParser for reliable parsing when available
   if (typeof DOMParser !== 'undefined') {
     var parser = new DOMParser();
-    // Wrap with xlink namespace to avoid false errors (Janus MAML uses xlink but doesn't declare it)
     var wrappedXml = xml.replace('<Widget ', '<Widget xmlns:xlink="http://www.w3.org/1999/xlink" ');
     var doc = parser.parseFromString(wrappedXml, 'application/xml');
     var parseError = doc.querySelector('parsererror');
     if (parseError) {
-      // Fall back to regex checks — MAML is not strict XML
-      return JCM._validateMAMLRegex(xml);
+      return validateMAMLRegex(xml);
     }
-    // Check root Widget tag exists
     if (!doc.documentElement || doc.documentElement.nodeName !== 'Widget') {
       errors.push('缺少 <Widget> 根标签');
     }
-    // Check name attribute
     if (!doc.documentElement.getAttribute('name')) {
       errors.push('缺少 name 属性');
     }
   } else {
-    return JCM._validateMAMLRegex(xml);
+    return validateMAMLRegex(xml);
   }
 
-  // Common checks
   if (xml.match(/="[^"]*[&<][^"]*"/)) {
     errors.push('属性值中存在未转义的 & 或 < 字符');
   }
 
   return { valid: errors.length === 0, errors: errors };
-};
+}
 
-JCM._validateMAMLRegex = function (xml) {
+function validateMAMLRegex(xml) {
   var errors = [];
   if (!xml.match(/<Widget[\s>]/)) errors.push('缺少 <Widget> 根标签');
   if (!xml.match(/<\/Widget>\s*$/)) errors.push('缺少 </Widget> 闭合标签');
 
-  // FIX: 1) use [^/>]* to prevent cross-tag greedy matching
-  //      2) filter out self-closing tags from open count, change formula to open === close
   var allOpenLike = xml.match(/<[A-Z][a-zA-Z]*\s[^/>]*>/g) || [];
   var selfClose = xml.match(/<[A-Z][a-zA-Z]*\s[^>]*\/>/g) || [];
   var closeTags = xml.match(/<\/[A-Z][a-zA-Z]*>/g) || [];
-
-  // True open tags = all open-like matches that are NOT self-closing
   var openTags = allOpenLike.filter(function (t) { return !/\/\s*>$/.test(t); });
 
   if (openTags.length !== closeTags.length) {
@@ -178,4 +162,4 @@ JCM._validateMAMLRegex = function (xml) {
     errors.push('属性值中存在未转义的 & 或 < 字符');
   }
   return { valid: errors.length === 0, errors: errors };
-};
+}

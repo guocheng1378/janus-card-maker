@@ -1,9 +1,9 @@
-// ─── App Entry ─────────────────────────────────────────────────────
+// ─── Main Entry Point ─────────────────────────────────────────────
+import { initUI } from './ui.js';
 
-// 全局错误捕获
+// Global error handling
 window.addEventListener('error', function (e) {
   console.error('[JCM Error]', e.error || e.message);
-  // 不让页面白屏，显示友好提示
   var el = document.getElementById('offlineIndicator');
   if (el) {
     el.textContent = '⚠️ 发生错误，请刷新页面';
@@ -17,13 +17,13 @@ window.addEventListener('unhandledrejection', function (e) {
 
 document.addEventListener('DOMContentLoaded', function () {
   try {
-    JCM.initUI();
+    initUI();
   } catch (e) {
     console.error('[JCM Init Error]', e);
     document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#fff;font-size:18px;text-align:center;padding:20px"><div>⚠️ 初始化失败<br><small style="opacity:0.6">' + (e.message || '未知错误') + '</small><br><br><button onclick="location.reload()" style="padding:8px 24px;border-radius:8px;border:none;background:#6c5ce7;color:#fff;font-size:16px;cursor:pointer">刷新页面</button></div></div>';
   }
 
-  // 离线检测
+  // Offline detection
   var offlineEl = document.getElementById('offlineIndicator');
   function updateOnlineStatus() {
     if (offlineEl) {
@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function () {
   updateOnlineStatus();
 });
 
-// ─── PWA Service Worker ───────────────────────────────────────────
+// PWA Service Worker
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(function () {});
 }

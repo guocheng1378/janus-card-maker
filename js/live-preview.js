@@ -1,4 +1,6 @@
-// ─── Preview: 预览渲染器 ──────────────────────────────────────────
+// ─── Live Preview: 配置页实时预览 ──────────────────────────────────
+import { escHtml } from './utils.js';
+import { getDevice } from './devices.js';
 
 var PREVIEW_W = 420;
 
@@ -13,7 +15,7 @@ PreviewRenderer.prototype.bg = function (bg, inner) {
 };
 
 PreviewRenderer.prototype.esc = function (s) {
-  return JCM.escHtml(s);
+  return escHtml(s);
 };
 
 PreviewRenderer.prototype.fmtTime = function (now, fmt) {
@@ -43,11 +45,10 @@ PreviewRenderer.prototype.calcCountdown = function (str) {
   var tMonth = Math.floor(Number(td) / 100), tDay = Number(td) % 100;
   if (tMonth < 1 || tMonth > 12 || tDay < 1 || tDay > 31) return 0;
   var now = new Date(), y = now.getFullYear();
-  // Helper: absolute day number from year 0 (handles leap years)
   function absDay(year, month, day) {
-    var y = year, m = month;
-    if (m <= 2) { y--; m += 12; }
-    return 365*y + Math.floor(y/4) - Math.floor(y/100) + Math.floor(y/400) + Math.floor(306*(m+1)/10) + day - 654855;
+    var y2 = year, m = month;
+    if (m <= 2) { y2--; m += 12; }
+    return 365*y2 + Math.floor(y2/4) - Math.floor(y2/100) + Math.floor(y2/400) + Math.floor(306*(m+1)/10) + day - 654855;
   }
   var today = absDay(y, now.getMonth()+1, now.getDate());
   var target = absDay(y, tMonth, tDay);
@@ -56,6 +57,7 @@ PreviewRenderer.prototype.calcCountdown = function (str) {
   return diff;
 };
 
+// ─── Template Renderers ───────────────────────────────────────────
 PreviewRenderer.prototype.renderClock = function (c) {
   var now = new Date();
   var ts = this.fmtTime(now, c.timeFormat);
@@ -130,39 +132,6 @@ PreviewRenderer.prototype.renderGradient = function (c) {
     '<div style="position:absolute;left:' + this.camW + 'px;right:0;top:30%;text-align:center;font-size:' + Math.round(Number(c.textSize) * this.scale) + 'px;color:' + c.textColor + ';font-weight:700;line-height:1.3">' + lines.map(this.esc).join('<br>') + '</div>';
 };
 
-PreviewRenderer.prototype.renderCustom = function (c) {
-  var pat = c.bgPattern || 'solid';
-  if (pat === 'dots') {
-    return '<div style="position:absolute;inset:0;background:' + c.bgColor + ';background-image:radial-gradient(circle,rgba(255,255,255,0.08) 1px,transparent 1px);background-size:20px 20px"></div>';
-  }
-  if (pat === 'dots-large') {
-    return '<div style="position:absolute;inset:0;background:' + c.bgColor + ';background-image:radial-gradient(circle,rgba(255,255,255,0.06) 4px,transparent 4px);background-size:32px 32px"></div>';
-  }
-  if (pat === 'grid') {
-    return '<div style="position:absolute;inset:0;background:' + c.bgColor + ';background-image:linear-gradient(rgba(255,255,255,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.05) 1px,transparent 1px);background-size:20px 20px"></div>';
-  }
-  if (pat === 'diagonal') {
-    return '<div style="position:absolute;inset:0;background:' + c.bgColor + ';background-image:repeating-linear-gradient(45deg,transparent,transparent 10px,rgba(255,255,255,0.04) 10px,rgba(255,255,255,0.04) 11px)"></div>';
-  }
-  if (pat === 'wave') {
-    return '<div style="position:absolute;inset:0;background:' + c.bgColor + '"></div>' +
-      '<svg style="position:absolute;bottom:0;left:0;width:100%;height:40%;opacity:0.08" viewBox="0 0 400 120" preserveAspectRatio="none"><path d="M0,60 C100,100 200,20 300,60 C350,80 400,40 400,60 L400,120 L0,120Z" fill="' + (c.bgColor2 || '#fff') + '"/></svg>';
-  }
-  if (pat === 'noise') {
-    return '<div style="position:absolute;inset:0;background:' + c.bgColor + '"></div>' +
-      '<div style="position:absolute;inset:0;opacity:0.03;background-image:url("data:image/svg+xml,%3Csvg viewBox=%270 0 256 256%27 xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter id=%27n%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%270.9%27 numOctaves=%274%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27100%25%27 height=%27100%25%27 filter=%27url(%23n)%27/%3E%3C/svg%3E")"></div>';
-  }
-  if (pat === 'gradient') {
-    return '<div style="position:absolute;inset:0;background:linear-gradient(135deg,' + c.bgColor + ',' + (c.bgColor2 || '#1a1a2e') + ')"></div>';
-  }
-  if (pat === 'gradient-radial') {
-    return '<div style="position:absolute;inset:0;background:radial-gradient(circle at 30% 40%,' + c.bgColor + ',' + (c.bgColor2 || '#1a1a2e') + ')"></div>';
-  }
-  return this.bg(c.bgColor, '');
-};
-
-// ─── 新模板预览 ────────────────────────────────────────────────────
-
 PreviewRenderer.prototype.renderWeather = function (c) {
   return this.bg(c.bgColor,
     '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:14px;font-size:' + Math.round(14 * this.scale) + 'px;color:' + c.descColor + ';opacity:0.7">' + this.esc(c.city) + '</div>' +
@@ -176,7 +145,7 @@ PreviewRenderer.prototype.renderWeather = function (c) {
 
 PreviewRenderer.prototype.renderSteps = function (c) {
   var goal = parseInt(c.goal) || 10000;
-  var steps = 6542; // Demo
+  var steps = 6542;
   var pct = Math.min(Math.round(steps / goal * 100), 100);
   var barW = (PREVIEW_W - this.camW - 20) * pct / 100;
   return this.bg(c.bgColor,
@@ -210,8 +179,6 @@ PreviewRenderer.prototype.renderCalendar = function (c) {
     evHtml
   );
 };
-
-// ─── 新增模板预览 ──────────────────────────────────────────────────
 
 PreviewRenderer.prototype.renderDualclock = function (c) {
   var now = new Date();
@@ -251,24 +218,15 @@ PreviewRenderer.prototype.renderRing = function (c) {
   var demoVal = Number(c.demoValue) || 65;
   var ringR = Math.round(80 * this.scale);
   var ringW = Math.round(Number(c.ringSize) * this.scale);
-  var innerR = ringR - ringW;
   var cx = this.camW + (PREVIEW_W - this.camW) / 2;
   var cy = 120 * this.scale;
   var pct = demoVal;
   var label = isBattery ? '电量' : '步数';
   var unit = isBattery ? '%' : '步';
-  // SVG arc for progress
-  var angle = pct / 100 * 360;
-  var rad = (angle - 90) * Math.PI / 180;
-  var x2 = cx + ringR * Math.cos(rad);
-  var y2 = cy + ringR * Math.sin(rad);
-  var largeArc = angle > 180 ? 1 : 0;
-  var trackColor = c.trackColor;
-  var ringColor = c.ringColor;
   return this.bg(c.bgColor,
     '<svg style="position:absolute;inset:0;width:100%;height:100%" viewBox="0 0 ' + PREVIEW_W + ' ' + (252) + '">' +
-    '<circle cx="' + cx + '" cy="' + cy + '" r="' + ringR + '" fill="none" stroke="' + trackColor + '" stroke-width="' + ringW + '" />' +
-    '<circle cx="' + cx + '" cy="' + cy + '" r="' + ringR + '" fill="none" stroke="' + ringColor + '" stroke-width="' + ringW + '" ' +
+    '<circle cx="' + cx + '" cy="' + cy + '" r="' + ringR + '" fill="none" stroke="' + c.trackColor + '" stroke-width="' + ringW + '" />' +
+    '<circle cx="' + cx + '" cy="' + cy + '" r="' + ringR + '" fill="none" stroke="' + c.ringColor + '" stroke-width="' + ringW + '" ' +
       'stroke-dasharray="' + (2 * Math.PI * ringR * pct / 100) + ' ' + (2 * Math.PI * ringR) + '" ' +
       'stroke-linecap="round" transform="rotate(-90 ' + cx + ' ' + cy + ')" />' +
     '</svg>' +
@@ -303,6 +261,18 @@ PreviewRenderer.prototype.renderImage = function (c) {
   );
 };
 
+PreviewRenderer.prototype.renderCustom = function (c) {
+  var pat = c.bgPattern || 'solid';
+  if (pat === 'dots') return '<div style="position:absolute;inset:0;background:' + c.bgColor + ';background-image:radial-gradient(circle,rgba(255,255,255,0.08) 1px,transparent 1px);background-size:20px 20px"></div>';
+  if (pat === 'dots-large') return '<div style="position:absolute;inset:0;background:' + c.bgColor + ';background-image:radial-gradient(circle,rgba(255,255,255,0.06) 4px,transparent 4px);background-size:32px 32px"></div>';
+  if (pat === 'grid') return '<div style="position:absolute;inset:0;background:' + c.bgColor + ';background-image:linear-gradient(rgba(255,255,255,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.05) 1px,transparent 1px);background-size:20px 20px"></div>';
+  if (pat === 'diagonal') return '<div style="position:absolute;inset:0;background:' + c.bgColor + ';background-image:repeating-linear-gradient(45deg,transparent,transparent 10px,rgba(255,255,255,0.04) 10px,rgba(255,255,255,0.04) 11px)"></div>';
+  if (pat === 'gradient') return '<div style="position:absolute;inset:0;background:linear-gradient(135deg,' + c.bgColor + ',' + (c.bgColor2 || '#1a1a2e') + ')"></div>';
+  if (pat === 'gradient-radial') return '<div style="position:absolute;inset:0;background:radial-gradient(circle at 30% 40%,' + c.bgColor + ',' + (c.bgColor2 || '#1a1a2e') + ')"></div>';
+  return this.bg(c.bgColor, '');
+};
+
+// ─── Element Rendering ────────────────────────────────────────────
 PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
   var self = this;
   return elements.map(function (el, i) {
@@ -313,7 +283,6 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
     if (i === selIdx && inCam) bdr = 'outline:2px solid #e17055;outline-offset:2px;';
     else if (i === selIdx) bdr = 'outline:1.5px dashed #6c5ce7;outline-offset:2px;';
     else if (inCam) bdr = 'outline:1.5px dashed rgba(225,112,85,0.6);outline-offset:2px;';
-
     var dc = 'cursor:move;' + bdr;
     var op = (el.opacity !== undefined && el.opacity !== 100) ? 'opacity:' + (el.opacity / 100) + ';' : '';
     var rot = (el.rotation && el.rotation !== 0) ? 'transform:rotate(' + el.rotation + 'deg);transform-origin:center;' : '';
@@ -321,25 +290,22 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
     if (el.shadow === 'light') sh = 'text-shadow:0 1px 3px rgba(0,0,0,0.4);';
     else if (el.shadow === 'dark') sh = 'text-shadow:0 2px 6px rgba(0,0,0,0.8);';
     else if (el.shadow === 'glow') sh = 'text-shadow:0 0 8px ' + el.color + ',0 0 16px ' + el.color + ';';
-    // Resize handle for selected elements
+
+    // Resize handle
     var rh = '';
     if (i === selIdx && (el.type === 'rectangle' || el.type === 'image' || el.type === 'video' || el.type === 'progress')) {
       var ew = (el.w || 100) * self.scale, eh = (el.h || 100) * self.scale;
       rh = '<div data-resize-idx="' + i + '" style="position:absolute;left:' + (px + ew - 6) + 'px;top:' + (py + eh - 6) + 'px;width:10px;height:10px;background:#6c5ce7;border:1px solid #fff;border-radius:2px;cursor:nwse-resize;z-index:20"></div>';
     }
-    // Size label for selected element
+
+    // Size label
     var sizeLabel = '';
     if (i === selIdx) {
       var elW = el.w || (el.r ? el.r * 2 : 0) || 0;
       var elH = el.h || (el.r ? el.r * 2 : 0) || 0;
-      var labelY = py + elH * self.scale + 4;
-      sizeLabel = '<div class="size-label" style="position:absolute;left:' + px + 'px;top:' + labelY + 'px;font-size:10px;color:var(--accent);background:rgba(108,92,231,0.15);padding:1px 6px;border-radius:3px;white-space:nowrap;z-index:20">x:' + el.x + ' y:' + el.y + ' · ' + elW + '×' + elH + '</div>';
+      sizeLabel = '<div class="size-label" style="position:absolute;left:' + px + 'px;top:' + (py + elH * self.scale + 4) + 'px;font-size:10px;color:var(--accent);background:rgba(108,92,231,0.15);padding:1px 6px;border-radius:3px;white-space:nowrap;z-index:20">x:' + el.x + ' y:' + el.y + ' · ' + elW + '×' + elH + '</div>';
     }
-    // Animation badge
-    var animBadge = '';
-    if (el.animationName) {
-      animBadge = '<div style="position:absolute;left:' + px + 'px;top:' + (py - 14) + 'px;font-size:9px;color:#fdcb6e;background:rgba(253,203,110,0.15);padding:0 4px;border-radius:3px;z-index:20">🎬 ' + el.animationName + '</div>';
-    }
+
     switch (el.type) {
       case 'text': {
         var ta = el.textAlign && el.textAlign !== 'left' ? 'text-align:' + el.textAlign + ';' : '';
@@ -351,19 +317,15 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
         }
         var w = el.multiLine || (el.textAlign && el.textAlign !== 'left') ? 'width:' + ((el.w || 200) * self.scale) + 'px;' : '';
         var lh = el.multiLine ? 'white-space:pre-wrap;line-height:' + (el.lineHeight || 1.4) + ';' : '';
-        // Text gradient
         var gradStyle = '';
         if (el.textGradient && el.textGradient !== 'none') {
           var gradColors = { sunset: '#ff6b6b,#feca57', ocean: '#0984e3,#00cec9', neon: '#ff00ff,#00ffff', gold: '#f39c12,#fdcb6e', aurora: '#6c5ce7,#00b894' };
           var gc = el.textGradient === 'custom' ? (el.color || '#ffffff') + ',' + (el.gradientColor2 || '#ff6b6b') : gradColors[el.textGradient] || gradColors.sunset;
           gradStyle = 'background:linear-gradient(135deg,' + gc + ');-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;';
         }
-        // Text stroke
         var strokeStyle = '';
         if (el.textStroke && el.textStroke > 0) {
-          var sw = el.textStroke * self.scale;
-          var sc = el.textStrokeColor || '#000000';
-          strokeStyle = '-webkit-text-stroke:' + sw + 'px ' + sc + ';';
+          strokeStyle = '-webkit-text-stroke:' + (el.textStroke * self.scale) + 'px ' + (el.textStrokeColor || '#000000') + ';';
         }
         var textContent = self.esc(el.text || '');
         if (el.multiLine) textContent = textContent.replace(/\n/g, '<br>');
@@ -371,51 +333,74 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
       }
       case 'rectangle':
         var rectBg = el.fillColor2 ? 'background:linear-gradient(135deg,' + el.color + ',' + el.fillColor2 + ')' : 'background:' + el.color;
-        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + el.w * self.scale + 'px;height:' + el.h * self.scale + 'px;' + rectBg + ';border-radius:' + (el.radius || 0) * self.scale + 'px;' + op + rot + dc + '"></div>' + rh + sizeLabel + animBadge;
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + el.w * self.scale + 'px;height:' + el.h * self.scale + 'px;' + rectBg + ';border-radius:' + (el.radius || 0) * self.scale + 'px;' + op + rot + dc + '"></div>' + rh + sizeLabel;
       case 'circle':
         return '<div data-el-idx="' + i + '" style="position:absolute;left:' + (self.camW + (el.x - el.r) * self.scale) + 'px;top:' + (el.y - el.r) * self.scale + 'px;width:' + el.r * 2 * self.scale + 'px;height:' + el.r * 2 * self.scale + 'px;background:' + el.color + ';border-radius:50%;' + op + rot + dc + '"></div>';
       case 'image': {
         var fi = el.fileName ? files[el.fileName] : null;
-        var imgFit = el.fit || 'cover';
-        if (fi) return '<img data-el-idx="' + i + '" src="' + fi.dataUrl + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 100) * self.scale + 'px;height:' + (el.h || 100) * self.scale + 'px;object-fit:' + imgFit + ';border-radius:2px;' + dc + '">' + rh + sizeLabel + animBadge;
-        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 100) * self.scale + 'px;height:' + (el.h || 100) * self.scale + 'px;background:#222;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#666;' + dc + '">🖼</div>' + rh + sizeLabel + animBadge;
+        if (fi) return '<img data-el-idx="' + i + '" src="' + fi.dataUrl + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 100) * self.scale + 'px;height:' + (el.h || 100) * self.scale + 'px;object-fit:' + (el.fit || 'cover') + ';border-radius:2px;' + dc + '">' + rh + sizeLabel;
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 100) * self.scale + 'px;height:' + (el.h || 100) * self.scale + 'px;background:#222;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#666;' + dc + '">🖼</div>' + rh + sizeLabel;
       }
       case 'video': {
         var fi2 = el.fileName ? files[el.fileName] : null;
-        var vidFit = el.fit || 'cover';
-        if (fi2) return '<video data-el-idx="' + i + '" src="' + fi2.dataUrl + '" muted loop autoplay style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 240) * self.scale + 'px;height:' + (el.h || 135) * self.scale + 'px;object-fit:' + vidFit + ';border-radius:2px;' + dc + '"></video>' + rh + sizeLabel + animBadge;
-        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 240) * self.scale + 'px;height:' + (el.h || 135) * self.scale + 'px;background:#1a1a2e;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#555;' + dc + '">🎬</div>' + rh + sizeLabel + animBadge;
-      }
-      case 'arc': {
-        var arcR = el.r || 40;
-        var startA = (el.startAngle || 0) - 90;
-        var endA = (el.endAngle || 270) - 90;
-        var arcSize = arcR * 2 * self.scale;
-        var arcSw = (el.strokeWidth || 6) * self.scale;
-        var arcCx = arcR * self.scale;
-        var arcCy = arcR * self.scale;
-        var startRad = startA * Math.PI / 180;
-        var endRad = endA * Math.PI / 180;
-        var x1 = arcCx + arcR * self.scale * 0.45 * Math.cos(startRad);
-        var y1 = arcCy + arcR * self.scale * 0.45 * Math.sin(startRad);
-        var x2 = arcCx + arcR * self.scale * 0.45 * Math.cos(endRad);
-        var y2 = arcCy + arcR * self.scale * 0.45 * Math.sin(endRad);
-        var largeArc = (endA - startA > 180 || endA - startA < -180) ? 1 : 0;
-        var svgArc = '<svg style="position:absolute;left:' + (self.camW + el.x * self.scale) + 'px;top:' + (el.y * self.scale) + 'px;width:' + arcSize + 'px;height:' + arcSize + 'px;' + dc + '" viewBox="0 0 ' + arcSize + ' ' + arcSize + '">' +
-          '<path d="M' + x1 + ',' + y1 + ' A' + (arcR * self.scale * 0.45) + ',' + (arcR * self.scale * 0.45) + ' 0 ' + largeArc + ' 1 ' + x2 + ',' + y2 + '" fill="none" stroke="' + el.color + '" stroke-width="' + arcSw + '" stroke-linecap="round"/></svg>';
-        return svgArc;
+        if (fi2) return '<video data-el-idx="' + i + '" src="' + fi2.dataUrl + '" muted loop autoplay style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 240) * self.scale + 'px;height:' + (el.h || 135) * self.scale + 'px;object-fit:' + (el.fit || 'cover') + ';border-radius:2px;' + dc + '"></video>' + rh + sizeLabel;
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 240) * self.scale + 'px;height:' + (el.h || 135) * self.scale + 'px;background:#1a1a2e;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#555;' + dc + '">🎬</div>' + rh + sizeLabel;
       }
       case 'progress': {
         var pw = (el.w || 200) * self.scale, ph = (el.h || 8) * self.scale;
-        var pv = (el.value || 60) / 100;
-        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + (self.camW + el.x * self.scale) + 'px;top:' + (el.y * self.scale) + 'px;width:' + pw + 'px;height:' + ph + 'px;background:' + (el.bgColor || '#333') + ';border-radius:' + ((el.radius || 4) * self.scale) + 'px;' + dc + '"><div style="width:' + (pv * 100) + '%;height:100%;background:' + el.color + ';border-radius:inherit"></div></div>' + rh + sizeLabel + animBadge;
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + (self.camW + el.x * self.scale) + 'px;top:' + (el.y * self.scale) + 'px;width:' + pw + 'px;height:' + ph + 'px;background:' + (el.bgColor || '#333') + ';border-radius:' + ((el.radius || 4) * self.scale) + 'px;' + dc + '"><div style="width:' + ((el.value || 60)) + '%;height:100%;background:' + el.color + ';border-radius:inherit"></div></div>' + rh + sizeLabel;
       }
-      case 'lottie': {
-        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + (self.camW + el.x * self.scale) + 'px;top:' + (el.y * self.scale) + 'px;width:' + ((el.w || 120) * self.scale) + 'px;height:' + ((el.h || 120) * self.scale) + 'px;background:var(--surface2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text2);border:1px dashed var(--border)' + dc + '"' + sa + '>🎭 Lottie</div>' + rh + sizeLabel + animBadge;
-      }
-      default: return sizeLabel + animBadge;
+      default: return sizeLabel;
     }
   }).join('');
 };
 
-JCM.PreviewRenderer = PreviewRenderer;
+// ─── Render Template Preview (dispatch) ───────────────────────────
+export function renderTemplatePreview(device, showCam, tpl, cfg) {
+  if (tpl.rawXml) {
+    return renderRealDevicePreview(device, showCam, tpl, cfg);
+  }
+  var r = new PreviewRenderer(device, showCam);
+  switch (tpl.id) {
+    case 'clock':      return r.renderClock(cfg);
+    case 'quote':      return r.renderQuote(cfg);
+    case 'battery':    return r.renderBattery(cfg);
+    case 'status':     return r.renderStatus(cfg);
+    case 'countdown':  return r.renderCountdown(cfg);
+    case 'music':      return r.renderMusic(cfg);
+    case 'gradient':   return r.renderGradient(cfg);
+    case 'weather':    return r.renderWeather(cfg);
+    case 'steps':      return r.renderSteps(cfg);
+    case 'calendar':   return r.renderCalendar(cfg);
+    case 'dualclock':  return r.renderDualclock(cfg);
+    case 'dailyquote': return r.renderDailyquote(cfg);
+    case 'ring':       return r.renderRing(cfg);
+    case 'dashboard':  return r.renderDashboard(cfg);
+    case 'image':      return r.renderImage(cfg);
+    case 'custom':     return r.renderCustom(cfg);
+    default:           return '';
+  }
+}
+
+function renderRealDevicePreview(device, showCam, tpl, cfg) {
+  var camW = showCam ? 420 * device.cameraZoneRatio : 0;
+  var bg = cfg.bgColor || '#0a1628';
+  var dc = cfg.descColor || '#888888';
+  if (tpl.id === 'weather_real') {
+    return '<div style="position:absolute;inset:0;background:' + bg + '"></div>' +
+      '<div style="position:absolute;left:' + (camW + 10) + 'px;top:20px;font-size:40px;color:' + (cfg.timeColor || '#fff') + ';font-weight:700">09:41</div>' +
+      '<div style="position:absolute;left:' + (camW + 10) + 'px;top:68px;font-size:12px;color:' + dc + '">4月6日 星期日</div>' +
+      '<div style="position:absolute;left:' + (camW + 10) + 'px;top:88px;font-size:32px;color:' + (cfg.tempColor || '#fff') + ';font-weight:700">23°</div>' +
+      '<div style="position:absolute;left:' + (camW + 10) + 'px;top:128px;font-size:11px;color:' + dc + '">北京 · 晴</div>' +
+      '<div style="position:absolute;right:8px;bottom:6px;font-size:8px;color:' + dc + ';opacity:0.3">需真实设备数据</div>';
+  }
+  if (tpl.id === 'music_real') {
+    return '<div style="position:absolute;inset:0;background:' + bg + '"></div>' +
+      '<div style="position:absolute;left:' + (camW + 14) + 'px;top:18px;font-size:15px;color:' + (cfg.titleColor || '#fff') + ';font-weight:700">歌曲名称</div>' +
+      '<div style="position:absolute;left:' + (camW + 14) + 'px;top:40px;font-size:10px;color:' + (cfg.artistColor || '#888') + '">歌手名称</div>' +
+      '<div style="position:absolute;right:8px;bottom:6px;font-size:8px;color:' + dc + ';opacity:0.3">需真实设备数据</div>';
+  }
+  return '<div style="position:absolute;inset:0;background:' + bg + '"></div>';
+}
+
+export { PreviewRenderer };
