@@ -316,6 +316,7 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
 
     var dc = 'cursor:move;' + bdr;
     var op = (el.opacity !== undefined && el.opacity !== 100) ? 'opacity:' + (el.opacity / 100) + ';' : '';
+    var rot = (el.rotation && el.rotation !== 0) ? 'transform:rotate(' + el.rotation + 'deg);transform-origin:center;' : '';
     var sh = '';
     if (el.shadow === 'light') sh = 'text-shadow:0 1px 3px rgba(0,0,0,0.4);';
     else if (el.shadow === 'dark') sh = 'text-shadow:0 2px 6px rgba(0,0,0,0.8);';
@@ -349,7 +350,7 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
           ff = 'font-family:' + (fontMap[el.fontFamily] || 'sans-serif') + ';';
         }
         var w = el.multiLine || (el.textAlign && el.textAlign !== 'left') ? 'width:' + ((el.w || 200) * self.scale) + 'px;' : '';
-        var lh = el.multiLine ? 'white-space:pre-wrap;line-height:1.4;' : '';
+        var lh = el.multiLine ? 'white-space:pre-wrap;line-height:' + (el.lineHeight || 1.4) + ';' : '';
         // Text gradient
         var gradStyle = '';
         if (el.textGradient && el.textGradient !== 'none') {
@@ -364,13 +365,13 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
           var sc = el.textStrokeColor || '#000000';
           strokeStyle = '-webkit-text-stroke:' + sw + 'px ' + sc + ';';
         }
-        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;font-size:' + el.size * self.scale + 'px;color:' + el.color + ';' + ff + w + ta + fw + lh + sh + op + gradStyle + strokeStyle + dc + '">' + self.esc(el.text || '') + '</div>';
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;font-size:' + el.size * self.scale + 'px;color:' + el.color + ';' + ff + w + ta + fw + lh + sh + op + rot + gradStyle + strokeStyle + dc + '">' + self.esc(el.text || '') + '</div>';
       }
       case 'rectangle':
         var rectBg = el.fillColor2 ? 'background:linear-gradient(135deg,' + el.color + ',' + el.fillColor2 + ')' : 'background:' + el.color;
-        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + el.w * self.scale + 'px;height:' + el.h * self.scale + 'px;' + rectBg + ';border-radius:' + (el.radius || 0) * self.scale + 'px;' + op + dc + '"></div>' + rh + sizeLabel + animBadge;
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + el.w * self.scale + 'px;height:' + el.h * self.scale + 'px;' + rectBg + ';border-radius:' + (el.radius || 0) * self.scale + 'px;' + op + rot + dc + '"></div>' + rh + sizeLabel + animBadge;
       case 'circle':
-        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + (self.camW + (el.x - el.r) * self.scale) + 'px;top:' + (el.y - el.r) * self.scale + 'px;width:' + el.r * 2 * self.scale + 'px;height:' + el.r * 2 * self.scale + 'px;background:' + el.color + ';border-radius:50%;' + op + dc + '"></div>';
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + (self.camW + (el.x - el.r) * self.scale) + 'px;top:' + (el.y - el.r) * self.scale + 'px;width:' + el.r * 2 * self.scale + 'px;height:' + el.r * 2 * self.scale + 'px;background:' + el.color + ';border-radius:50%;' + op + rot + dc + '"></div>';
       case 'image': {
         var fi = el.fileName ? files[el.fileName] : null;
         if (fi) return '<img data-el-idx="' + i + '" src="' + fi.dataUrl + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 100) * self.scale + 'px;height:' + (el.h || 100) * self.scale + 'px;object-fit:cover;border-radius:2px;' + dc + '">' + rh + sizeLabel + animBadge;

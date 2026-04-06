@@ -214,6 +214,7 @@
             <button class="btn btn-secondary" onclick="JCM.copyXML()"><span class="btn-icon">📋</span> 复制 XML</button>
             <button class="btn btn-export" onclick="JCM.handleExport()"><span class="btn-icon">📦</span> 导出 ZIP</button>
             <button class="btn btn-secondary" onclick="JCM.handleExportPNG()"><span class="btn-icon">🖼</span> 导出 PNG</button>
+            <button class="btn btn-secondary" onclick="JCM.handleExportSVG()"><span class="btn-icon">📐</span> 导出 SVG</button>
           </div>
           <div class="batch-export-bar">
             <span style="font-size:11px;color:var(--text2)">批量导出：</span>
@@ -297,12 +298,15 @@
 <script src="js/export.js"></script>
 <script src="js/transcode.js"></script>
 <script src="js/storage.js"></script>
+<script src="js/toast.js"></script>
+<script src="js/drag.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
 
 
 <!-- Auto-save indicator -->
 <div class="autosave-indicator" id="autosaveIndicator">💾 已自动保存</div>
+<div class="offline-indicator" id="offlineIndicator" style="display:none">📴 离线模式</div>
 
 <!-- Right-click Context Menu -->
 <div class="context-menu" id="contextMenu" style="display:none" role="menu" aria-label="元素操作">

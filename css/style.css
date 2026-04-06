@@ -681,3 +681,82 @@ kbd{
   padding:1px 6px;border-radius:3px;z-index:5;
   background:rgba(0,0,0,0.5);color:#fff;
 }
+
+/* ═══ 响应式 ═══ */
+@media (max-width: 900px) {
+  .config-live-left,
+  .config-live-right {
+    width: 100% !important;
+    flex: none !important;
+  }
+  .page-config-live {
+    flex-direction: column !important;
+  }
+  .config-live-right {
+    order: -1;
+    padding: 12px;
+  }
+  .config-preview-phone {
+    max-width: 300px;
+    margin: 0 auto;
+  }
+  .preview-layout {
+    flex-direction: column !important;
+  }
+  .preview-side {
+    width: 100% !important;
+  }
+  .preview-phone-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .batch-export-bar {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 600px) {
+  .topbar h1 { font-size: 14px; }
+  .step-label { display: none; }
+  .step-num { margin-right: 0; }
+  .steps { justify-content: center; gap: 4px; }
+  .tpl-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .tpl-card { padding: 8px; }
+  .tpl-thumb { height: 60px; }
+  .config-grid { gap: 6px; }
+  .device-row { flex-wrap: wrap; gap: 6px; }
+  .zoom-controls { display: none; }
+  .preview-actions { flex-wrap: wrap; }
+  .preview-actions .btn { font-size: 12px; padding: 6px 10px; }
+  .code-body { max-height: 200px; }
+  .el-toolbar { flex-wrap: wrap; }
+  .modal { margin: 8px; max-height: 90vh; }
+}
+
+/* Toast Spinner */
+.toast-spinner {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: toast-spin 0.6s linear infinite;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+@keyframes toast-spin { to { transform: rotate(360deg); } }
+
+/* Offline Indicator */
+.offline-indicator {
+  position: fixed;
+  top: calc(var(--safe-top, 0px) + 8px);
+  right: 8px;
+  background: rgba(255, 152, 0, 0.9);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  z-index: 10000;
+  animation: slide-down 0.3s ease;
+}

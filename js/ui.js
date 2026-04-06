@@ -101,9 +101,21 @@ function rRealPreview(device, showCam, tpl, cfg) {
 var _history = [];
 var _redoStack = [];
 var _historyLabels = []; // 操作描述
-var _deepClone = typeof structuredClone === 'function'
-  ? function (v) { return structuredClone(v); }
-  : function (v) { return JSON.parse(JSON.stringify(v)); };
+// 安全深拷贝：处理 ArrayBuffer（structuredClone 和 JSON 都不能正确处理）
+function _deepClone(v) {
+  if (v === null || typeof v !== 'object') return v;
+  if (v instanceof ArrayBuffer) return v.slice(0);
+  if (v instanceof Uint8Array) return new Uint8Array(v);
+  if (Array.isArray(v)) return v.map(_deepClone);
+  if (typeof structuredClone === 'function') {
+    try { return structuredClone(v); } catch (e) { /* fallback */ }
+  }
+  var clone = {};
+  for (var key in v) {
+    if (v.hasOwnProperty(key)) clone[key] = _deepClone(v[key]);
+  }
+  return clone;
+}
 
 function captureState(label) {
   var filesSnapshot = {};
@@ -686,15 +698,20 @@ function generateCustomMAML(device) {
         if (el.textStroke && el.textStroke > 0) {
           ts = ' stroke="' + el.textStroke + '" strokeColor="' + (el.textStrokeColor || '#000000') + '"';
         }
-        lines.push('    <Text text="' + JCM.escXml(el.text || '') + '" x="' + el.x + '" y="' + el.y + '" size="' + el.size + '" color="' + el.color + '"' + w + a + ml + b + ff + tg + ts + ' />');
+        var rot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
+        var lh = el.multiLine && el.lineHeight && el.lineHeight !== 1.4 ? ' lineHeight="' + el.lineHeight + '"' : '';
+        lines.push('    <Text text="' + JCM.escXml(el.text || '') + '" x="' + el.x + '" y="' + el.y + '" size="' + el.size + '" color="' + el.color + '"' + w + a + ml + b + ff + tg + ts + rot + lh + ' />');
         break;
       }
       case 'rectangle':
         var rectFill = el.fillColor2 ? ' fillColor="' + el.color + '" fillColor2="' + el.fillColor2 + '"' : ' fillColor="' + el.color + '"';
-        lines.push('    <Rectangle x="' + el.x + '" y="' + el.y + '" w="' + el.w + '" h="' + el.h + '"' + rectFill + (el.radius ? ' cornerRadius="' + el.radius + '"' : '') + ' />');
+        var rectRot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
+        var rectBlur = el.blur ? ' blur="' + el.blur + '"' : '';
+        lines.push('    <Rectangle x="' + el.x + '" y="' + el.y + '" w="' + el.w + '" h="' + el.h + '"' + rectFill + (el.radius ? ' cornerRadius="' + el.radius + '"' : '') + rectRot + rectBlur + ' />');
         break;
       case 'circle':
-        lines.push('    <Circle x="' + el.x + '" y="' + el.y + '" r="' + el.r + '" fillColor="' + el.color + '" />');
+        var circRot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
+        lines.push('    <Circle x="' + el.x + '" y="' + el.y + '" r="' + el.r + '" fillColor="' + el.color + '"' + circRot + ' />');
         break;
       case 'image': {
         var imgSrc = el.src || el.fileName || '';
@@ -753,14 +770,22 @@ JCM.handleExport = function () {
     return toast('XML 校验失败: ' + validation.errors[0], 'error');
   }
 
+  var p = toastProgress('正在打包 ZIP...');
   JCM.exportZip(maml, _cfg.cardName || 'card', _elements, JCM.uploadedFiles, _tpl.id === 'custom', _cfg.bgImage || '')
-    .then(function () { toast('✅ ZIP 已导出', 'success'); })
-    .catch(function (e) { toast('导出失败: ' + e.message, 'error'); });
+    .then(function () { p.close('✅ ZIP 已导出', 'success'); })
+    .catch(function (e) { p.close('导出失败: ' + e.message, 'error'); });
 };
 
 JCM.handleExportPNG = function () {
+  var p = toastProgress('正在导出 PNG...');
   JCM.exportPNG(_cfg.cardName || 'card')
-    .then(function () { toast('✅ PNG 已导出', 'success'); })
+    .then(function () { p.close('✅ PNG 已导出', 'success'); })
+    .catch(function (e) { p.close('导出失败: ' + e.message, 'error'); });
+};
+
+JCM.handleExportSVG = function () {
+  JCM.exportSVG(_cfg.cardName || 'card')
+    .then(function () { toast('✅ SVG 已导出', 'success'); })
     .catch(function (e) { toast('导出失败: ' + e.message, 'error'); });
 };
 
@@ -1354,14 +1379,14 @@ function handleFilePicked(e) {
   }
 
   if (needTranscode) {
-    toast('🔄 正在转码为 MP4 (H.264)...', 'info');
+    var tp = toastProgress('正在转码为 MP4 (H.264)...');
     JCM.transcodeToH264(file, function (pct) {
-      toast('🔄 转码中 ' + pct + '%...', 'info');
+      tp.update('转码中 ' + pct + '%...');
     }).then(function (transcodedFile) {
-      toast('✅ 转码完成', 'success');
+      tp.close('✅ 转码完成', 'success');
       doStore(transcodedFile);
     }).catch(function (err) {
-      toast('⚠️ 转码失败，使用原始文件: ' + err.message, 'warning');
+      tp.close('⚠️ 转码失败，使用原始文件', 'warning');
       doStore(file);
     });
   } else {
@@ -1601,9 +1626,16 @@ function setupEvents() {
   }
 
   // Config content
+  // 配置变更的节流 capture（避免每次按键都存快照）
+  var _cfgChangeTimer = null;
   document.getElementById('cfgContent').addEventListener('input', function (e) {
     var t = e.target;
     if (t.dataset.cfg) {
+      // 首次变更时 capture state
+      if (!_cfgChangeTimer) captureState('修改配置');
+      clearTimeout(_cfgChangeTimer);
+      _cfgChangeTimer = setTimeout(function () { _cfgChangeTimer = null; }, 1000);
+
       var key = t.dataset.cfg;
       if (t.type === 'range') {
         _cfg[key] = Number(t.value);
@@ -1616,6 +1648,10 @@ function setupEvents() {
       _dirty = true;
     }
     if (t.dataset.prop) {
+      if (!_cfgChangeTimer) captureState('修改元素');
+      clearTimeout(_cfgChangeTimer);
+      _cfgChangeTimer = setTimeout(function () { _cfgChangeTimer = null; }, 1000);
+
       var idx = Number(t.dataset.idx);
       var prop = t.dataset.prop;
       if (t.type === 'number' || t.type === 'range') _elements[idx][prop] = Number(t.value);
@@ -2286,53 +2322,6 @@ JCM._doFilterTemplates = function (query) {
     card.style.display = (catMatch && searchMatch) ? '' : 'none';
   });
 };
-
-// ─── Toast (queue, supports multiple simultaneous) ────────────────
-var _toastQueue = [];
-var _toastId = 0;
-
-function toast(msg, type, undoFn) {
-  var id = 'toast-' + (++_toastId);
-  var el = document.createElement('div');
-  el.id = id;
-  el.className = 'toast ' + (type || 'success');
-  if (undoFn) {
-    el.innerHTML = '<span>' + escH(msg) + '</span> <button class="toast-undo" onclick="this.parentElement._undo()">↩ 撤销</button>';
-    el._undo = function () {
-      undoFn();
-      el.classList.remove('show');
-      setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 300);
-      _toastQueue = _toastQueue.filter(function (t) { return t !== id; });
-      repositionToasts();
-    };
-  } else {
-    el.textContent = msg;
-  }
-  document.body.appendChild(el);
-
-  var offset = _toastQueue.length * 52;
-  _toastQueue.push(id);
-  el.style.bottom = (80 + offset) + 'px';
-
-  requestAnimationFrame(function () { el.classList.add('show'); });
-  setTimeout(function () {
-    el.classList.remove('show');
-    setTimeout(function () {
-      if (el.parentNode) el.parentNode.removeChild(el);
-      _toastQueue = _toastQueue.filter(function (t) { return t !== id; });
-      repositionToasts();
-    }, 300);
-  }, undoFn ? 5000 : 2500);
-}
-
-function repositionToasts() {
-  _toastQueue.forEach(function (tid, i) {
-    var t = document.getElementById(tid);
-    if (t) t.style.bottom = (80 + i * 52) + 'px';
-  });
-}
-
-function escH(s) { return JCM.escHtml(s); }
 
 // ─── Init ─────────────────────────────────────────────────────────
 // Expose internal state for editor.js

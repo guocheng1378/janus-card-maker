@@ -61,25 +61,31 @@ function renderEl(el, files) {
       if (el.shadow === 'light') sh = ' shadow="1" shadowColor="#000000"';
       else if (el.shadow === 'dark') sh = ' shadow="3" shadowColor="#000000"';
       else if (el.shadow === 'glow') sh = ' shadow="4" shadowColor="' + (el.color || '#ffffff') + '"';
-      // Text gradient
       var tg = '';
       if (el.textGradient && el.textGradient !== 'none') {
         var gradColors = { sunset: '#ff6b6b,#feca57', ocean: '#0984e3,#00cec9', neon: '#ff00ff,#00ffff', gold: '#f39c12,#fdcb6e', aurora: '#6c5ce7,#00b894' };
         var gc = el.textGradient === 'custom' ? (el.color || '#ffffff') + ',' + (el.gradientColor2 || '#ff6b6b') : gradColors[el.textGradient] || gradColors.sunset;
         tg = ' gradientColors="' + gc + '" gradientOrientation="top_bottom"';
       }
-      // Text stroke
       var ts = '';
       if (el.textStroke && el.textStroke > 0) {
         ts = ' stroke="' + el.textStroke + '" strokeColor="' + (el.textStrokeColor || '#000000') + '"';
       }
-      return p + '<Text ' + t + ' x="' + el.x + '" y="' + el.y + '" size="' + el.size + '" color="' + el.color + '"' + w + a + ml + b + ff + alphaAttr(el) + sh + tg + ts + ' />';
+      var rot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
+      var lh = el.multiLine && el.lineHeight && el.lineHeight !== 1.4 ? ' lineHeight="' + el.lineHeight + '"' : '';
+      return p + '<Text ' + t + ' x="' + el.x + '" y="' + el.y + '" size="' + el.size + '" color="' + el.color + '"' + w + a + ml + b + ff + alphaAttr(el) + sh + tg + ts + rot + lh + ' />';
     }
     case 'rectangle': {
       if (el.h <= 3 && el.radius >= 1) {
-        return p + '<Line x="' + el.x + '" y="' + el.y + '" w="' + el.w + '" h="' + el.h + '" fillColor="' + el.color + '" cornerRadius="' + el.radius + '"' + alphaAttr(el) + ' />';
+        var lineRot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
+        return p + '<Line x="' + el.x + '" y="' + el.y + '" w="' + el.w + '" h="' + el.h + '" fillColor="' + el.color + '" cornerRadius="' + el.radius + '"' + alphaAttr(el) + lineRot + ' />';
       }
-      return p + '<Rectangle x="' + el.x + '" y="' + el.y + '" w="' + el.w + '" h="' + el.h + '" fillColor="' + el.color + '"' + (el.radius ? ' cornerRadius="' + el.radius + '"' : '') + alphaAttr(el) + ' />';
+      var rectRot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
+      var blur = el.blur ? ' blur="' + el.blur + '"' : '';
+      if (el.fillColor2) {
+        return p + '<Rectangle x="' + el.x + '" y="' + el.y + '" w="' + el.w + '" h="' + el.h + '" fillColor="' + el.color + '" fillColor2="' + el.fillColor2 + '"' + (el.radius ? ' cornerRadius="' + el.radius + '"' : '') + alphaAttr(el) + rectRot + blur + ' />';
+      }
+      return p + '<Rectangle x="' + el.x + '" y="' + el.y + '" w="' + el.w + '" h="' + el.h + '" fillColor="' + el.color + '"' + (el.radius ? ' cornerRadius="' + el.radius + '"' : '') + alphaAttr(el) + rectRot + blur + ' />';
     }
     case 'circle': {
       return p + '<Circle x="' + el.x + '" y="' + el.y + '" r="' + el.r + '" fillColor="' + el.color + '"' + alphaAttr(el) + ' />';

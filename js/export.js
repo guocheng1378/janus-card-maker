@@ -426,6 +426,64 @@ function drawRoundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+// ─── Export SVG ────────────────────────────────────────────────────
+JCM.exportSVG = function (cardName) {
+  if (!_elements || _elements.length === 0) {
+    return Promise.reject(new Error('没有可导出的元素'));
+  }
+  var device = JCM.getSelectedDevice ? JCM.getSelectedDevice() : { width: 976, height: 596, cameraZoneRatio: 0.3 };
+  var svgParts = [];
+  svgParts.push('<svg xmlns="http://www.w3.org/2000/svg" width="' + device.width + '" height="' + device.height + '" viewBox="0 0 ' + device.width + ' ' + device.height + '">');
+  svgParts.push('<rect width="100%" height="100%" fill="' + (_cfg.bgColor || '#000000') + '"/>');
+
+  _elements.forEach(function (el) {
+    var opacity = (el.opacity !== undefined ? el.opacity : 100) / 100;
+    var opAttr = opacity < 1 ? ' opacity="' + opacity + '"' : '';
+    var rotAttr = el.rotation ? ' transform="rotate(' + el.rotation + ' ' + (el.x + (el.w || 0) / 2) + ' ' + (el.y + (el.h || 0) / 2) + ')"' : '';
+
+    switch (el.type) {
+      case 'text':
+        var anchor = el.textAlign === 'center' ? 'middle' : el.textAlign === 'right' ? 'end' : 'start';
+        var tx = el.textAlign === 'center' ? el.x + (el.w || 200) / 2 : el.textAlign === 'right' ? el.x + (el.w || 200) : el.x;
+        var lines = String(el.text || '').split('\n');
+        lines.forEach(function (line, li) {
+          svgParts.push('<text x="' + tx + '" y="' + (el.y + el.size + li * el.size * (el.lineHeight || 1.4)) + '" font-size="' + el.size + '" fill="' + el.color + '" text-anchor="' + anchor + '"' + (el.bold ? ' font-weight="bold"' : '') + opAttr + '>' + JCM.escXml(line) + '</text>');
+        });
+        break;
+      case 'rectangle':
+        svgParts.push('<rect x="' + el.x + '" y="' + el.y + '" width="' + el.w + '" height="' + el.h + '" fill="' + el.color + '"' + (el.radius ? ' rx="' + el.radius + '"' : '') + opAttr + rotAttr + '/>');
+        break;
+      case 'circle':
+        svgParts.push('<circle cx="' + el.x + '" cy="' + el.y + '" r="' + el.r + '" fill="' + el.color + '"' + opAttr + '/>');
+        break;
+      case 'image':
+        var fi = el.fileName ? JCM.uploadedFiles[el.fileName] : null;
+        if (fi && fi.dataUrl) {
+          svgParts.push('<image x="' + el.x + '" y="' + el.y + '" width="' + (el.w || 100) + '" height="' + (el.h || 100) + '" href="' + fi.dataUrl + '"' + opAttr + '/>');
+        }
+        break;
+      case 'progress':
+        var pw = el.w || 200, ph = el.h || 8, pv = (el.value || 60) / 100;
+        svgParts.push('<rect x="' + el.x + '" y="' + el.y + '" width="' + pw + '" height="' + ph + '" fill="' + (el.bgColor || '#333') + '"' + (el.radius ? ' rx="' + el.radius + '"' : '') + '/>');
+        svgParts.push('<rect x="' + el.x + '" y="' + el.y + '" width="' + (pw * pv) + '" height="' + ph + '" fill="' + el.color + '"' + (el.radius ? ' rx="' + el.radius + '"' : '') + '/>');
+        break;
+    }
+  });
+
+  svgParts.push('</svg>');
+  var svgStr = svgParts.join('\n');
+  var blob = new Blob([svgStr], { type: 'image/svg+xml' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = (cardName || 'card') + '.svg';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
+  return Promise.resolve();
+};
+
 // ─── Export Template Config JSON ───────────────────────────────────
 JCM.exportTemplateJSON = function (tplId, cfg, elements) {
   var data = JSON.stringify({ templateId: tplId, config: cfg, elements: elements || [] }, null, 2);

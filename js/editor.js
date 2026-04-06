@@ -1,10 +1,10 @@
 // ─── Editor: 自定义元素编辑 ──────────────────────────────────────
 
 JCM.ElementDefaults = {
-  text: function () { return { type: 'text', text: '新文字', x: 10, y: 60, size: 24, color: '#ffffff', fontFamily: 'default', textAlign: 'left', bold: false, multiLine: false, w: 200, shadow: 'none', opacity: 100, textGradient: 'none', gradientColor2: '#ff6b6b', textStroke: 0, textStrokeColor: '#000000', locked: false }; },
-  rectangle: function () { return { type: 'rectangle', x: 10, y: 60, w: 100, h: 40, color: '#333333', radius: 0, opacity: 100, fillColor2: '', blur: 0, locked: false }; },
-  circle: function () { return { type: 'circle', x: 50, y: 100, r: 30, color: '#6c5ce7', opacity: 100, locked: false }; },
-  line: function () { return { type: 'rectangle', x: 10, y: 100, w: 200, h: 2, color: '#555555', radius: 1, opacity: 60, _isLine: true, locked: false }; },
+  text: function () { return { type: 'text', text: '新文字', x: 10, y: 60, size: 24, color: '#ffffff', fontFamily: 'default', textAlign: 'left', bold: false, multiLine: false, w: 200, shadow: 'none', opacity: 100, rotation: 0, lineHeight: 1.4, textGradient: 'none', gradientColor2: '#ff6b6b', textStroke: 0, textStrokeColor: '#000000', locked: false }; },
+  rectangle: function () { return { type: 'rectangle', x: 10, y: 60, w: 100, h: 40, color: '#333333', radius: 0, opacity: 100, rotation: 0, fillColor2: '', blur: 0, locked: false }; },
+  circle: function () { return { type: 'circle', x: 50, y: 100, r: 30, color: '#6c5ce7', opacity: 100, rotation: 0, locked: false }; },
+  line: function () { return { type: 'rectangle', x: 10, y: 100, w: 200, h: 2, color: '#555555', radius: 1, opacity: 60, rotation: 0, _isLine: true, locked: false }; },
   arc: function () { return { type: 'arc', x: 50, y: 50, r: 40, startAngle: 0, endAngle: 270, color: '#6c5ce7', strokeWidth: 6, locked: false }; },
   progress: function () { return { type: 'progress', x: 10, y: 100, w: 200, h: 8, color: '#6c5ce7', bgColor: '#333333', value: 60, radius: 4, locked: false }; },
   lottie: function () { return { type: 'lottie', x: 50, y: 50, w: 120, h: 120, fileName: '', speed: 1, locked: false, _browserOnly: true }; },
@@ -82,11 +82,13 @@ JCM.renderElementEditor = function (el, idx, device) {
       field('加粗', '<label class="toggle-switch"><input type="checkbox" data-prop="bold" data-idx="' + idx + '"' + (el.bold ? ' checked' : '') + '><span class="toggle-slider"></span></label>') +
       field('多行', '<label class="toggle-switch"><input type="checkbox" data-prop="multiLine" data-idx="' + idx + '"' + (el.multiLine ? ' checked' : '') + '><span class="toggle-slider"></span></label>') +
       field('宽度', '<input type="number" value="' + (el.w || 200) + '" data-prop="w" data-idx="' + idx + '">') +
+      field('行间距', '<input type="range" min="1" max="3" step="0.1" value="' + (el.lineHeight || 1.4) + '" data-prop="lineHeight" data-idx="' + idx + '">') +
       field('阴影', '<select data-prop="shadow" data-idx="' + idx + '">' +
         '<option value="none"' + (!el.shadow || el.shadow === 'none' ? ' selected' : '') + '>无</option>' +
         '<option value="light"' + (el.shadow === 'light' ? ' selected' : '') + '>浅色</option>' +
         '<option value="dark"' + (el.shadow === 'dark' ? ' selected' : '') + '>深色</option>' +
         '<option value="glow"' + (el.shadow === 'glow' ? ' selected' : '') + '>发光</option></select>') +
+      field('旋转', '<input type="range" min="0" max="360" value="' + (el.rotation || 0) + '" data-prop="rotation" data-idx="' + idx + '">') +
       field('透明度', '<input type="range" min="0" max="100" value="' + (el.opacity !== undefined ? el.opacity : 100) + '" data-prop="opacity" data-idx="' + idx + '">') +
       field('X', '<input type="number" value="' + el.x + '" data-prop="x" data-idx="' + idx + '">') +
       field('Y', '<input type="number" value="' + el.y + '" data-prop="y" data-idx="' + idx + '">') +
@@ -101,6 +103,7 @@ JCM.renderElementEditor = function (el, idx, device) {
       field('渐变色2', '<input type="color" value="' + (el.fillColor2 || '') + '" data-prop="fillColor2" data-idx="' + idx + '"><span class="hint">留空则纯色</span>') +
       field('模糊', '<input type="number" min="0" max="40" value="' + (el.blur || 0) + '" data-prop="blur" data-idx="' + idx + '"><span class="hint">0=无模糊 (px)</span>') +
       field('圆角', '<input type="number" value="' + (el.radius || 0) + '" data-prop="radius" data-idx="' + idx + '">') +
+      field('旋转', '<input type="range" min="0" max="360" value="' + (el.rotation || 0) + '" data-prop="rotation" data-idx="' + idx + '">') +
       field('透明度', '<input type="range" min="0" max="100" value="' + (el.opacity !== undefined ? el.opacity : 100) + '" data-prop="opacity" data-idx="' + idx + '">') +
       '</div>';
   } else if (el.type === 'circle') {
