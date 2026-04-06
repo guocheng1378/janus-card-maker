@@ -330,6 +330,11 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
       case 'text': {
         var ta = el.textAlign && el.textAlign !== 'left' ? 'text-align:' + el.textAlign + ';' : '';
         var fw = el.bold ? 'font-weight:700;' : '';
+        var ff = '';
+        if (el.fontFamily && el.fontFamily !== 'default') {
+          var fontMap = { 'mipro-normal': 'MiSans', 'mipro-demibold': 'MiSans', 'mipro-bold': 'MiSans', 'mipro-light': 'MiSans', 'mibright': 'MiBright', 'noto-sans-sc': '"Noto Sans SC"', 'roboto': 'Roboto', 'monospace': 'monospace' };
+          ff = 'font-family:' + (fontMap[el.fontFamily] || 'sans-serif') + ';';
+        }
         var w = el.multiLine || (el.textAlign && el.textAlign !== 'left') ? 'width:' + ((el.w || 200) * self.scale) + 'px;' : '';
         var lh = el.multiLine ? 'white-space:pre-wrap;line-height:1.4;' : '';
         // Text gradient
@@ -346,7 +351,7 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
           var sc = el.textStrokeColor || '#000000';
           strokeStyle = '-webkit-text-stroke:' + sw + 'px ' + sc + ';';
         }
-        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;font-size:' + el.size * self.scale + 'px;color:' + el.color + ';' + w + ta + fw + lh + sh + op + gradStyle + strokeStyle + dc + '">' + self.esc(el.text || '') + '</div>';
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;font-size:' + el.size * self.scale + 'px;color:' + el.color + ';' + ff + w + ta + fw + lh + sh + op + gradStyle + strokeStyle + dc + '">' + self.esc(el.text || '') + '</div>';
       }
       case 'rectangle':
         var rectBg = el.fillColor2 ? 'background:linear-gradient(135deg,' + el.color + ',' + el.fillColor2 + ')' : 'background:' + el.color;
