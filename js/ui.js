@@ -290,7 +290,7 @@ function renderConfig() {
   });
 
   // Custom elements section
-  html += '<div class="config-section"><div class="config-section-title"><span>▸</span> 额外元素</div>' +
+  html += '<div class="config-section"><div class="config-section-title"><span>▸</span> 额外元素' + (_elements.length > 0 ? ' <span class="el-count-badge">' + _elements.length + '</span>' : '') + '</div>' +
     '<div class="el-toolbar">' +
     '<button class="el-btn" data-add="text"><span class="el-btn-icon">T</span> 文字</button>' +
     '<button class="el-btn" data-add="rectangle"><span class="el-btn-icon">▢</span> 矩形</button>' +
@@ -447,7 +447,7 @@ function renderField(f) {
 
 // ─── Config Actions ───────────────────────────────────────────────
 JCM.addElement = function (type) {
-  captureState();
+  captureState('添加 ' + type);
   var defs = JCM.ElementDefaults;
   if (defs[type]) {
     _elements.push(JSON.parse(JSON.stringify(defs[type]())));
@@ -463,7 +463,7 @@ JCM.selectElement = function (idx) {
 };
 
 JCM.removeElement = function (idx) {
-  captureState();
+  captureState('删除元素');
   var el = _elements[idx];
   if (el && el.fileName) {
     var stillUsed = _elements.some(function (e, i) { return i !== idx && e.fileName === el.fileName; });
@@ -476,7 +476,7 @@ JCM.removeElement = function (idx) {
 };
 
 JCM.moveElementZ = function (idx, dir) {
-  captureState();
+  captureState('调整层级');
   var newIdx = dir === 'up' ? idx + 1 : idx - 1;
   if (newIdx < 0 || newIdx >= _elements.length) return;
   var tmp = _elements[idx];
@@ -489,7 +489,7 @@ JCM.moveElementZ = function (idx, dir) {
 
 JCM.alignElement = function (idx, align) {
   if (idx < 0 || idx >= _elements.length) return;
-  captureState();
+  captureState('对齐 ' + align);
   var device = getSelectedDevice();
   var el = _elements[idx];
   var ew = el.w || (el.r ? el.r * 2 : 0) || 100;
@@ -510,7 +510,7 @@ JCM.alignElement = function (idx, align) {
 
 JCM.applyQuickSize = function (idx, size) {
   if (idx < 0 || idx >= _elements.length) return;
-  captureState();
+  captureState('调整大小 ' + size);
   var device = getSelectedDevice();
   var el = _elements[idx];
   var safeW = device.width * (1 - device.cameraZoneRatio);
@@ -969,6 +969,27 @@ function applyZoom() {
   if (phone) phone.style.transform = 'scale(' + (_zoomLevel / 100) + ')';
   var label = document.getElementById('zoomLabel');
   if (label) label.textContent = _zoomLevel + '%';
+}
+
+// ─── Config Page Zoom ────────────────────────────────────────────
+var _cfgZoomLevel = 100;
+JCM.cfgZoomIn = function () {
+  _cfgZoomLevel = Math.min(_cfgZoomLevel + 25, 200);
+  applyCfgZoom();
+};
+JCM.cfgZoomOut = function () {
+  _cfgZoomLevel = Math.max(_cfgZoomLevel - 25, 50);
+  applyCfgZoom();
+};
+JCM.cfgZoomReset = function () {
+  _cfgZoomLevel = 100;
+  applyCfgZoom();
+};
+function applyCfgZoom() {
+  var phone = document.querySelector('.config-preview-phone');
+  if (phone) phone.style.transform = 'scale(' + (_cfgZoomLevel / 100) + ')';
+  var label = document.getElementById('cfgZoomLabel');
+  if (label) label.textContent = _cfgZoomLevel + '%';
 }
 
 // ─── Batch Export ─────────────────────────────────────────────────
@@ -1654,6 +1675,20 @@ function setupEvents() {
       renderConfig();
       toast('📋 已粘贴', 'success');
     }
+    // 方向键移动元素
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].indexOf(e.key) >= 0 && _selIdx >= 0 && _selIdx < _elements.length && !_elements[_selIdx].locked) {
+      e.preventDefault();
+      var step = e.shiftKey ? 10 : 1;
+      var el = _elements[_selIdx];
+      captureState('移动 ' + el.type);
+      if (e.key === 'ArrowUp') el.y = Math.max(0, el.y - step);
+      if (e.key === 'ArrowDown') el.y += step;
+      if (e.key === 'ArrowLeft') el.x = Math.max(0, el.x - step);
+      if (e.key === 'ArrowRight') el.x += step;
+      _dirty = true;
+      renderConfig();
+      if (_step === 2) renderPreview();
+    }
   });
 
   // Drag & Drop file upload
@@ -1863,6 +1898,61 @@ JCM.toggleGrid = function () {
   var cb = document.getElementById('showGrid');
   var overlay = document.getElementById('previewGridOverlay');
   if (cb && overlay) overlay.style.display = cb.checked ? '' : 'none';
+};
+
+// ─── Theme Compare (dark/light side-by-side) ─────────────────────
+var _themeCompareHtml = null;
+JCM.toggleThemeCompare = function () {
+  var cb = document.getElementById('showThemeCompare');
+  var wrap = document.querySelector('#page2 .preview-phone-wrap');
+  if (!wrap || !cb) return;
+
+  if (cb.checked) {
+    // Save current preview and show side-by-side
+    _themeCompareHtml = wrap.innerHTML;
+    if (!_tpl) return toast('请先选择模板并配置', 'error');
+    var device = getSelectedDevice();
+    var showCam = document.getElementById('showCamera').checked;
+
+    // Generate dark preview
+    var darkHtml = renderTemplatePreview(device, showCam, _tpl, _cfg);
+    darkHtml += new JCM.PreviewRenderer(device, showCam).renderElements(_elements, JCM.uploadedFiles, _selIdx);
+
+    // Generate light preview (swap colors for bg elements)
+    var lightCfg = JSON.parse(JSON.stringify(_cfg));
+    // Swap dark colors to light
+    if (lightCfg.bgColor === '#000000' || lightCfg.bgColor === '#0a0a0a' || lightCfg.bgColor === '#0d1117' || lightCfg.bgColor === '#0f0f1a' || lightCfg.bgColor === '#1a1a2e' || lightCfg.bgColor === '#1a0a2e') {
+      lightCfg.bgColor = '#f0f0f0';
+    }
+    var lightHtml = renderTemplatePreview(device, showCam, _tpl, lightCfg);
+    lightHtml += new JCM.PreviewRenderer(device, showCam).renderElements(_elements, JCM.uploadedFiles, _selIdx);
+
+    var camW = showCam ? (device.cameraZoneRatio * 100) + '%' : '0';
+    wrap.innerHTML =
+      '<div class="theme-compare">' +
+        '<div class="theme-compare-pane" style="background:#000">' +
+          '<div class="theme-compare-label">🌙 暗色</div>' +
+          '<div class="preview-screen" style="width:180px;height:' + Math.round(180 * device.height / device.width) + 'px">' +
+            '<div class="preview-camera" style="width:' + camW + '"></div>' +
+            '<div class="preview-content">' + darkHtml + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="theme-compare-pane" style="background:#fff">' +
+          '<div class="theme-compare-label">☀️ 亮色</div>' +
+          '<div class="preview-screen" style="width:180px;height:' + Math.round(180 * device.height / device.width) + 'px">' +
+            '<div class="preview-camera" style="width:' + camW + '"></div>' +
+            '<div class="preview-content">' + lightHtml + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  } else {
+    // Restore original preview
+    if (_themeCompareHtml) {
+      wrap.innerHTML = _themeCompareHtml;
+      _themeCompareHtml = null;
+      renderPreview();
+    }
+  }
 };
 
 // ─── Template Filter ─────────────────────────────────────────────

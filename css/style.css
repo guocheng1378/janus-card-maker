@@ -574,3 +574,37 @@ kbd{
 
 /* ─── Lottie element ─── */
 .el-badge[data-type="lottie"]{background:#9b59b6}
+
+/* ─── Element count badge ─── */
+.el-count-badge{
+  display:inline-block;min-width:20px;height:20px;line-height:20px;
+  text-align:center;font-size:11px;font-weight:700;color:var(--accent);
+  background:var(--accent-glow);border-radius:10px;padding:0 6px;margin-left:6px;
+}
+
+/* ─── Config page zoom controls ─── */
+.cfg-zoom-controls{
+  display:flex;align-items:center;gap:6px;margin-top:8px;
+  justify-content:center;padding:4px 0;
+}
+.cfg-zoom-btn{
+  width:28px;height:28px;border-radius:6px;border:1px solid var(--border);
+  background:var(--surface2);color:var(--text);cursor:pointer;font-size:14px;
+  display:flex;align-items:center;justify-content:center;transition:var(--transition);
+}
+.cfg-zoom-btn:hover{border-color:var(--accent);background:var(--accent-glow)}
+.cfg-zoom-label{font-size:11px;color:var(--text2);min-width:36px;text-align:center}
+
+/* ─── Theme compare mode ─── */
+.theme-compare{
+  display:flex;gap:8px;margin-top:8px;
+}
+.theme-compare-pane{
+  flex:1;border-radius:var(--radius);overflow:hidden;
+  border:1px solid var(--border);position:relative;
+}
+.theme-compare-label{
+  position:absolute;top:4px;left:4px;font-size:9px;
+  padding:1px 6px;border-radius:3px;z-index:5;
+  background:rgba(0,0,0,0.5);color:#fff;
+}

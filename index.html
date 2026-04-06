@@ -138,6 +138,12 @@
           </div>
         </div>
         <div class="preview-device-label" id="cfgDeviceLabel">Pro Max — 976 × 596</div>
+        <div class="cfg-zoom-controls">
+          <button class="cfg-zoom-btn" onclick="JCM.cfgZoomOut()">−</button>
+          <span class="cfg-zoom-label" id="cfgZoomLabel">100%</span>
+          <button class="cfg-zoom-btn" onclick="JCM.cfgZoomIn()">+</button>
+          <button class="cfg-zoom-btn" onclick="JCM.cfgZoomReset()" style="font-size:11px;width:auto;padding:0 8px">重置</button>
+        </div>
         <div class="config-live-export-row">
           <button class="btn btn-secondary" onclick="JCM.goStep(2)"><span class="btn-icon">🔍</span> 全屏预览</button>
           <button class="btn btn-export" onclick="JCM.handleExport()"><span class="btn-icon">📦</span> 导出 ZIP</button>
@@ -160,6 +166,7 @@
         </label>
         <label class="check-label">
           <input type="checkbox" id="showGrid" onchange="JCM.toggleGrid()"> 网格
+          <label class="check-label"><input type="checkbox" id="showThemeCompare" onchange="JCM.toggleThemeCompare()"> 双主题</label>
         </label>
         <div class="zoom-controls">
           <button onclick="JCM.zoomOut()" title="缩小">−</button>
