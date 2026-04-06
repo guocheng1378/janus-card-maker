@@ -89,9 +89,9 @@ JCM.exportZip = function (maml, cardName, elements, files, isCustom, bgImage) {
       a.download = fileName;
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
-      // 延迟释放，确保下载已触发
-      setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
+      a.style.display = 'none';
+      // 不要立即 removeChild，部分浏览器 click() 还没触发就被删了
+      setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 10000);
     });
   }
 
