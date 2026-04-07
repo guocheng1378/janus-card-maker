@@ -3383,11 +3383,18 @@ PreviewRenderer.prototype.fmtTime = function (now, fmt) {
 
 PreviewRenderer.prototype.fmtDate = function (now, fmt) {
   var days = ['日', '一', '二', '三', '四', '五', '六'];
+  var h = now.getHours(), h12 = h % 12 || 12;
   var tk = {
     yyyy: String(now.getFullYear()),
     MM: String(now.getMonth() + 1).padStart(2, '0'),
     dd: String(now.getDate()).padStart(2, '0'),
-    EEEE: '星期' + days[now.getDay()]
+    HH: String(h).padStart(2, '0'),
+    hh: String(h12).padStart(2, '0'),
+    mm: String(now.getMinutes()).padStart(2, '0'),
+    ss: String(now.getSeconds()).padStart(2, '0'),
+    a: h < 12 ? 'AM' : 'PM',
+    EEEE: '星期' + days[now.getDay()],
+    E: '周' + days[now.getDay()],
   };
   return Object.keys(tk).sort(function (a, b) { return b.length - a.length; })
     .reduce(function (s, k) { return s.split(k).join(tk[k]); }, fmt);
@@ -3414,9 +3421,21 @@ PreviewRenderer.prototype.calcCountdown = function (str) {
 // ─── Expression Evaluator (for template elements with textExp) ────
 PreviewRenderer.prototype.evalExpression = function (expr) {
   var now = new Date();
-  // formatDate('HH:mm', #time_sys)
-  var fm = expr.match(/formatDate\s*\(\s*'([^']+)'\s*,/);
-  if (fm) return this.fmtDate(now, fm[1]) || this.fmtTime(now, fm[1]);
+  // formatDate('FORMAT', #variable)
+  var fm = expr.match(/formatDate\s*\(\s*'([^']+)'\s*,\s*([^)]+)\)/);
+  if (fm) {
+    var fmt = fm[1];
+    var varName = fm[2].trim();
+    // Resolve variable to a Date-like value
+    var dateVal = now;
+    if (varName === '#time_sys') {
+      dateVal = now;
+    } else if (varName === '#utcNow' || varName === '#utcNow2') {
+      // Approximate: use current time (timezone offset can't be known in preview)
+      dateVal = now;
+    }
+    return this.fmtDate(dateVal, fmt);
+  }
   // Simple variables
   var vars = {
     '#step_count': '6542',
@@ -3430,13 +3449,30 @@ PreviewRenderer.prototype.evalExpression = function (expr) {
     '#heart_rate': '72',
     '#blood_oxygen': '98',
     '#sleep_hours': '7.5',
+    '#utcNow': String(now.getTime()),
+    '#utcNow2': String(now.getTime()),
+    '#dayIdx': '0',
   };
   if (vars[expr]) return vars[expr];
-  // Math expressions like (#view_width - #marginL - 20)
-  var cleaned = expr.replace(/#view_width/g, this.device.width).replace(/#view_height/g, this.device.height).replace(/#marginL/g, Math.round(this.device.width * this.device.cameraZoneRatio));
+  // Complex expressions (string concat, ifelse, etc.)
+  var cleaned = expr
+    .replace(/#view_width/g, this.device.width)
+    .replace(/#view_height/g, this.device.height)
+    .replace(/#marginL/g, Math.round(this.device.width * this.device.cameraZoneRatio))
+    .replace(/#step_count/g, 6542)
+    .replace(/#battery_level/g, 78)
+    .replace(/#step_distance/g, 4.2)
+    .replace(/#step_calorie/g, 256)
+    .replace(/#goalN/g, 10000)
+    .replace(/#pct/g, 65)
+    .replace(/#year/g, now.getFullYear())
+    .replace(/#month/g, now.getMonth() + 1)
+    .replace(/#date/g, now.getDate())
+    .replace(/#dayIdx/g, 0);
   try {
-    var result = Function('"use strict";return (' + cleaned + ')')();
-    if (typeof result === 'number') return String(Math.round(result));
+    var scope = 'var ifelse = function(c,a,b){return c?a:b;};';
+    var result = Function('"use strict";' + scope + 'return (' + cleaned + ')')();
+    if (result != null) return String(result);
   } catch (e) {}
   return expr; // fallback: show raw expression
 };
