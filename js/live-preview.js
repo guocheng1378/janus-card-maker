@@ -549,6 +549,38 @@ PreviewRenderer.prototype.renderVideoWallpaper = function (c) {
   return html;
 };
 
+
+PreviewRenderer.prototype.renderCarousel = function (c) {
+  var bg = c.bgColor || '#000';
+  var fitMode = c.fitMode || 'cover';
+  var html = this.bg(bg, '');
+  // 3 slide placeholders
+  var slideColors = ['#1a1a2e', '#2d1b69', '#1b4332'];
+  var slideLabels = ['照片 1', '照片 2', '照片 3'];
+  for (var i = 0; i < 3; i++) {
+    var alpha = i === 0 ? 1 : 0;
+    html += '<div style="position:absolute;inset:0;background:' + slideColors[i] + ';opacity:' + alpha + ';display:flex;align-items:center;justify-content:center;transition:opacity 0.5s">' +
+      '<div style="text-align:center;color:rgba(255,255,255,0.3);font-size:' + Math.round(14 * this.scale) + 'px">' +
+      '<div style="font-size:' + Math.round(32 * this.scale) + 'px;margin-bottom:6px">🖼️</div>' +
+      slideLabels[i] + '<br><span style="font-size:' + Math.round(10 * this.scale) + 'px">上传图片后自动替换</span></div></div>';
+  }
+  // Caption
+  if (c.showCaption === 'true' && c.caption) {
+    var capAlpha = (c.captionBgAlpha || 50) / 100;
+    html += '<div style="position:absolute;left:0;right:0;bottom:0;height:' + Math.round(30 * this.scale) + 'px;background:rgba(0,0,0,' + capAlpha + ');display:flex;align-items:center;padding:0 12px">' +
+      '<span style="font-size:' + Math.round(10 * this.scale) + 'px;color:' + (c.captionColor || '#fff') + '">' + this.esc(c.caption) + '</span></div>';
+  }
+  // Indicators
+  if (c.showIndicator !== 'false') {
+    html += '<div style="position:absolute;bottom:' + Math.round(10 * this.scale) + 'px;left:50%;transform:translateX(-50%);display:flex;gap:6px">';
+    for (var j = 0; j < 3; j++) {
+      html += '<div style="width:' + Math.round(6 * this.scale) + 'px;height:' + Math.round(6 * this.scale) + 'px;border-radius:50%;background:' + (c.indicatorColor || '#fff') + ';opacity:' + (j === 0 ? 1 : 0.3) + '"></div>';
+    }
+    html += '</div>';
+  }
+  return html;
+};
+
 // ─── Render Template Preview (dispatch) ───────────────────────────
 export function renderTemplatePreview(device, showCam, tpl, cfg) {
   if (tpl.rawXml) {
@@ -573,6 +605,7 @@ export function renderTemplatePreview(device, showCam, tpl, cfg) {
     case 'image':      return r.renderImage(cfg);
     case 'custom':          return r.renderCustom(cfg);
     case 'video_wallpaper': return r.renderVideoWallpaper(cfg);
+    case 'carousel':        return r.renderCarousel(cfg);
     default:                return '';
   }
 }

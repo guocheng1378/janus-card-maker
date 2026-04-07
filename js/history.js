@@ -20,36 +20,92 @@ function deepClone(v) {
   return clone;
 }
 
+
+function deepCloneFiles(files) {
+  var result = {};
+  Object.keys(files || {}).forEach(function (k) {
+    var f = files[k];
+    result[k] = {
+      mimeType: f.mimeType,
+      originalName: f.originalName,
+      fileName: f.fileName,
+      dataUrl: f.dataUrl || '',
+      data: f.data ? (f.data.slice ? f.data.slice(0) : f.data) : null,
+    };
+  });
+  return result;
+}
+
+function restoreFiles(snapshot) {
+  var result = {};
+  Object.keys(snapshot || {}).forEach(function (k) {
+    var f = snapshot[k];
+    var entry = {
+      mimeType: f.mimeType,
+      originalName: f.originalName,
+      fileName: f.fileName,
+      dataUrl: f.dataUrl || '',
+      data: f.data || null,
+    };
+    // Re-create blob URLs for data
+    if (entry.data && !entry.dataUrl) {
+      try {
+        var blob = new Blob([entry.data], { type: entry.mimeType });
+        entry.dataUrl = URL.createObjectURL(blob);
+      } catch (e) {}
+    }
+    result[k] = entry;
+  });
+  return result;
+}
+
 export function captureState(label) {
   var filesSnapshot = {};
   Object.keys(S.uploadedFiles).forEach(function (k) {
     var f = S.uploadedFiles[k];
-    filesSnapshot[k] = { mimeType: f.mimeType, originalName: f.originalName, fileName: f.fileName };
+    filesSnapshot[k] = {
+      mimeType: f.mimeType,
+      originalName: f.originalName,
+      fileName: f.fileName,
+      dataUrl: f.dataUrl || '',
+      data: f.data ? (f.data.slice ? f.data.slice(0) : f.data) : null,
+    };
   });
   history.push({ cfg: deepClone(S.cfg), elements: deepClone(S.elements), files: filesSnapshot });
   historyLabels.push(label || '操作');
   redoStack = [];
-  if (history.length > 50) { history.shift(); historyLabels.shift(); }
+  // Keep max 30 (down from 50) since we now store file data
+  if (history.length > 30) { history.shift(); historyLabels.shift(); }
 }
 
 export function undo() {
   if (history.length === 0) return;
-  redoStack.push({ cfg: deepClone(S.cfg), elements: deepClone(S.elements) });
+  redoStack.push({
+    cfg: deepClone(S.cfg),
+    elements: deepClone(S.elements),
+    files: deepCloneFiles(S.uploadedFiles),
+  });
   var state = history.pop();
   historyLabels.pop();
   S.setCfg(state.cfg);
   S.setElements(state.elements);
+  if (state.files) S.setUploadedFiles(restoreFiles(state.files));
   S.setDirty(true);
   return { needsRerender: true, message: '↩ 已撤销' };
 }
 
 export function redo() {
   if (redoStack.length === 0) return;
-  history.push({ cfg: deepClone(S.cfg), elements: deepClone(S.elements) });
+  history.push({
+    cfg: deepClone(S.cfg),
+    elements: deepClone(S.elements),
+    files: deepCloneFiles(S.uploadedFiles),
+  });
   historyLabels.push('重做');
   var state = redoStack.pop();
   S.setCfg(state.cfg);
   S.setElements(state.elements);
+  if (state.files) S.setUploadedFiles(restoreFiles(state.files));
   S.setDirty(true);
   return { needsRerender: true, message: '↪ 已重做' };
 }
