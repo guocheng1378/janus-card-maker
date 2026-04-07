@@ -107,9 +107,9 @@ const jszip = fs.readFileSync(path.join(ROOT, 'lib', 'jszip.min.js'), 'utf8');
 // Read index.html and inline everything
 let html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 
-// Replace <link rel="stylesheet" href="css/style.css"> with inline <style>
+// Replace <link rel="stylesheet" href="css/style.css..."> with inline <style>
 html = html.replace(
-  /<link\s+rel="stylesheet"\s+href="css\/style\.css">/,
+  /<link\s+rel="stylesheet"\s+href="css\/style\.css(\?v=\w+)?"\s*>/,
   '<style>' + css + '</style>'
 );
 
@@ -123,6 +123,8 @@ html = html.replace(/<script[\s\S]*?<\/script>/g, function (match) {
   scriptCount++;
   return scriptCount <= 1 ? match : '';
 });
+// Also remove <script type="module" ...> self-closing tags
+html = html.replace(/<script\s+type="module"\s+src="[^"]*"\s*><\/script>\s*\n?/g, '');
 // Also remove empty <!-- Non-module libs --> comments
 html = html.replace(/<!--\s*Non-module[^>]*-->\s*\n?/g, '');
 
