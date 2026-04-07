@@ -1,4 +1,3 @@
-import { escXml } from '../maml.js';
 import { generateAutoDetectMAML } from '../devices.js';
 
 export default {
@@ -27,15 +26,17 @@ export default {
       ], default: 'HH:mm' },
     ]},
   ],
-  gen(c) {
+  elements(c) {
     var dateY = 80 + Number(c.timeSize) * 0.9;
+    return [
+      { type: 'text', expression: "formatDate('" + c.timeFormat + "', #time_sys)", text: '12:34', x: 10, y: 80, size: Number(c.timeSize), color: c.timeColor, bold: true, locked: false },
+      { type: 'text', expression: "formatDate('" + c.dateFormat + "', #time_sys)", text: '2026/04/04 星期五', x: 10, y: Math.round(dateY), size: 20, color: c.dateColor, locked: false },
+    ];
+  },
+  gen(c) {
     return [
       generateAutoDetectMAML(),
       '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
-      '  <Group x="#marginL" y="0">',
-      '    <Text textExp="formatDate(\'' + c.timeFormat + '\', #time_sys)" x="0" y="80" size="' + c.timeSize + '" color="' + c.timeColor + '" />',
-      '    <Text textExp="formatDate(\'' + c.dateFormat + '\', #time_sys)" x="0" y="' + Math.round(dateY) + '" size="20" color="' + c.dateColor + '" />',
-      '  </Group>',
     ].join('\n');
   },
 };

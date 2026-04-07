@@ -1,4 +1,3 @@
-import { escXml } from '../maml.js';
 import { generateAutoDetectMAML } from '../devices.js';
 
 export default {
@@ -17,15 +16,17 @@ export default {
       { key: 'authorColor', label: '作者颜色', type: 'color', default: '#6c5ce7' },
     ]},
   ],
+  elements(c) {
+    var safeW = 976 * (1 - 0.3) - 20; // approx safe width
+    return [
+      { type: 'text', text: c.text, x: 10, y: 40, size: Number(c.textSize), color: c.textColor, multiLine: true, w: safeW, lineHeight: 1.4, locked: false },
+      { type: 'text', text: c.author, x: 10, y: 596 - 80, size: 16, color: c.authorColor, w: safeW, locked: false },
+    ];
+  },
   gen(c) {
     return [
       generateAutoDetectMAML(),
-      '  <Var name="safeW" type="number" expression="(#view_width - #marginL - 20)" />',
       '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
-      '  <Group x="#marginL" y="40" w="#safeW">',
-      '    <Text text="' + escXml(c.text) + '" size="' + c.textSize + '" color="' + c.textColor + '" w="#safeW" multiLine="true" />',
-      '    <Text text="' + escXml(c.author) + '" x="0" y="(#view_height - 80)" size="16" color="' + c.authorColor + '" w="#safeW" />',
-      '  </Group>',
     ].join('\n');
   },
 };

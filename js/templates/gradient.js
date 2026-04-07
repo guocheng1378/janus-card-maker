@@ -1,4 +1,3 @@
-import { escXml } from '../maml.js';
 import { generateAutoDetectMAML } from '../devices.js';
 
 export default {
@@ -17,15 +16,18 @@ export default {
       { key: 'textSize', label: '字号', type: 'range', min: 16, max: 72, default: 36 },
     ]},
   ],
+  elements(c) {
+    var safeW = Math.round(976 * (1 - 0.3)) - 30;
+    var textY = Math.round(596 * 0.3);
+    return [
+      { type: 'text', text: c.text, x: 10, y: textY, size: Number(c.textSize), color: c.textColor, multiLine: true, w: safeW, textAlign: 'center', lineHeight: 1.4, locked: false },
+    ];
+  },
   gen(c) {
     return [
       generateAutoDetectMAML(),
-      '  <Var name="safeW" type="number" expression="(#view_width - #marginL - 30)" />',
       '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor1 + '" />',
       '  <Rectangle x="(#view_width * 0.5)" w="(#view_width * 0.5)" h="#view_height" fillColor="' + c.bgColor2 + '" alpha="179" />',
-      '  <Group x="#marginL" y="0" w="#safeW" h="#view_height">',
-      '    <Text text="' + escXml(c.text) + '" x="0" y="(#view_height * 0.3)" size="' + c.textSize + '" color="' + c.textColor + '" w="#safeW" multiLine="true" textAlign="center" />',
-      '  </Group>',
     ].join('\n');
   },
 };

@@ -57,27 +57,37 @@ PreviewRenderer.prototype.calcCountdown = function (str) {
   return diff;
 };
 
-// ─── Template Renderers ───────────────────────────────────────────
-PreviewRenderer.prototype.renderClock = function (c) {
+// ─── Expression Evaluator (for template elements with textExp) ────
+PreviewRenderer.prototype.evalExpression = function (expr) {
   var now = new Date();
-  var ts = this.fmtTime(now, c.timeFormat);
-  var ds = this.fmtDate(now, c.dateFormat);
-  var tfs = Math.round(Number(c.timeSize) * this.scale);
-  var dy = Math.round(30 + tfs + 6 * this.scale);
-  return this.bg(c.bgColor,
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:30px;font-size:' + tfs + 'px;color:' + c.timeColor + ';font-weight:700;letter-spacing:1px">' + this.esc(ts) + '</div>' +
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:' + dy + 'px;font-size:' + Math.round(20 * this.scale) + 'px;color:' + c.dateColor + '">' + this.esc(ds) + '</div>'
-  );
+  // formatDate('HH:mm', #time_sys)
+  var fm = expr.match(/formatDate\s*\(\s*'([^']+)'\s*,/);
+  if (fm) return this.fmtDate(now, fm[1]) || this.fmtTime(now, fm[1]);
+  // Simple variables
+  var vars = {
+    '#step_count': '6542',
+    '#battery_level': '78',
+    '#battery_state': '放电中',
+    '#weather_temp': '23°',
+    '#weather_desc': '晴',
+    '#weather_city': '北京',
+    '#view_width': String(this.device.width),
+    '#view_height': String(this.device.height),
+    '#heart_rate': '72',
+    '#blood_oxygen': '98',
+    '#sleep_hours': '7.5',
+  };
+  if (vars[expr]) return vars[expr];
+  // Math expressions like (#view_width - #marginL - 20)
+  var cleaned = expr.replace(/#view_width/g, this.device.width).replace(/#view_height/g, this.device.height).replace(/#marginL/g, Math.round(this.device.width * this.device.cameraZoneRatio));
+  try {
+    var result = Function('"use strict";return (' + cleaned + ')')();
+    if (typeof result === 'number') return String(Math.round(result));
+  } catch (e) {}
+  return expr; // fallback: show raw expression
 };
 
-PreviewRenderer.prototype.renderQuote = function (c) {
-  var lines = String(c.text).split('\n');
-  return this.bg(c.bgColor,
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:24px;right:10px;font-size:' + Math.round(Number(c.textSize) * this.scale) + 'px;color:' + c.textColor + ';line-height:1.4">' + lines.map(this.esc).join('<br>') + '</div>' +
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;bottom:20px;font-size:' + Math.round(16 * this.scale) + 'px;color:' + c.authorColor + '">' + this.esc(c.author) + '</div>'
-  );
-};
-
+// ─── Template Renderers ───────────────────────────────────────────
 PreviewRenderer.prototype.renderBattery = function (c) {
   var level = Number(c.demoLevel) || 78;
   var bw = PREVIEW_W - this.camW - 20;
@@ -90,126 +100,12 @@ PreviewRenderer.prototype.renderBattery = function (c) {
   );
 };
 
-PreviewRenderer.prototype.renderStatus = function (c) {
-  var items = [c.item1, c.item2, c.item3, c.item4].filter(Boolean);
-  var self = this;
-  return this.bg(c.bgColor,
-    '<div style="position:absolute;left:' + (this.camW + 6) + 'px;top:18px;display:flex;align-items:center;gap:6px">' +
-    '<div style="width:3px;height:' + Math.round(24 * this.scale) + 'px;background:' + c.accentColor + ';border-radius:2px"></div>' +
-    '<span style="font-size:' + Math.round(22 * this.scale) + 'px;color:' + c.textColor + ';font-weight:600">' + this.esc(c.title) + '</span></div>' +
-    items.map(function (t, i) {
-      return '<div style="position:absolute;left:' + (self.camW + 16) + 'px;top:' + (50 + i * Math.round(40 * self.scale)) + 'px;font-size:' + Math.round(16 * self.scale) + 'px;color:' + c.textColor + ';opacity:0.8">' + self.esc(t) + '</div>';
-    }).join('')
-  );
-};
-
 PreviewRenderer.prototype.renderCountdown = function (c) {
   var diff = this.calcCountdown(c.targetDate);
   return this.bg(c.bgColor,
     '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:20px;font-size:' + Math.round(18 * this.scale) + 'px;color:' + c.textColor + ';opacity:0.6">' + this.esc(c.eventName) + '</div>' +
     '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:44px;font-size:' + Math.round(72 * this.scale) + 'px;color:' + c.accentColor + ';font-weight:700">' + diff + '</div>' +
     '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:' + Math.round(44 + 72 * this.scale + 4) + 'px;font-size:' + Math.round(20 * this.scale) + 'px;color:' + c.textColor + ';opacity:0.5">天</div>'
-  );
-};
-
-PreviewRenderer.prototype.renderMusic = function (c) {
-  var bs = Math.round(48 * this.scale), br = Math.round(12 * this.scale), is = Math.round(28 * this.scale);
-  var after = 18 + bs + 10;
-  return this.bg(c.bgColor,
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:18px;display:flex;gap:8px;align-items:center">' +
-    '<div style="width:' + bs + 'px;height:' + bs + 'px;background:' + c.accentColor + ';border-radius:' + br + 'px;display:flex;align-items:center;justify-content:center;font-size:' + is + 'px;color:#fff">♪</div>' +
-    '<span style="font-size:' + Math.round(12 * this.scale) + 'px;color:' + c.accentColor + '">正在播放</span></div>' +
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:' + after + 'px;font-size:' + Math.round(24 * this.scale) + 'px;color:' + c.titleColor + ';font-weight:600">' + this.esc(c.songName) + '</div>' +
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:' + (after + Math.round(28 * this.scale)) + 'px;font-size:' + Math.round(16 * this.scale) + 'px;color:' + c.artistColor + '">' + this.esc(c.artistName) + '</div>' +
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;right:10px;top:' + (after + Math.round(50 * this.scale)) + 'px;height:2px;background:#333;border-radius:1px"><div style="width:40%;height:100%;background:' + c.accentColor + ';border-radius:1px"></div></div>'
-  );
-};
-
-PreviewRenderer.prototype.renderGradient = function (c) {
-  var lines = String(c.text).split('\n');
-  return '<div style="position:absolute;left:0;top:0;width:50%;height:100%;background:' + c.bgColor1 + '"></div>' +
-    '<div style="position:absolute;left:50%;top:0;width:50%;height:100%;background:' + c.bgColor2 + ';opacity:0.7"></div>' +
-    '<div style="position:absolute;left:' + this.camW + 'px;right:0;top:30%;text-align:center;font-size:' + Math.round(Number(c.textSize) * this.scale) + 'px;color:' + c.textColor + ';font-weight:700;line-height:1.3">' + lines.map(this.esc).join('<br>') + '</div>';
-};
-
-PreviewRenderer.prototype.renderWeather = function (c) {
-  return this.bg(c.bgColor,
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:14px;font-size:' + Math.round(14 * this.scale) + 'px;color:' + c.descColor + ';opacity:0.7">' + this.esc(c.city) + '</div>' +
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:32px;font-size:' + Math.round(Number(c.tempSize) * this.scale) + 'px;color:' + c.tempColor + ';font-weight:700">23°</div>' +
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:' + Math.round(32 + Number(c.tempSize) * this.scale + 8) + 'px;font-size:' + Math.round(18 * this.scale) + 'px;color:' + c.descColor + '">晴</div>' +
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:' + Math.round(32 + Number(c.tempSize) * this.scale + 40) + 'px;font-size:' + Math.round(14 * this.scale) + 'px;color:' + c.descColor + ';opacity:0.5">湿度 45%</div>' +
-    '<div style="position:absolute;left:' + (this.camW + 120) + 'px;top:' + Math.round(32 + Number(c.tempSize) * this.scale + 40) + 'px;font-size:' + Math.round(14 * this.scale) + 'px;color:' + c.descColor + ';opacity:0.5">体感 21°</div>' +
-    '<div style="position:absolute;right:8px;bottom:6px;font-size:' + Math.round(10 * this.scale) + 'px;color:' + c.descColor + ';opacity:0.3">预览数据</div>'
-  );
-};
-
-PreviewRenderer.prototype.renderSteps = function (c) {
-  var goal = parseInt(c.goal) || 10000;
-  var steps = 6542;
-  var pct = Math.min(Math.round(steps / goal * 100), 100);
-  var barW = (PREVIEW_W - this.camW - 20) * pct / 100;
-  return this.bg(c.bgColor,
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:14px;font-size:' + Math.round(14 * this.scale) + 'px;color:' + c.textColor + ';opacity:0.5">今日步数</div>' +
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:30px;font-size:' + Math.round(52 * this.scale) + 'px;color:' + c.textColor + ';font-weight:700">' + steps.toLocaleString() + '</div>' +
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:' + Math.round(30 + 52 * this.scale + 4) + 'px;font-size:' + Math.round(16 * this.scale) + 'px;color:' + c.textColor + ';opacity:0.5">步</div>' +
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:' + Math.round(30 + 52 * this.scale + 30) + 'px;right:10px;height:5px;background:#222;border-radius:3px">' +
-      '<div style="width:' + barW + 'px;height:100%;background:' + c.barColor + ';border-radius:3px"></div></div>' +
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:' + Math.round(30 + 52 * this.scale + 44) + 'px;font-size:' + Math.round(12 * this.scale) + 'px;color:' + c.textColor + ';opacity:0.4">目标 ' + goal.toLocaleString() + ' · ' + pct + '%</div>' +
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:' + Math.round(30 + 52 * this.scale + 70) + 'px;font-size:' + Math.round(14 * this.scale) + 'px;color:' + c.accentColor + ';opacity:0.7">距离 4.2 km</div>' +
-    '<div style="position:absolute;left:' + (this.camW + 130) + 'px;top:' + Math.round(30 + 52 * this.scale + 70) + 'px;font-size:' + Math.round(14 * this.scale) + 'px;color:' + c.accentColor + ';opacity:0.7">消耗 186 kcal</div>' +
-    '<div style="position:absolute;right:8px;bottom:6px;font-size:' + Math.round(10 * this.scale) + 'px;color:' + c.textColor + ';opacity:0.15">预览数据</div>'
-  );
-};
-
-PreviewRenderer.prototype.renderCalendar = function (c) {
-  var now = new Date();
-  var days = ['日', '一', '二', '三', '四', '五', '六'];
-  var mmdd = String(now.getMonth() + 1).padStart(2, '0') + '/' + String(now.getDate()).padStart(2, '0');
-  var dow = '星期' + days[now.getDay()];
-  var dd = String(now.getDate());
-  var events = [c.event1, c.event2, c.event3].filter(Boolean);
-  var evHtml = events.map(function (e, i) {
-    return '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:' + Math.round(130 + i * 28 * this.scale) + 'px;font-size:' + Math.round(14 * this.scale) + 'px;color:' + c.textColor + '">' + this.esc(e) + '</div>';
-  }.bind(this)).join('');
-
-  return this.bg(c.bgColor,
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:14px;font-size:' + Math.round(14 * this.scale) + 'px;color:' + c.textColor + ';opacity:0.5">' + mmdd + '</div>' +
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:30px;font-size:' + Math.round(18 * this.scale) + 'px;color:' + c.accentColor + '">' + dow + '</div>' +
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:44px;font-size:' + Math.round(Number(c.daySize) * this.scale) + 'px;color:' + c.dayColor + ';font-weight:700">' + dd + '</div>' +
-    evHtml
-  );
-};
-
-PreviewRenderer.prototype.renderDualclock = function (c) {
-  var now = new Date();
-  var o1 = Number(c.offset1) || 0, o2 = Number(c.offset2) || 0;
-  var utc = now.getTime() + now.getTimezoneOffset() * 60000;
-  var t1 = new Date(utc + o1 * 3600000);
-  var t2 = new Date(utc + o2 * 3600000);
-  var ts = Math.round(Number(c.timeSize) * this.scale);
-  var lx = this.camW + 10;
-  return this.bg(c.bgColor,
-    '<div style="position:absolute;left:' + lx + 'px;top:18px;font-size:' + Math.round(13 * this.scale) + 'px;color:' + c.dateColor + '">' + this.esc(c.city1) + '</div>' +
-    '<div style="position:absolute;left:' + lx + 'px;top:36px;font-size:' + ts + 'px;color:' + c.timeColor1 + ';font-weight:700">' + this.fmtTime(t1, 'HH:mm') + '</div>' +
-    '<div style="position:absolute;left:' + lx + 'px;top:' + Math.round(36 + ts + 4) + 'px;font-size:' + Math.round(12 * this.scale) + 'px;color:' + c.dateColor + ';opacity:0.6">' + this.fmtDate(t1, 'MM/dd EEEE') + '</div>' +
-    '<div style="position:absolute;left:' + lx + 'px;top:50%;width:' + (PREVIEW_W - this.camW - 20) + 'px;height:1px;background:' + c.dividerColor + '"></div>' +
-    '<div style="position:absolute;left:' + lx + 'px;top:54%;font-size:' + Math.round(13 * this.scale) + 'px;color:' + c.dateColor + '">' + this.esc(c.city2) + '</div>' +
-    '<div style="position:absolute;left:' + lx + 'px;top:calc(54% + 18px);font-size:' + ts + 'px;color:' + c.timeColor2 + ';font-weight:700">' + this.fmtTime(t2, 'HH:mm') + '</div>' +
-    '<div style="position:absolute;left:' + lx + 'px;top:calc(54% + ' + Math.round(18 + ts + 4) + 'px);font-size:' + Math.round(12 * this.scale) + 'px;color:' + c.dateColor + ';opacity:0.6">' + this.fmtDate(t2, 'MM/dd EEEE') + '</div>'
-  );
-};
-
-PreviewRenderer.prototype.renderDailyquote = function (c) {
-  var quotes = [c.quote1, c.quote2, c.quote3, c.quote4, c.quote5, c.quote6, c.quote7].filter(Boolean);
-  if (quotes.length === 0) quotes = ['每日一句'];
-  var dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
-  var idx = dayOfYear % quotes.length;
-  var lines = String(quotes[idx]).split('\n');
-  var lx = this.camW + 10;
-  return this.bg(c.bgColor,
-    '<div style="position:absolute;left:' + lx + 'px;top:38px;width:20px;height:2px;background:' + c.accentColor + ';border-radius:1px"></div>' +
-    '<div style="position:absolute;left:' + lx + 'px;top:50px;right:10px;font-size:' + Math.round(Number(c.textSize) * this.scale) + 'px;color:' + c.textColor + ';line-height:1.5">' + lines.map(this.esc).join('<br>') + '</div>' +
-    '<div style="position:absolute;left:' + lx + 'px;bottom:16px;font-size:' + Math.round(12 * this.scale) + 'px;color:' + c.dayColor + ';opacity:0.5">' + this.fmtDate(new Date(), 'MM/dd EEEE') + '</div>'
   );
 };
 
@@ -333,7 +229,7 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
         if (el.textStroke && el.textStroke > 0) {
           strokeStyle = '-webkit-text-stroke:' + (el.textStroke * self.scale) + 'px ' + (el.textStrokeColor || '#000000') + ';';
         }
-        var textContent = self.esc(el.text || '');
+        var textContent = el.expression ? self.esc(self.evalExpression(el.expression)) : self.esc(el.text || '');
         if (el.multiLine) textContent = textContent.replace(/\n/g, '<br>');
         return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;font-size:' + el.size * self.scale + 'px;color:' + el.color + ';' + ff + w + ta + fw + lh + sh + op + rot + gradStyle + strokeStyle + tDeco + lSpace + dc + '">' + textContent + '</div>';
       }
@@ -593,77 +489,25 @@ PreviewRenderer.prototype.renderCarousel = function (c) {
 };
 
 
-PreviewRenderer.prototype.renderComposite = function (c) {
-  var bg = c.bgColor || '#0a0e1a';
-  var demoSteps = c.demoSteps || 6542;
-  var goal = parseInt(c.goal) || 10000;
-  var pct = Math.min(Math.round(demoSteps / goal * 100), 100);
-  var ringR = Math.round(42 * this.scale);
-  var ringW = Math.round((c.ringSize || 8) * this.scale);
-  var lx = this.camW;
-  var sw = PREVIEW_W - lx;
-  var ringCx = lx + sw * 0.3;
-  var weatherX = lx + sw * 0.6;
-
-  var html = this.bg(bg, '');
-
-  // Ring background
-  html += '<svg style="position:absolute;inset:0;width:100%;height:100%" viewBox="0 0 ' + PREVIEW_W + ' 252">';
-  html += '<circle cx="' + ringCx + '" cy="85" r="' + ringR + '" fill="none" stroke="' + (c.ringTrack || '#1a1f2e') + '" stroke-width="' + ringW + '" />';
-  html += '<circle cx="' + ringCx + '" cy="85" r="' + ringR + '" fill="none" stroke="' + (c.ringColor || '#6c5ce7') + '" stroke-width="' + ringW + '" ' +
-    'stroke-dasharray="' + (2 * Math.PI * ringR * pct / 100) + ' ' + (2 * Math.PI * ringR) + '" ' +
-    'stroke-linecap="round" transform="rotate(-90 ' + ringCx + ' 85)" />';
-  html += '</svg>';
-
-  // Step value
-  html += '<div style="position:absolute;left:' + (ringCx - 30) + 'px;top:' + (85 - Math.round(16 * this.scale)) + 'px;width:60px;text-align:center;font-size:' + Math.round(24 * this.scale) + 'px;color:' + (c.textColor || '#fff') + ';font-weight:700">' + demoSteps.toLocaleString() + '</div>';
-  html += '<div style="position:absolute;left:' + (ringCx - 8) + 'px;top:' + (85 + Math.round(6 * this.scale)) + 'px;font-size:' + Math.round(10 * this.scale) + 'px;color:' + (c.labelColor || '#666') + '">步</div>';
-
-  // Weather
-  html += '<div style="position:absolute;left:' + weatherX + 'px;top:45px;font-size:' + Math.round(30 * this.scale) + 'px;color:' + (c.tempColor || '#fff') + ';font-weight:700">23°</div>';
-  html += '<div style="position:absolute;left:' + weatherX + 'px;top:' + (45 + Math.round(34 * this.scale)) + 'px;font-size:' + Math.round(11 * this.scale) + 'px;color:' + (c.descColor || '#888') + '">晴</div>';
-  html += '<div style="position:absolute;left:' + weatherX + 'px;top:' + (45 + Math.round(34 * this.scale) + 18) + 'px;font-size:' + Math.round(10 * this.scale) + 'px;color:' + (c.descColor || '#888') + ';opacity:0.5">最高26° 最低18°</div>';
-
-  // Divider
-  var divX = lx + sw * 0.5;
-  html += '<div style="position:absolute;left:' + divX + 'px;top:30px;width:1px;height:130px;background:' + (c.labelColor || '#666') + ';opacity:0.1"></div>';
-
-  // City label
-  html += '<div style="position:absolute;left:' + (ringCx - 20) + 'px;top:148px;width:40px;text-align:center;font-size:' + Math.round(9 * this.scale) + 'px;color:' + (c.labelColor || '#666') + ';opacity:0.6">' + this.esc(c.city || '北京') + '</div>';
-
-  // Time
-  html += '<div style="position:absolute;left:' + lx + 'px;top:185px;font-size:' + Math.round(18 * this.scale) + 'px;color:' + (c.textColor || '#fff') + ';font-weight:700;padding-left:10px">' + this.fmtTime(new Date(), 'HH:mm') + '</div>';
-  html += '<div style="position:absolute;left:' + (lx + Math.round(60 * this.scale)) + 'px;top:' + (185 + Math.round(4 * this.scale)) + 'px;font-size:' + Math.round(10 * this.scale) + 'px;color:' + (c.descColor || '#888') + '">' + this.fmtDate(new Date(), 'MM/dd E') + '</div>';
-
-  return html;
-};
-
 // ─── Render Template Preview (dispatch) ───────────────────────────
 export function renderTemplatePreview(device, showCam, tpl, cfg) {
   if (tpl.rawXml) {
     return renderRealDevicePreview(device, showCam, tpl, cfg);
   }
   var r = new PreviewRenderer(device, showCam);
+  // Templates with elements() are rendered via renderElements; only show background here
+  if (tpl.elements) {
+    return r.bg(cfg.bgColor || '#000000', '');
+  }
   switch (tpl.id) {
-    case 'clock':      return r.renderClock(cfg);
-    case 'quote':      return r.renderQuote(cfg);
     case 'battery':    return r.renderBattery(cfg);
-    case 'status':     return r.renderStatus(cfg);
     case 'countdown':  return r.renderCountdown(cfg);
-    case 'music':      return r.renderMusic(cfg);
-    case 'gradient':   return r.renderGradient(cfg);
-    case 'weather':    return r.renderWeather(cfg);
-    case 'steps':      return r.renderSteps(cfg);
-    case 'calendar':   return r.renderCalendar(cfg);
-    case 'dualclock':  return r.renderDualclock(cfg);
-    case 'dailyquote': return r.renderDailyquote(cfg);
     case 'ring':       return r.renderRing(cfg);
     case 'dashboard':  return r.renderDashboard(cfg);
     case 'image':      return r.renderImage(cfg);
     case 'custom':          return r.renderCustom(cfg);
     case 'video_wallpaper': return r.renderVideoWallpaper(cfg);
     case 'carousel':        return r.renderCarousel(cfg);
-    case 'composite':       return r.renderComposite(cfg);
     default:                return '';
   }
 }

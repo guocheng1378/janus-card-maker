@@ -81,7 +81,12 @@ function generateCustomMAML() {
         if (el.textStroke && el.textStroke > 0) ts = ' stroke="' + el.textStroke + '" strokeColor="' + (el.textStrokeColor || '#000000') + '"';
         var rot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
         var lh = el.multiLine && el.lineHeight && el.lineHeight !== 1.4 ? ' lineHeight="' + el.lineHeight + '"' : '';
-        lines.push('    <Text text="' + escXml(el.text || '') + '" x="' + el.x + '" y="' + el.y + '" size="' + el.size + '" color="' + el.color + '"' + w + a + ml + b + ff + alpha + sh + tg + ts + rot + lh + ' />');
+        // Support expression (textExp) for dynamic template elements
+        if (el.expression) {
+          lines.push('    <Text textExp="' + el.expression + '" x="' + el.x + '" y="' + el.y + '" size="' + el.size + '" color="' + el.color + '"' + w + a + ml + b + ff + alpha + sh + tg + ts + rot + lh + ' />');
+        } else {
+          lines.push('    <Text text="' + escXml(el.text || '') + '" x="' + el.x + '" y="' + el.y + '" size="' + el.size + '" color="' + el.color + '"' + w + a + ml + b + ff + alpha + sh + tg + ts + rot + lh + ' />');
+        }
         break;
       }
       case 'rectangle': {
@@ -146,9 +151,14 @@ function selectTemplate(id) {
   var newCfg = {};
   tpl.config.forEach(function (g) { g.fields.forEach(function (f) { newCfg[f.key] = f.default; }); });
   S.setCfg(newCfg);
-  S.setElements(id === 'custom'
-    ? [{ type: 'text', text: 'Hello Card', x: 10, y: 60, size: 28, color: '#ffffff', textAlign: 'left', bold: false, multiLine: false, w: 200 }]
-    : []);
+  // Load template's editable elements, or default for custom
+  if (tpl.elements) {
+    S.setElements(tpl.elements(newCfg).map(function (el) { return JSON.parse(JSON.stringify(el)); }));
+  } else if (id === 'custom') {
+    S.setElements([{ type: 'text', text: 'Hello Card', x: 10, y: 60, size: 28, color: '#ffffff', textAlign: 'left', bold: false, multiLine: false, w: 200 }]);
+  } else {
+    S.setElements([]);
+  }
   S.setSelIdx(-1);
   S.setDirty(true);
   S.setUploadedFiles({});

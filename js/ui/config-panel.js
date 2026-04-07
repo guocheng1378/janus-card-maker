@@ -474,6 +474,8 @@ function renderElementEditorInline(el, idx, device) {
 
   if (el.type === 'text') {
     html += fieldHtml('文字', '<input type="text" value="' + esc(el.text || '') + '" data-prop="text" data-idx="' + idx + '">', true);
+    // Expression field for dynamic template elements
+    html += fieldHtml('表达式', '<input type="text" value="' + esc(el.expression || '') + '" data-prop="expression" data-idx="' + idx + '" placeholder="如 formatDate(\'HH:mm\', #time_sys)" style="font-size:11px"><div style="font-size:10px;color:var(--text3);margin-top:2px">留空使用静态文字，填写后用 textExp 生成</div>', true);
     html += fieldHtml('字号', '<input type="number" value="' + el.size + '" data-prop="size" data-idx="' + idx + '" min="8" max="200">');
     html += colorFieldHtml('颜色', el.color || '#ffffff', 'color', idx);
     // Font family

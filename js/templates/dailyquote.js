@@ -26,25 +26,28 @@ export default {
       { key: 'dayColor', label: '日期颜色', type: 'color', default: '#555555' },
     ]},
   ],
+  elements(c) {
+    var quotes = [c.quote1, c.quote2, c.quote3, c.quote4, c.quote5, c.quote6, c.quote7].filter(Boolean);
+    if (quotes.length === 0) quotes = ['每日一句'];
+    // Build ifelse expression for text rotation
+    var textExpr = "'" + escXml(quotes[quotes.length - 1]).replace(/\n/g, '\\n') + "'";
+    for (var i = quotes.length - 2; i >= 0; i--) {
+      textExpr = "ifelse((#dayIdx == " + i + "), '" + escXml(quotes[i]).replace(/\n/g, '\\n') + "', " + textExpr + ")";
+    }
+    var safeW = Math.round(976 * (1 - 0.3)) - 20;
+    return [
+      { type: 'rectangle', x: 10, y: 42, w: 24, h: 3, color: c.accentColor, radius: 1.5, locked: false },
+      { type: 'text', expression: textExpr, text: quotes[0], x: 10, y: 50, size: Number(c.textSize), color: c.textColor, multiLine: true, w: safeW, lineHeight: 1.5, locked: false },
+      { type: 'text', expression: "formatDate('MM/dd EEEE', #time_sys)", text: '04/08 星期二', x: 10, y: 596 - 50, size: 12, color: c.dayColor, locked: false, opacity: 50 },
+    ];
+  },
   gen(c) {
     var quotes = [c.quote1, c.quote2, c.quote3, c.quote4, c.quote5, c.quote6, c.quote7].filter(Boolean);
     if (quotes.length === 0) quotes = ['每日一句'];
-
-    // Build ifelse chain
-    var textExpr = '\'' + escXml(quotes[quotes.length - 1]).replace(/\n/g, '\\n') + '\'';
-    for (var i = quotes.length - 2; i >= 0; i--) {
-      textExpr = 'ifelse((#dayIdx == ' + i + '), \'' + escXml(quotes[i]).replace(/\n/g, '\\n') + '\', ' + textExpr + ')';
-    }
-
     return [
       generateAutoDetectMAML(),
       '  <Var name="dayIdx" type="number" expression="((#year * 366 + #month * 31 + #date) % ' + quotes.length + ')" />',
       '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
-      '  <Group x="#marginL" y="0" w="#safeW">',
-      '    <Text textExp="' + textExpr + '" x="0" y="50" size="' + c.textSize + '" color="' + c.textColor + '" w="#safeW" multiLine="true" />',
-      '    <Rectangle x="0" y="42" w="24" h="3" fillColor="' + c.accentColor + '" cornerRadius="1.5" />',
-      '    <Text textExp="formatDate(\'MM/dd EEEE\', #time_sys)" x="0" y="(#view_height - 50)" size="12" color="' + c.dayColor + '" alpha="128" />',
-      '  </Group>',
     ].join('\n');
   },
 };

@@ -20,7 +20,7 @@ function renderEl(el, files) {
   var p = '    ';
   switch (el.type) {
     case 'text': {
-      var t = 'text="' + escXml(el.text || '') + '"';
+      var t = el.expression ? 'textExp="' + el.expression + '"' : 'text="' + escXml(el.text || '') + '"';
       var a = el.textAlign && el.textAlign !== 'left' ? ' textAlign="' + el.textAlign + '"' : '';
       var ml = el.multiLine ? ' multiLine="true"' : '';
       var w = el.multiLine || (el.textAlign && el.textAlign !== 'left') ? ' w="' + (el.w || 200) + '"' : '';
