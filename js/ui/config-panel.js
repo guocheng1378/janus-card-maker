@@ -178,6 +178,9 @@ export function renderConfig(getTemplateMAML) {
     }
     if (selEl.color !== undefined) html += renderColorPresets('color', S.selIdx);
     html += '</div>';
+
+    // Design tools inline
+    html += renderDesignToolsInline(S.selIdx);
   }
   html += '</div>';
 
@@ -191,6 +194,21 @@ export function renderConfig(getTemplateMAML) {
     '</div></div>';
 
   document.getElementById('cfgContent').innerHTML = html;
+}
+
+function renderColorPresets(prop, idx) {
+  var html = '<div class="color-presets">' +
+    COLOR_PRESETS.map(function (c) {
+      return '<div class="color-swatch" style="background:' + c + '" data-color="' + c + '" data-cprop="' + prop + '" data-cidx="' + idx + '" title="' + c + '"></div>';
+    }).join('') + '</div>';
+  html += '<div class="theme-presets">';
+  THEME_PRESETS.forEach(function (theme) {
+    html += '<div class="theme-preset" data-theme-cprop="' + prop + '" data-theme-cidx="' + idx + '" title="' + theme.name + '">' +
+      theme.colors.map(function (c) { return '<div class="theme-dot" style="background:' + c + '"></div>'; }).join('') +
+      '<span class="theme-name">' + theme.name + '</span></div>';
+  });
+  html += '</div>';
+  return html;
 }
 
 function renderField(f) {
@@ -221,7 +239,159 @@ function renderField(f) {
   }
 }
 
-function renderColorPresets(prop, idx) {
+// ─── Design Tool Inline Helpers ───────────────────────────────────
+var FONTS = [
+  { id: 'default', name: '系统默认', family: '-apple-system, sans-serif' },
+  { id: 'mipro-normal', name: 'Mi Sans Regular', family: 'MiSans, sans-serif' },
+  { id: 'mipro-demibold', name: 'Mi Sans SemiBold', family: 'MiSans, sans-serif', weight: 600 },
+  { id: 'mipro-bold', name: 'Mi Sans Bold', family: 'MiSans, sans-serif', weight: 700 },
+  { id: 'mipro-light', name: 'Mi Sans Light', family: 'MiSans, sans-serif', weight: 300 },
+  { id: 'mibright', name: 'Mi Bright', family: 'MiBright, serif' },
+  { id: 'noto-sans-sc', name: 'Noto Sans SC', family: '"Noto Sans SC", sans-serif' },
+  { id: 'roboto', name: 'Roboto', family: 'Roboto, sans-serif' },
+  { id: 'monospace', name: '等宽', family: 'monospace' },
+];
+
+function hexToHSL(hex) {
+  hex = hex.replace('#', '');
+  var r = parseInt(hex.substr(0, 2), 16) / 255;
+  var g = parseInt(hex.substr(2, 2), 16) / 255;
+  var b = parseInt(hex.substr(4, 2), 16) / 255;
+  var max = Math.max(r, g, b), min = Math.min(r, g, b);
+  var h, s, l = (max + min) / 2;
+  if (max === min) { h = s = 0; }
+  else {
+    var d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+    else if (max === g) h = ((b - r) / d + 2) / 6;
+    else h = ((r - g) / d + 4) / 6;
+  }
+  return [h * 360, s * 100, l * 100];
+}
+
+function hslToHex(h, s, l) {
+  h /= 360; s /= 100; l /= 100;
+  var r, g, b;
+  if (s === 0) { r = g = b = l; }
+  else {
+    var hue2rgb = function (p, q, t) { if (t < 0) t += 1; if (t > 1) t -= 1; if (t < 1 / 6) return p + (q - p) * 6 * t; if (t < 1 / 2) return q; if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6; return p; };
+    var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    var p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1 / 3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1 / 3);
+  }
+  return '#' + [r, g, b].map(function (x) { return Math.round(x * 255).toString(16).padStart(2, '0'); }).join('');
+}
+
+function generateHarmony(baseHex, type) {
+  var hsl = hexToHSL(baseHex);
+  var h = hsl[0], s = hsl[1], l = hsl[2];
+  var colors = [baseHex];
+  switch (type) {
+    case 'complementary': colors.push(hslToHex((h + 180) % 360, s, l)); break;
+    case 'triadic': colors.push(hslToHex((h + 120) % 360, s, l)); colors.push(hslToHex((h + 240) % 360, s, l)); break;
+    case 'split': colors.push(hslToHex((h + 150) % 360, s, l)); colors.push(hslToHex((h + 210) % 360, s, l)); break;
+    case 'analogous': colors.push(hslToHex((h + 30) % 360, s, l)); colors.push(hslToHex((h + 330) % 360, s, l)); break;
+    case 'monochromatic': colors.push(hslToHex(h, s, Math.min(l + 20, 95))); colors.push(hslToHex(h, s, Math.max(l - 20, 5))); colors.push(hslToHex(h, Math.max(s - 30, 10), l)); break;
+  }
+  return colors;
+}
+
+var GRAD_PRESETS = [
+  { name: '赛博朋克', c1: '#ff00ff', c2: '#00ffff' },
+  { name: '日落', c1: '#e55039', c2: '#f39c12' },
+  { name: '海洋', c1: '#0984e3', c2: '#00cec9' },
+  { name: '森林', c1: '#2d5016', c2: '#6ab04c' },
+  { name: '极光', c1: '#6c5ce7', c2: '#00b894' },
+  { name: '霓虹', c1: '#ff00ff', c2: '#39ff14' },
+  { name: '暗金', c1: '#2c3e50', c2: '#f39c12' },
+  { name: '玫瑰', c1: '#e84393', c2: '#fd79a8' },
+];
+
+var ANIM_LIST = [
+  { v: 'none', l: '无动画' }, { v: 'fadeIn', l: '淡入' }, { v: 'fadeOut', l: '淡出' },
+  { v: 'slideInLeft', l: '从左滑入' }, { v: 'slideInRight', l: '从右滑入' },
+  { v: 'slideInUp', l: '从下滑入' }, { v: 'slideInDown', l: '从上滑入' },
+  { v: 'zoomIn', l: '放大进入' }, { v: 'zoomOut', l: '缩小退出' },
+  { v: 'bounce', l: '弹跳' }, { v: 'pulse', l: '脉冲' }, { v: 'shake', l: '抖动' },
+  { v: 'rotate', l: '旋转' }, { v: 'blink', l: '闪烁' },
+];
+
+function renderDesignToolsInline(idx) {
+  var el = S.elements[idx];
+  if (!el) return '';
+  var html = '';
+
+  // ── 调色板 ──
+  var base = el.color || '#6c5ce7';
+  var types = [
+    { id: 'complementary', name: '互补色' },
+    { id: 'triadic', name: '三色' },
+    { id: 'split', name: '分裂互补' },
+    { id: 'analogous', name: '类似色' },
+    { id: 'monochromatic', name: '单色' },
+  ];
+  html += '<div class="config-section"><div class="config-section-title"><span>▸</span> 🎨 色彩搭配</div>';
+  html += '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">';
+  types.forEach(function (t) {
+    var colors = generateHarmony(base, t.id);
+    html += '<div style="flex:1;min-width:100px"><div style="font-size:10px;color:var(--text3);margin-bottom:3px">' + t.name + '</div><div style="display:flex;gap:2px;height:24px;border-radius:4px;overflow:hidden">';
+    colors.forEach(function (c) {
+      html += '<div style="flex:1;background:' + c + ';cursor:pointer" class="palette-swatch" data-color="' + c + '" data-apply-to="' + idx + '" title="' + c + '"></div>';
+    });
+    html += '</div></div>';
+  });
+  html += '</div></div>';
+
+  // ── 字体预览 (仅文字元素) ──
+  if (el.type === 'text') {
+    html += '<div class="config-section"><div class="config-section-title"><span>▸</span> 🔤 字体选择</div>';
+    FONTS.forEach(function (f) {
+      var isActive = el.fontFamily === f.id;
+      html += '<div class="font-preview-item' + (isActive ? ' active' : '') + '" data-font-apply="' + f.id + '" data-font-idx="' + idx + '" style="padding:8px 10px;margin-bottom:3px;border-radius:6px;cursor:pointer;border:1px solid ' + (isActive ? 'var(--accent)' : 'var(--border)') + ';background:' + (isActive ? 'var(--accent-glow)' : 'var(--surface2)') + '">' +
+        '<div style="font-size:10px;color:var(--text3)">' + f.name + '</div>' +
+        '<div style="font-family:' + f.family + ';font-size:16px;' + (f.weight ? 'font-weight:' + f.weight + ';' : '') + '">小米背屏 123 ABC</div></div>';
+    });
+    html += '</div>';
+  }
+
+  // ── 渐变编辑 (文字/矩形) ──
+  if (el.type === 'text' || el.type === 'rectangle') {
+    var gc1 = el.color || '#6c5ce7';
+    var gc2 = (el.type === 'text' ? el.gradientColor2 : el.fillColor2) || '#00b894';
+    html += '<div class="config-section"><div class="config-section-title"><span>▸</span> 🌈 渐变编辑</div>';
+    html += '<div style="height:36px;border-radius:8px;background:linear-gradient(135deg,' + gc1 + ',' + gc2 + ');margin-bottom:10px"></div>';
+    html += '<div style="display:flex;gap:10px;margin-bottom:10px">';
+    html += '<div class="field field-color" style="flex:1"><label>起始色</label><input type="color" value="' + gc1 + '" data-prop="color" data-idx="' + idx + '"><span class="color-val">' + gc1 + '</span></div>';
+    html += '<div class="field field-color" style="flex:1"><label>结束色</label><input type="color" value="' + gc2 + '" data-prop="' + (el.type === 'text' ? 'gradientColor2' : 'fillColor2') + '" data-idx="' + idx + '"><span class="color-val">' + gc2 + '</span></div>';
+    html += '</div>';
+    // Presets
+    html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">';
+    GRAD_PRESETS.forEach(function (p) {
+      html += '<div class="grad-preset" data-gp-c1="' + p.c1 + '" data-gp-c2="' + p.c2 + '" data-gp-idx="' + idx + '" data-gp-type="' + el.type + '" style="height:28px;border-radius:5px;background:linear-gradient(135deg,' + p.c1 + ',' + p.c2 + ');cursor:pointer;position:relative" title="' + p.name + '"><span style="position:absolute;bottom:1px;left:0;right:0;text-align:center;font-size:8px;color:rgba(255,255,255,.8);text-shadow:0 1px 2px rgba(0,0,0,.5)">' + p.name + '</span></div>';
+    });
+    html += '</div>';
+    html += '</div>';
+  }
+
+  // ── 动画编辑 ──
+  html += '<div class="config-section"><div class="config-section-title"><span>▸</span> ✨ 动画效果</div>';
+  html += '<div class="config-grid">';
+  html += '<div class="field"><label>动画类型</label><select data-prop="animationName" data-idx="' + idx + '">';
+  ANIM_LIST.forEach(function (a) {
+    html += '<option value="' + a.v + '"' + ((el.animationName || '') === a.v ? ' selected' : '') + '>' + a.l + '</option>';
+  });
+  html += '</select></div>';
+  html += '<div class="field"><label>持续 (ms)</label><input type="number" value="' + (el.animationDuration || 500) + '" data-prop="animationDuration" data-idx="' + idx + '" min="100" max="5000" step="100"></div>';
+  html += '<div class="field"><label>延迟 (ms)</label><input type="number" value="' + (el.animationDelay || 0) + '" data-prop="animationDelay" data-idx="' + idx + '" min="0" max="3000" step="100"></div>';
+  html += '<div class="field"><label>重复</label><input type="number" value="' + (el.animationRepeat || 1) + '" data-prop="animationRepeat" data-idx="' + idx + '" min="1" max="99"></div>';
+  html += '<div class="field"><label>无限循环</label><label class="toggle-switch"><input type="checkbox" data-prop="animationInfinite" data-idx="' + idx + '"' + (el.animationInfinite ? ' checked' : '') + '><span class="toggle-slider"></span></label></div>';
+  html += '</div></div>';
+
+  return html;
+}
   var html = '<div class="color-presets">' +
     COLOR_PRESETS.map(function (c) {
       return '<div class="color-swatch" style="background:' + c + '" data-color="' + c + '" data-cprop="' + prop + '" data-cidx="' + idx + '" title="' + c + '"></div>';

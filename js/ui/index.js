@@ -601,6 +601,51 @@ function setupEvents() {
       favBtn.classList.toggle('active', isFav);
       return;
     }
+    // Design tools: palette swatch
+    var palSwatch = e.target.closest('.palette-swatch[data-apply-to]');
+    if (palSwatch) {
+      var pi = Number(palSwatch.dataset.applyTo);
+      if (pi >= 0 && pi < S.elements.length) {
+        captureState('应用色彩搭配');
+        S.elements[pi].color = palSwatch.dataset.color;
+        S.setDirty(true);
+        renderConfig(getTemplateMAML);
+        toast('🎨 已应用 ' + palSwatch.dataset.color, 'success');
+      }
+      return;
+    }
+    // Design tools: font apply
+    var fontItem = e.target.closest('[data-font-apply][data-font-idx]');
+    if (fontItem) {
+      var fi = Number(fontItem.dataset.fontIdx);
+      if (fi >= 0 && fi < S.elements.length && S.elements[fi].type === 'text') {
+        captureState('更改字体');
+        S.elements[fi].fontFamily = fontItem.dataset.fontApply;
+        S.setDirty(true);
+        renderConfig(getTemplateMAML);
+        toast('🔤 字体已应用', 'success');
+      }
+      return;
+    }
+    // Design tools: gradient preset
+    var gradItem = e.target.closest('.grad-preset[data-gp-idx]');
+    if (gradItem) {
+      var gi = Number(gradItem.dataset.gpIdx);
+      if (gi >= 0 && gi < S.elements.length) {
+        captureState('应用渐变');
+        S.elements[gi].color = gradItem.dataset.gpC1;
+        if (gradItem.dataset.gpType === 'text') {
+          S.elements[gi].textGradient = 'custom';
+          S.elements[gi].gradientColor2 = gradItem.dataset.gpC2;
+        } else {
+          S.elements[gi].fillColor2 = gradItem.dataset.gpC2;
+        }
+        S.setDirty(true);
+        renderConfig(getTemplateMAML);
+        toast('🌈 渐变已应用', 'success');
+      }
+      return;
+    }
   });
 
   // File inputs
