@@ -221,8 +221,6 @@ export function renderConfig(getTemplateMAML) {
     if (selEl.color !== undefined) quickOpsInner += renderColorPresets('color', S.selIdx);
     html += sec('quickOps', '快速操作', quickOpsInner);
 
-    // Design tools (default collapsed)
-    html += sec('designTools', '设计工具', renderDesignToolsInline(S.selIdx), true);
   }
   html += '</div>';
 

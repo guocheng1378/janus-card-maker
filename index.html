@@ -38,7 +38,6 @@
           <button onclick="JCM.openDesignTools();JCM.toggleMoreMenu()">🎨 设计工具</button>
           <button onclick="JCM.showSnapshots();JCM.toggleMoreMenu()">📸 版本快照</button>
           <button onclick="JCM.toggleHistory();JCM.toggleMoreMenu()">📜 操作历史</button>
-          <button onclick="JCM.toggleLayerPanel();JCM.toggleMoreMenu()">🗂️ 图层管理</button>
           <button onclick="JCM.toggleHelp();JCM.toggleMoreMenu()">⌨️ 快捷键</button>
           <button onclick="JCM.toggleChangelog();JCM.toggleMoreMenu()">📝 更新日志</button>
           <button onclick="JCM.switchLang();JCM.toggleMoreMenu()">🌐 切换语言</button>
@@ -206,7 +205,6 @@
               </div>
               <div class="batch-export-bar" style="margin-top:6px">
                 <span style="font-size:11px;color:var(--text2)">开发工具</span>
-                <button class="btn btn-secondary" onclick="JCM.openDesignTools()"><span class="btn-icon">🎨</span> 设计工具</button>
                 <button class="btn btn-secondary" onclick="JCM.openSnippets()"><span class="btn-icon">🧩</span> 代码片段</button>
                 <button class="btn btn-secondary" onclick="JCM.openBatchOps()"><span class="btn-icon">✏️</span> 批量操作</button>
                 <button class="btn btn-secondary" onclick="JCM.openSchemeImport()"><span class="btn-icon">🎨</span> 配色方案</button>
@@ -241,15 +239,6 @@
       </button>
     </div>
   </footer>
-<!-- Layer Panel -->
-<div class="layer-panel" id="layerPanel">
-  <div class="layer-panel-header">
-    <span>📚 <span data-i18n="layer.title">图层管理</span></span>
-    <button class="layer-panel-close" onclick="JCM.toggleLayerPanel()" aria-label="关闭图层面板">✕</button>
-  </div>
-  <div id="layerPanelList"></div>
-</div>
-
 </div>
 
 <!-- Keyboard Shortcut Help Modal -->
