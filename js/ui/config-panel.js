@@ -4,7 +4,7 @@ import { getDevice, cameraZoneWidth } from '../devices.js';
 import { TEMPLATES, TPL_CATEGORIES, TPL_CATEGORY_MAP } from '../templates/index.js';
 import { renderTemplatePreview, PreviewRenderer } from '../live-preview.js';
 import { escHtml, getRecentColors, addRecentColor, getFavorites, toggleFavorite } from '../utils.js';
-import { isInCameraZone } from './elements.js';
+import { isInCameraZone, hasStyleClipboard } from './elements.js';
 
 export var COLOR_PRESETS = [
   '#ffffff', '#e0e0e0', '#888888', '#333333', '#000000',
