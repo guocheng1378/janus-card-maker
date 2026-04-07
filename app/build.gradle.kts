@@ -11,8 +11,8 @@ android {
         applicationId = "com.reareye.cardmaker"
         minSdk = 26
         targetSdk = 35
-        versionCode = 9
-        versionName = "4.0.0"
+        versionCode = 10
+        versionName = "4.1.0"
     }
 
     buildTypes {
