@@ -565,6 +565,9 @@ function renderElementEditorInline(el, idx, device) {
   html += '</div>';
   html += '</div>';
 
+  // ── Design Tools (collapsed by default) ──
+  html += renderDesignToolsInline(idx);
+
   html += '</div>';
   return html;
 }
