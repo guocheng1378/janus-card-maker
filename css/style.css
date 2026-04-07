@@ -549,7 +549,7 @@ kbd{
   .config-live-left{padding:16px;border-right:none;max-height:none;overflow-y:auto;flex:1}
   .config-live-right{display:none}
   /* Category tabs: horizontal scroll on mobile */
-  .tpl-categories{flex-wrap:nowrap;overflow-x:auto;padding:0 16px 10px;gap:6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tpl-categories{flex-wrap:nowrap;overflow-x:auto;padding:0 16px 16px;gap:6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
   .tpl-categories::-webkit-scrollbar{display:none}
   .tpl-cat{flex-shrink:0}
 }
@@ -826,7 +826,10 @@ kbd{
   .config-live-left,
   .config-live-right {
     width: 100% !important;
-    flex: none !important;
+  }
+  .config-live-left {
+    flex: 1 1 0% !important;
+    min-height: 0 !important;
   }
   .page-config-live {
     flex-direction: column !important;
