@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ─── build.js: 将 CSS/JS 内联到单个 HTML，供 Android WebView 使用 ───
-// v3: 支持 ES Modules 打包 + ui/ 子模块拆分
+// v4: 补全所有模块和模板
 
 const fs = require('fs');
 const path = require('path');
@@ -13,6 +13,7 @@ const JS_FILES = [
   'js/state.js',           // 无依赖
   'js/devices.js',         // 无依赖
   'js/maml.js',            // 无依赖（escXml 内联）
+  // Templates
   'js/templates/clock.js',
   'js/templates/quote.js',
   'js/templates/battery.js',
@@ -31,14 +32,24 @@ const JS_FILES = [
   'js/templates/custom.js',
   'js/templates/weather_real.js',
   'js/templates/music_real.js',
+  'js/templates/lyrics.js',
+  'js/templates/video_wallpaper.js',
+  'js/templates/health.js',
+  'js/templates/schedule.js',
+  'js/templates/notification.js',
+  'js/templates/carousel.js',
+  'js/templates/quick_settings.js',
   'js/templates/index.js',  // 汇总所有模板
-  'js/live-preview.js',     // 依赖 utils, devices
-  'js/history.js',          // 依赖 state
-  'js/canvas.js',           // 依赖 state, devices
-  'js/storage.js',          // 依赖无（但需在 JCM 全局之后）
-  'js/export.js',           // 依赖 state
-  'js/transcode.js',        // 依赖 state
-  'js/changelog.js',        // 无依赖
+  // Core
+  'js/live-preview.js',
+  'js/history.js',
+  'js/canvas.js',
+  'js/card-library.js',
+  'js/storage.js',
+  'js/export.js',
+  'js/transcode.js',
+  'js/changelog.js',
+  'js/i18n.js',
   // UI 子模块
   'js/ui/toast.js',
   'js/ui/steps.js',
@@ -46,6 +57,15 @@ const JS_FILES = [
   'js/ui/elements.js',
   'js/ui/config-panel.js',
   'js/ui/share.js',
+  'js/ui/qr-share.js',
+  'js/ui/card-library-ui.js',
+  'js/ui/template-market.js',
+  'js/ui/design-tools.js',
+  'js/ui/binding-wizard.js',
+  'js/ui/command-palette.js',
+  'js/ui/linter-tools.js',
+  'js/ui/version-snapshots.js',
+  'js/ui/export-adb.js',
   'js/ui/index.js',         // UI 入口（依赖所有上面的）
   'js/main.js',             // 应用入口
 ];
@@ -108,7 +128,7 @@ html = html.replace(/<!--\s*Non-module[^>]*-->\s*\n?/g, '');
 
 // Insert inline scripts before </body>
 const inlineScripts = [
-  '<!-- Inlined by build.js v3 -->',
+  '<!-- Inlined by build.js v4 -->',
   '<script>' + jszip + '<\/script>',
   '<script>window.JCM = window.JCM || {};<\/script>',
   '<script>' + js + '<\/script>',
