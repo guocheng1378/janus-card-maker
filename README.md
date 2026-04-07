@@ -73,6 +73,26 @@ npm run build
 ### 在线构建
 点击页面上的「🤖 构建 APK」按钮，自动触发 GitHub Actions 构建。
 
+## 📱 配合 REAREye 使用（导入到小米背屏）
+
+本工具生成的 MAML 卡片可通过 [REAREye](https://github.com/killerprojecte/REAREye) Xposed 模块导入到小米背屏上显示。
+
+### 快速流程
+
+1. **制作卡片** → 选择模板、调整参数
+2. **导出 ZIP** → 点击「📦 导出 ZIP」下载
+3. **导入 REAREye** → 打开 REAREye → 组件模板管理器 → 导入 ZIP → 设置 business 名称
+4. **绑定卡片** → 卡片管理器 → 添加卡片 → business 名称填一致 → 启用常驻
+5. **生效** → 重启背屏中心
+
+> 📖 详细步骤请查看 [REAREYE_USAGE.md](REAREYE_USAGE.md)
+
+### 前提
+
+- 小米 17 Pro / Pro Max
+- 已安装 LSPosed + [REAREye](https://github.com/killerprojecte/REAREye)
+- REAREye 作用域包含 `com.xiaomi.subscreencenter`
+
 ## 模板
 
 ### 预设模板（15 个）
