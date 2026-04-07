@@ -124,74 +124,8 @@ PreviewRenderer.prototype.evalExpression = function (expr) {
 };
 
 // ─── Template Renderers ───────────────────────────────────────────
-PreviewRenderer.prototype.renderBattery = function (c) {
-  var level = Number(c.demoLevel) || 78;
-  var bw = PREVIEW_W - this.camW - 20;
-  var status = level < 20 ? '电量极低' : level < 80 ? '电量偏低' : '电量充足';
-  return this.bg(c.bgColor,
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:20px;font-size:' + Math.round(18 * this.scale) + 'px;color:' + c.textColor + ';opacity:0.6">电量</div>' +
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:42px;font-size:' + Math.round(56 * this.scale) + 'px;color:' + c.textColor + ';font-weight:700">' + level + '%</div>' +
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:110px;width:' + bw + 'px;height:7px;background:#333;border-radius:4px"><div style="width:' + level + '%;height:100%;background:' + c.barColor + ';border-radius:4px"></div></div>' +
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:126px;font-size:' + Math.round(16 * this.scale) + 'px;color:' + c.textColor + ';opacity:0.5">' + status + '</div>'
-  );
-};
-
-PreviewRenderer.prototype.renderCountdown = function (c) {
-  var diff = this.calcCountdown(c.targetDate);
-  return this.bg(c.bgColor,
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:20px;font-size:' + Math.round(18 * this.scale) + 'px;color:' + c.textColor + ';opacity:0.6">' + this.esc(c.eventName) + '</div>' +
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:44px;font-size:' + Math.round(72 * this.scale) + 'px;color:' + c.accentColor + ';font-weight:700">' + diff + '</div>' +
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:' + Math.round(44 + 72 * this.scale + 4) + 'px;font-size:' + Math.round(20 * this.scale) + 'px;color:' + c.textColor + ';opacity:0.5">天</div>'
-  );
-};
-
-PreviewRenderer.prototype.renderRing = function (c) {
-  var isBattery = c.source === 'battery';
-  var demoVal = Number(c.demoValue) || 65;
-  var ringR = Math.round(80 * this.scale);
-  var ringW = Math.round(Number(c.ringSize) * this.scale);
-  var cx = this.camW + (PREVIEW_W - this.camW) / 2;
-  var cy = 120 * this.scale;
-  var pct = demoVal;
-  var label = isBattery ? '电量' : '步数';
-  var unit = isBattery ? '%' : '步';
-  return this.bg(c.bgColor,
-    '<svg style="position:absolute;inset:0;width:100%;height:100%" viewBox="0 0 ' + PREVIEW_W + ' ' + (252) + '">' +
-    '<circle cx="' + cx + '" cy="' + cy + '" r="' + ringR + '" fill="none" stroke="' + c.trackColor + '" stroke-width="' + ringW + '" />' +
-    '<circle cx="' + cx + '" cy="' + cy + '" r="' + ringR + '" fill="none" stroke="' + c.ringColor + '" stroke-width="' + ringW + '" ' +
-      'stroke-dasharray="' + (2 * Math.PI * ringR * pct / 100) + ' ' + (2 * Math.PI * ringR) + '" ' +
-      'stroke-linecap="round" transform="rotate(-90 ' + cx + ' ' + cy + ')" />' +
-    '</svg>' +
-    '<div style="position:absolute;left:' + (cx - 40) + 'px;top:' + (cy - Math.round(28 * this.scale)) + 'px;width:80px;text-align:center;font-size:' + Math.round(48 * this.scale) + 'px;color:' + c.textColor + ';font-weight:700">' + pct + '</div>' +
-    '<div style="position:absolute;left:' + (cx - 12) + 'px;top:' + (cy + Math.round(14 * this.scale)) + 'px;font-size:' + Math.round(14 * this.scale) + 'px;color:' + c.labelColor + ';opacity:0.6">' + unit + '</div>' +
-    '<div style="position:absolute;left:' + (cx - 24) + 'px;top:' + (cy + ringR + Math.round(16 * this.scale)) + 'px;width:48px;text-align:center;font-size:' + Math.round(13 * this.scale) + 'px;color:' + c.labelColor + ';opacity:0.5">' + label + '</div>'
-  );
-};
-
-PreviewRenderer.prototype.renderDashboard = function (c) {
-  var lx = this.camW + 10;
-  var sw = PREVIEW_W - this.camW - 20;
-  var halfW = sw / 2;
-  return this.bg(c.bgColor,
-    '<div style="position:absolute;left:' + lx + 'px;top:12px;font-size:' + Math.round(38 * this.scale) + 'px;color:' + c.timeColor + ';font-weight:700">' + this.fmtTime(new Date(), 'HH:mm') + '</div>' +
-    '<div style="position:absolute;left:' + lx + 'px;top:' + Math.round(12 + 38 * this.scale + 4) + 'px;font-size:' + Math.round(12 * this.scale) + 'px;color:' + c.dimColor + '">' + this.fmtDate(new Date(), 'MM/dd EEEE') + '</div>' +
-    '<div style="position:absolute;left:' + lx + 'px;top:' + Math.round(72 * this.scale) + 'px;width:' + sw + 'px;height:1px;background:#1a1f2e"></div>' +
-    '<div style="position:absolute;left:' + lx + 'px;top:' + Math.round(80 * this.scale) + 'px;font-size:' + Math.round(11 * this.scale) + 'px;color:' + c.dimColor + '">步数</div>' +
-    '<div style="position:absolute;left:' + lx + 'px;top:' + Math.round(94 * this.scale) + 'px;font-size:' + Math.round(22 * this.scale) + 'px;color:' + c.textColor + ';font-weight:700">6,542</div>' +
-    '<div style="position:absolute;left:' + (lx + halfW) + 'px;top:' + Math.round(80 * this.scale) + 'px;font-size:' + Math.round(11 * this.scale) + 'px;color:' + c.dimColor + '">电量</div>' +
-    '<div style="position:absolute;left:' + (lx + halfW) + 'px;top:' + Math.round(94 * this.scale) + 'px;font-size:' + Math.round(22 * this.scale) + 'px;color:' + c.textColor + ';font-weight:700">78%</div>' +
-    '<div style="position:absolute;left:' + lx + 'px;top:' + Math.round(132 * this.scale) + 'px;width:' + sw + 'px;height:1px;background:#1a1f2e"></div>' +
-    '<div style="position:absolute;left:' + lx + 'px;top:' + Math.round(142 * this.scale) + 'px;font-size:' + Math.round(14 * this.scale) + 'px;color:' + c.accentColor + '">晴</div>' +
-    '<div style="position:absolute;left:' + (lx + halfW) + 'px;top:' + Math.round(142 * this.scale) + 'px;font-size:' + Math.round(16 * this.scale) + 'px;color:' + c.textColor + '">23°</div>' +
-    '<div style="position:absolute;left:' + lx + 'px;top:' + Math.round(164 * this.scale) + 'px;font-size:' + Math.round(11 * this.scale) + 'px;color:' + c.dimColor + ';opacity:0.5">湿度 45%</div>'
-  );
-};
-
-PreviewRenderer.prototype.renderImage = function (c) {
-  return this.bg(c.bgColor,
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:50%;right:10px;transform:translateY(-50%);text-align:center;color:#555;font-size:' + Math.round(14 * this.scale) + 'px">点击配置上传图片</div>'
-  );
-};
+// Templates with elements() are rendered via renderElements + bg only.
+// These are kept for the custom template (no elements()) and rawXml templates.
 
 PreviewRenderer.prototype.renderCustom = function (c) {
   var pat = c.bgPattern || 'solid';
@@ -473,58 +407,6 @@ PreviewRenderer.prototype.renderQuickSettings = function (c) {
 };
 
 
-PreviewRenderer.prototype.renderVideoWallpaper = function (c) {
-  var bg = c.bgColor || '#000000';
-  var html = '<div style="position:absolute;inset:0;background:' + bg + '"></div>';
-  // Video placeholder with play icon
-  html += '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px">';
-  html += '<div style="width:' + Math.round(48 * this.scale) + 'px;height:' + Math.round(48 * this.scale) + 'px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:' + Math.round(24 * this.scale) + 'px">▶️</div>';
-  html += '<div style="font-size:' + Math.round(11 * this.scale) + 'px;color:rgba(255,255,255,0.4)">上传视频以预览</div>';
-  html += '</div>';
-  // Settings indicator
-  var settings = [];
-  if (c.loopMode === 'loop') settings.push('🔁 循环');
-  else if (c.loopMode === 'bounce') settings.push('↔️ 来回');
-  else settings.push('▶️ 单次');
-  if (c.volume > 0) settings.push('🔊 ' + c.volume + '%');
-  if (c.overlayEnable === 'true') settings.push('🎭 遮罩');
-  html += '<div style="position:absolute;left:8px;bottom:6px;font-size:' + Math.round(8 * this.scale) + 'px;color:rgba(255,255,255,0.3)">' + settings.join(' · ') + '</div>';
-  return html;
-};
-
-
-PreviewRenderer.prototype.renderCarousel = function (c) {
-  var bg = c.bgColor || '#000';
-  var fitMode = c.fitMode || 'cover';
-  var html = this.bg(bg, '');
-  // 3 slide placeholders
-  var slideColors = ['#1a1a2e', '#2d1b69', '#1b4332'];
-  var slideLabels = ['照片 1', '照片 2', '照片 3'];
-  for (var i = 0; i < 3; i++) {
-    var alpha = i === 0 ? 1 : 0;
-    html += '<div style="position:absolute;inset:0;background:' + slideColors[i] + ';opacity:' + alpha + ';display:flex;align-items:center;justify-content:center;transition:opacity 0.5s">' +
-      '<div style="text-align:center;color:rgba(255,255,255,0.3);font-size:' + Math.round(14 * this.scale) + 'px">' +
-      '<div style="font-size:' + Math.round(32 * this.scale) + 'px;margin-bottom:6px">🖼️</div>' +
-      slideLabels[i] + '<br><span style="font-size:' + Math.round(10 * this.scale) + 'px">上传图片后自动替换</span></div></div>';
-  }
-  // Caption
-  if (c.showCaption === 'true' && c.caption) {
-    var capAlpha = (c.captionBgAlpha || 50) / 100;
-    html += '<div style="position:absolute;left:0;right:0;bottom:0;height:' + Math.round(30 * this.scale) + 'px;background:rgba(0,0,0,' + capAlpha + ');display:flex;align-items:center;padding:0 12px">' +
-      '<span style="font-size:' + Math.round(10 * this.scale) + 'px;color:' + (c.captionColor || '#fff') + '">' + this.esc(c.caption) + '</span></div>';
-  }
-  // Indicators
-  if (c.showIndicator !== 'false') {
-    html += '<div style="position:absolute;bottom:' + Math.round(10 * this.scale) + 'px;left:50%;transform:translateX(-50%);display:flex;gap:6px">';
-    for (var j = 0; j < 3; j++) {
-      html += '<div style="width:' + Math.round(6 * this.scale) + 'px;height:' + Math.round(6 * this.scale) + 'px;border-radius:50%;background:' + (c.indicatorColor || '#fff') + ';opacity:' + (j === 0 ? 1 : 0.3) + '"></div>';
-    }
-    html += '</div>';
-  }
-  return html;
-};
-
-
 // ─── Render Template Preview (dispatch) ───────────────────────────
 export function renderTemplatePreview(device, showCam, tpl, cfg) {
   if (tpl.rawXml) {
@@ -536,15 +418,8 @@ export function renderTemplatePreview(device, showCam, tpl, cfg) {
     return r.bg(cfg.bgColor || '#000000', '');
   }
   switch (tpl.id) {
-    case 'battery':    return r.renderBattery(cfg);
-    case 'countdown':  return r.renderCountdown(cfg);
-    case 'ring':       return r.renderRing(cfg);
-    case 'dashboard':  return r.renderDashboard(cfg);
-    case 'image':      return r.renderImage(cfg);
-    case 'custom':          return r.renderCustom(cfg);
-    case 'video_wallpaper': return r.renderVideoWallpaper(cfg);
-    case 'carousel':        return r.renderCarousel(cfg);
-    default:                return '';
+    case 'custom': return r.renderCustom(cfg);
+    default:       return '';
   }
 }
 

@@ -56,6 +56,13 @@ export default {
       { key: 'overlayTextY', label: '文字 Y', type: 'range', min: 0, max: 596, default: 500 },
     ]},
   ],
+  elements(c) {
+    var els = [];
+    if (c.showOverlayText === 'true' && c.overlayText) {
+      els.push({ type: 'text', text: c.overlayText, x: Number(c.overlayTextX) || 40, y: Number(c.overlayTextY) || 500, size: Number(c.overlayTextSize) || 24, color: c.overlayTextColor || '#ffffff', bold: true, locked: false });
+    }
+    return els;
+  },
   gen(c) {
     var loop = c.loopMode || 'loop';
     var autoPlay = c.autoPlay !== 'false';
@@ -115,10 +122,7 @@ export default {
       lines.push('  <Rectangle w="#view_width" h="#view_height" fillColor="' + (c.overlayColor || '#000000') + '" alpha="' + alpha + '" />');
     }
 
-    // Text overlay
-    if (c.showOverlayText === 'true' && c.overlayText) {
-      lines.push('  <Text text="' + escXml(c.overlayText) + '" x="' + (c.overlayTextX || 40) + '" y="' + (c.overlayTextY || 500) + '" size="' + (c.overlayTextSize || 24) + '" color="' + (c.overlayTextColor || '#ffffff') + '" bold="true" />');
-    }
+    // Text overlay is in elements(), not here
 
     return lines.join('\n');
   },

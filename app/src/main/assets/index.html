@@ -2128,20 +2128,23 @@ var battery = {
       { key: 'demoLevel', label: '预览电量 (0-100)', type: 'range', min: 0, max: 100, default: 78 },
     ]},
   ],
+  elements(c) {
+    var safeW = Math.round(976 * (1 - 0.3)) - 40;
+    return [
+      { type: 'text', text: '电量', x: 10, y: 50, size: 18, color: c.textColor, locked: false, opacity: 60 },
+      { type: 'text', expression: "(#battery_level + '%')", text: c.demoLevel + '%', x: 10, y: 80, size: 56, color: c.textColor, bold: true, locked: false },
+      { type: 'text', expression: "ifelse((#battery_level >= 80), '电量充足', ifelse((#battery_level >= 20), '电量偏低', '电量极低'))", text: '电量充足', x: 10, y: 200, size: 16, color: c.textColor, locked: false, opacity: 50 },
+    ];
+  },
   gen(c) {
+    var safeW = Math.round(976 * (1 - 0.3)) - 40;
     return [
       generateAutoDetectMAML(),
       '  <Var name="safeW" type="number" expression="(#view_width - #marginL - 40)" />',
       '  <Var name="barW" type="number" expression="(#safeW * #battery_level / 100)" />',
       '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
-      '  <Group x="#marginL" y="0">',
-      '    <Text text="电量" x="0" y="50" size="18" color="' + c.textColor + '" alpha="153" />',
-      '    <Text textExp="(#battery_level + \'%\')" x="0" y="80" size="56" color="' + c.textColor + '" />',
-      '    <Rectangle x="0" y="160" w="#safeW" h="12" fillColor="#333333" cornerRadius="6" />',
-      '    <Rectangle x="0" y="160" w="#barW" h="12" fillColor="' + c.barColor + '" cornerRadius="6" />',
-      '    <Text textExp="ifelse((#battery_level >= 80), \'电量充足\', ifelse((#battery_level >= 20), \'电量偏低\', \'电量极低\'))"',
-      '          x="0" y="200" size="16" color="' + c.textColor + '" alpha="128" />',
-      '  </Group>',
+      '  <Rectangle x="#marginL" y="160" w="#safeW" h="12" fillColor="#333333" cornerRadius="6" />',
+      '  <Rectangle x="#marginL" y="160" w="#barW" h="12" fillColor="' + c.barColor + '" cornerRadius="6" />',
     ].join('\n');
   },
 };
@@ -2451,12 +2454,22 @@ var ring = {
       { key: 'ringSize', label: '环粗细', type: 'range', min: 6, max: 20, default: 12 },
     ]},
   ],
+  elements(c) {
+    var isBattery = c.source === 'battery';
+    var unit = isBattery ? '%' : '步';
+    var label = isBattery ? '电量' : '步数';
+    var demoText = isBattery ? String(c.demoValue) : '6542';
+    var expr = isBattery ? '#battery_level' : '#step_count';
+    return [
+      { type: 'text', expression: expr, text: demoText, x: 380, y: 70, size: 48, color: c.textColor, bold: true, textAlign: 'center', w: 100, locked: false },
+      { type: 'text', text: unit, x: 420, y: 130, size: 16, color: c.labelColor, locked: false, opacity: 60 },
+      { type: 'text', text: label, x: 400, y: 220, size: 14, color: c.labelColor, textAlign: 'center', w: 60, locked: false, opacity: 50 },
+    ];
+  },
   gen(c) {
     var isBattery = c.source === 'battery';
     var goalN = parseInt(c.goal) || 10000;
     var pctExpr = isBattery ? '#battery_level' : 'ifelse((#step_count > ' + goalN + '), 100, (#step_count * 100 / ' + goalN + '))';
-    var label = isBattery ? '电量' : '步数';
-    var unit = isBattery ? '%' : '步';
     return [
       generateAutoDetectMAML(),
       '  <Var name="cx" type="number" expression="(#marginL + (#view_width - #marginL) / 2)" />',
@@ -2466,9 +2479,6 @@ var ring = {
       '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
       '  <Circle x="#cx" y="120" r="#ringR" fillColor="' + c.trackColor + '" />',
       '  <Circle x="#cx" y="120" r="(#ringR - #ringW)" fillColor="' + c.bgColor + '" />',
-      '  <Text textExp="#pct" x="(#cx - 50)" y="80" w="100" size="48" color="' + c.textColor + '" textAlign="center" bold="true" />',
-      '  <Text text="' + unit + '" x="(#cx - 20)" y="138" size="16" color="' + c.labelColor + '" alpha="153" />',
-      '  <Text text="' + label + '" x="(#cx - 30)" y="220" w="60" size="14" color="' + c.labelColor + '" alpha="128" textAlign="center" />',
     ].join('\n');
   },
 };
@@ -2491,26 +2501,27 @@ var dashboard = {
       { key: 'dimColor', label: '次要颜色', type: 'color', default: '#555555' },
     ]},
   ],
+  elements(c) {
+    var colW = Math.round((976 * (1 - 0.3) - 20) / 2);
+    return [
+      { type: 'text', expression: "formatDate('HH:mm', #time_sys)", text: '09:41', x: 10, y: 20, size: 40, color: c.timeColor, bold: true, locked: false },
+      { type: 'text', expression: "formatDate('MM/dd EEEE', #time_sys)", text: '04/08 星期二', x: 10, y: 68, size: 12, color: c.dimColor, locked: false },
+      { type: 'rectangle', x: 10, y: 92, w: 400, h: 1, color: '#1a1f2e', locked: false },
+      { type: 'text', text: '步数', x: 10, y: 110, size: 11, color: c.dimColor, locked: false },
+      { type: 'text', expression: '#step_count', text: '6542', x: 10, y: 128, size: 24, color: c.textColor, bold: true, locked: false },
+      { type: 'text', text: '步', x: 10, y: 158, size: 11, color: c.dimColor, locked: false, opacity: 60 },
+      { type: 'text', text: '电量', x: colW, y: 110, size: 11, color: c.dimColor, locked: false },
+      { type: 'text', expression: "(#battery_level + '%')", text: '78%', x: colW, y: 128, size: 24, color: c.textColor, bold: true, locked: false },
+      { type: 'rectangle', x: 10, y: 178, w: 400, h: 1, color: '#1a1f2e', locked: false },
+      { type: 'text', expression: '#weather_desc', text: '晴', x: 10, y: 196, size: 14, color: c.accentColor, locked: false },
+      { type: 'text', expression: "(#weather_temp + '°')", text: '23°', x: colW, y: 196, size: 18, color: c.textColor, locked: false },
+      { type: 'text', expression: "('湿度 ' + 45 + '%')", text: '湿度 45%', x: 10, y: 218, size: 11, color: c.dimColor, locked: false, opacity: 50 },
+    ];
+  },
   gen(c) {
     return [
       generateAutoDetectMAML(),
-      '  <Var name="safeW" type="number" expression="(#view_width - #marginL - 20)" />',
-      '  <Var name="colW" type="number" expression="(#safeW / 2)" />',
       '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
-      '  <Group x="#marginL" y="0" w="#safeW">',
-      '    <Text textExp="formatDate(\'HH:mm\', #time_sys)" x="0" y="20" size="40" color="' + c.timeColor + '" bold="true" />',
-      '    <Text textExp="formatDate(\'MM/dd EEEE\', #time_sys)" x="0" y="68" size="12" color="' + c.dimColor + '" />',
-      '    <Rectangle x="0" y="92" w="#safeW" h="1" fillColor="#1a1f2e" />',
-      '    <Text text="步数" x="0" y="110" size="11" color="' + c.dimColor + '" />',
-      '    <Text textExp="#step_count" x="0" y="128" size="24" color="' + c.textColor + '" bold="true" />',
-      '    <Text text="步" x="0" y="158" size="11" color="' + c.dimColor + '" alpha="153" />',
-      '    <Text text="电量" x="#colW" y="110" size="11" color="' + c.dimColor + '" />',
-      '    <Text textExp="(#battery_level + \'%\')" x="#colW" y="128" size="24" color="' + c.textColor + '" bold="true" />',
-      '    <Rectangle x="0" y="178" w="#safeW" h="1" fillColor="#1a1f2e" />',
-      '    <Text textExp="#weather_desc" x="0" y="196" size="14" color="' + c.accentColor + '" />',
-      '    <Text textExp="(#weather_temp + \'°\')" x="#colW" y="196" size="18" color="' + c.textColor + '" />',
-      '    <Text textExp="(\'湿度 \' + #weather_humidity + \'%\')" x="0" y="218" size="11" color="' + c.dimColor + '" alpha="128" />',
-      '  </Group>',
     ].join('\n');
   },
 };
@@ -2844,6 +2855,13 @@ var video_wallpaper = {
       { key: 'overlayTextY', label: '文字 Y', type: 'range', min: 0, max: 596, default: 500 },
     ]},
   ],
+  elements(c) {
+    var els = [];
+    if (c.showOverlayText === 'true' && c.overlayText) {
+      els.push({ type: 'text', text: c.overlayText, x: Number(c.overlayTextX) || 40, y: Number(c.overlayTextY) || 500, size: Number(c.overlayTextSize) || 24, color: c.overlayTextColor || '#ffffff', bold: true, locked: false });
+    }
+    return els;
+  },
   gen(c) {
     var loop = c.loopMode || 'loop';
     var autoPlay = c.autoPlay !== 'false';
@@ -2903,10 +2921,7 @@ var video_wallpaper = {
       lines.push('  <Rectangle w="#view_width" h="#view_height" fillColor="' + (c.overlayColor || '#000000') + '" alpha="' + alpha + '" />');
     }
 
-    // Text overlay
-    if (c.showOverlayText === 'true' && c.overlayText) {
-      lines.push('  <Text text="' + escXml(c.overlayText) + '" x="' + (c.overlayTextX || 40) + '" y="' + (c.overlayTextY || 500) + '" size="' + (c.overlayTextSize || 24) + '" color="' + (c.overlayTextColor || '#ffffff') + '" bold="true" />');
-    }
+    // Text overlay is in elements(), not here
 
     return lines.join('\n');
   },
@@ -3191,6 +3206,13 @@ var carousel = {
       { key: 'indicatorColor', label: '指示器颜色', type: 'color', default: '#ffffff' },
     ]},
   ],
+  elements(c) {
+    var els = [];
+    if (c.showCaption === 'true' && c.caption) {
+      els.push({ type: 'text', text: c.caption, x: 10, y: 596 - 36, size: 14, color: c.captionColor, fontFamily: 'mipro-normal', locked: false });
+    }
+    return els;
+  },
   gen(c) {
     var interval = (c.interval || 5) * 1000;
     var transition = c.transition || 'fade';
@@ -3478,74 +3500,8 @@ PreviewRenderer.prototype.evalExpression = function (expr) {
 };
 
 // ─── Template Renderers ───────────────────────────────────────────
-PreviewRenderer.prototype.renderBattery = function (c) {
-  var level = Number(c.demoLevel) || 78;
-  var bw = PREVIEW_W - this.camW - 20;
-  var status = level < 20 ? '电量极低' : level < 80 ? '电量偏低' : '电量充足';
-  return this.bg(c.bgColor,
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:20px;font-size:' + Math.round(18 * this.scale) + 'px;color:' + c.textColor + ';opacity:0.6">电量</div>' +
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:42px;font-size:' + Math.round(56 * this.scale) + 'px;color:' + c.textColor + ';font-weight:700">' + level + '%</div>' +
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:110px;width:' + bw + 'px;height:7px;background:#333;border-radius:4px"><div style="width:' + level + '%;height:100%;background:' + c.barColor + ';border-radius:4px"></div></div>' +
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:126px;font-size:' + Math.round(16 * this.scale) + 'px;color:' + c.textColor + ';opacity:0.5">' + status + '</div>'
-  );
-};
-
-PreviewRenderer.prototype.renderCountdown = function (c) {
-  var diff = this.calcCountdown(c.targetDate);
-  return this.bg(c.bgColor,
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:20px;font-size:' + Math.round(18 * this.scale) + 'px;color:' + c.textColor + ';opacity:0.6">' + this.esc(c.eventName) + '</div>' +
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:44px;font-size:' + Math.round(72 * this.scale) + 'px;color:' + c.accentColor + ';font-weight:700">' + diff + '</div>' +
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:' + Math.round(44 + 72 * this.scale + 4) + 'px;font-size:' + Math.round(20 * this.scale) + 'px;color:' + c.textColor + ';opacity:0.5">天</div>'
-  );
-};
-
-PreviewRenderer.prototype.renderRing = function (c) {
-  var isBattery = c.source === 'battery';
-  var demoVal = Number(c.demoValue) || 65;
-  var ringR = Math.round(80 * this.scale);
-  var ringW = Math.round(Number(c.ringSize) * this.scale);
-  var cx = this.camW + (PREVIEW_W - this.camW) / 2;
-  var cy = 120 * this.scale;
-  var pct = demoVal;
-  var label = isBattery ? '电量' : '步数';
-  var unit = isBattery ? '%' : '步';
-  return this.bg(c.bgColor,
-    '<svg style="position:absolute;inset:0;width:100%;height:100%" viewBox="0 0 ' + PREVIEW_W + ' ' + (252) + '">' +
-    '<circle cx="' + cx + '" cy="' + cy + '" r="' + ringR + '" fill="none" stroke="' + c.trackColor + '" stroke-width="' + ringW + '" />' +
-    '<circle cx="' + cx + '" cy="' + cy + '" r="' + ringR + '" fill="none" stroke="' + c.ringColor + '" stroke-width="' + ringW + '" ' +
-      'stroke-dasharray="' + (2 * Math.PI * ringR * pct / 100) + ' ' + (2 * Math.PI * ringR) + '" ' +
-      'stroke-linecap="round" transform="rotate(-90 ' + cx + ' ' + cy + ')" />' +
-    '</svg>' +
-    '<div style="position:absolute;left:' + (cx - 40) + 'px;top:' + (cy - Math.round(28 * this.scale)) + 'px;width:80px;text-align:center;font-size:' + Math.round(48 * this.scale) + 'px;color:' + c.textColor + ';font-weight:700">' + pct + '</div>' +
-    '<div style="position:absolute;left:' + (cx - 12) + 'px;top:' + (cy + Math.round(14 * this.scale)) + 'px;font-size:' + Math.round(14 * this.scale) + 'px;color:' + c.labelColor + ';opacity:0.6">' + unit + '</div>' +
-    '<div style="position:absolute;left:' + (cx - 24) + 'px;top:' + (cy + ringR + Math.round(16 * this.scale)) + 'px;width:48px;text-align:center;font-size:' + Math.round(13 * this.scale) + 'px;color:' + c.labelColor + ';opacity:0.5">' + label + '</div>'
-  );
-};
-
-PreviewRenderer.prototype.renderDashboard = function (c) {
-  var lx = this.camW + 10;
-  var sw = PREVIEW_W - this.camW - 20;
-  var halfW = sw / 2;
-  return this.bg(c.bgColor,
-    '<div style="position:absolute;left:' + lx + 'px;top:12px;font-size:' + Math.round(38 * this.scale) + 'px;color:' + c.timeColor + ';font-weight:700">' + this.fmtTime(new Date(), 'HH:mm') + '</div>' +
-    '<div style="position:absolute;left:' + lx + 'px;top:' + Math.round(12 + 38 * this.scale + 4) + 'px;font-size:' + Math.round(12 * this.scale) + 'px;color:' + c.dimColor + '">' + this.fmtDate(new Date(), 'MM/dd EEEE') + '</div>' +
-    '<div style="position:absolute;left:' + lx + 'px;top:' + Math.round(72 * this.scale) + 'px;width:' + sw + 'px;height:1px;background:#1a1f2e"></div>' +
-    '<div style="position:absolute;left:' + lx + 'px;top:' + Math.round(80 * this.scale) + 'px;font-size:' + Math.round(11 * this.scale) + 'px;color:' + c.dimColor + '">步数</div>' +
-    '<div style="position:absolute;left:' + lx + 'px;top:' + Math.round(94 * this.scale) + 'px;font-size:' + Math.round(22 * this.scale) + 'px;color:' + c.textColor + ';font-weight:700">6,542</div>' +
-    '<div style="position:absolute;left:' + (lx + halfW) + 'px;top:' + Math.round(80 * this.scale) + 'px;font-size:' + Math.round(11 * this.scale) + 'px;color:' + c.dimColor + '">电量</div>' +
-    '<div style="position:absolute;left:' + (lx + halfW) + 'px;top:' + Math.round(94 * this.scale) + 'px;font-size:' + Math.round(22 * this.scale) + 'px;color:' + c.textColor + ';font-weight:700">78%</div>' +
-    '<div style="position:absolute;left:' + lx + 'px;top:' + Math.round(132 * this.scale) + 'px;width:' + sw + 'px;height:1px;background:#1a1f2e"></div>' +
-    '<div style="position:absolute;left:' + lx + 'px;top:' + Math.round(142 * this.scale) + 'px;font-size:' + Math.round(14 * this.scale) + 'px;color:' + c.accentColor + '">晴</div>' +
-    '<div style="position:absolute;left:' + (lx + halfW) + 'px;top:' + Math.round(142 * this.scale) + 'px;font-size:' + Math.round(16 * this.scale) + 'px;color:' + c.textColor + '">23°</div>' +
-    '<div style="position:absolute;left:' + lx + 'px;top:' + Math.round(164 * this.scale) + 'px;font-size:' + Math.round(11 * this.scale) + 'px;color:' + c.dimColor + ';opacity:0.5">湿度 45%</div>'
-  );
-};
-
-PreviewRenderer.prototype.renderImage = function (c) {
-  return this.bg(c.bgColor,
-    '<div style="position:absolute;left:' + (this.camW + 10) + 'px;top:50%;right:10px;transform:translateY(-50%);text-align:center;color:#555;font-size:' + Math.round(14 * this.scale) + 'px">点击配置上传图片</div>'
-  );
-};
+// Templates with elements() are rendered via renderElements + bg only.
+// These are kept for the custom template (no elements()) and rawXml templates.
 
 PreviewRenderer.prototype.renderCustom = function (c) {
   var pat = c.bgPattern || 'solid';
@@ -3825,56 +3781,6 @@ PreviewRenderer.prototype.renderQuickSettings = function (c) {
   return html;
 };
 
-PreviewRenderer.prototype.renderVideoWallpaper = function (c) {
-  var bg = c.bgColor || '#000000';
-  var html = '<div style="position:absolute;inset:0;background:' + bg + '"></div>';
-  // Video placeholder with play icon
-  html += '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px">';
-  html += '<div style="width:' + Math.round(48 * this.scale) + 'px;height:' + Math.round(48 * this.scale) + 'px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:' + Math.round(24 * this.scale) + 'px">▶️</div>';
-  html += '<div style="font-size:' + Math.round(11 * this.scale) + 'px;color:rgba(255,255,255,0.4)">上传视频以预览</div>';
-  html += '</div>';
-  // Settings indicator
-  var settings = [];
-  if (c.loopMode === 'loop') settings.push('🔁 循环');
-  else if (c.loopMode === 'bounce') settings.push('↔️ 来回');
-  else settings.push('▶️ 单次');
-  if (c.volume > 0) settings.push('🔊 ' + c.volume + '%');
-  if (c.overlayEnable === 'true') settings.push('🎭 遮罩');
-  html += '<div style="position:absolute;left:8px;bottom:6px;font-size:' + Math.round(8 * this.scale) + 'px;color:rgba(255,255,255,0.3)">' + settings.join(' · ') + '</div>';
-  return html;
-};
-
-PreviewRenderer.prototype.renderCarousel = function (c) {
-  var bg = c.bgColor || '#000';
-  var fitMode = c.fitMode || 'cover';
-  var html = this.bg(bg, '');
-  // 3 slide placeholders
-  var slideColors = ['#1a1a2e', '#2d1b69', '#1b4332'];
-  var slideLabels = ['照片 1', '照片 2', '照片 3'];
-  for (var i = 0; i < 3; i++) {
-    var alpha = i === 0 ? 1 : 0;
-    html += '<div style="position:absolute;inset:0;background:' + slideColors[i] + ';opacity:' + alpha + ';display:flex;align-items:center;justify-content:center;transition:opacity 0.5s">' +
-      '<div style="text-align:center;color:rgba(255,255,255,0.3);font-size:' + Math.round(14 * this.scale) + 'px">' +
-      '<div style="font-size:' + Math.round(32 * this.scale) + 'px;margin-bottom:6px">🖼️</div>' +
-      slideLabels[i] + '<br><span style="font-size:' + Math.round(10 * this.scale) + 'px">上传图片后自动替换</span></div></div>';
-  }
-  // Caption
-  if (c.showCaption === 'true' && c.caption) {
-    var capAlpha = (c.captionBgAlpha || 50) / 100;
-    html += '<div style="position:absolute;left:0;right:0;bottom:0;height:' + Math.round(30 * this.scale) + 'px;background:rgba(0,0,0,' + capAlpha + ');display:flex;align-items:center;padding:0 12px">' +
-      '<span style="font-size:' + Math.round(10 * this.scale) + 'px;color:' + (c.captionColor || '#fff') + '">' + this.esc(c.caption) + '</span></div>';
-  }
-  // Indicators
-  if (c.showIndicator !== 'false') {
-    html += '<div style="position:absolute;bottom:' + Math.round(10 * this.scale) + 'px;left:50%;transform:translateX(-50%);display:flex;gap:6px">';
-    for (var j = 0; j < 3; j++) {
-      html += '<div style="width:' + Math.round(6 * this.scale) + 'px;height:' + Math.round(6 * this.scale) + 'px;border-radius:50%;background:' + (c.indicatorColor || '#fff') + ';opacity:' + (j === 0 ? 1 : 0.3) + '"></div>';
-    }
-    html += '</div>';
-  }
-  return html;
-};
-
 // ─── Render Template Preview (dispatch) ───────────────────────────
 function renderTemplatePreview(device, showCam, tpl, cfg) {
   if (tpl.rawXml) {
@@ -3886,15 +3792,8 @@ function renderTemplatePreview(device, showCam, tpl, cfg) {
     return r.bg(cfg.bgColor || '#000000', '');
   }
   switch (tpl.id) {
-    case 'battery':    return r.renderBattery(cfg);
-    case 'countdown':  return r.renderCountdown(cfg);
-    case 'ring':       return r.renderRing(cfg);
-    case 'dashboard':  return r.renderDashboard(cfg);
-    case 'image':      return r.renderImage(cfg);
-    case 'custom':          return r.renderCustom(cfg);
-    case 'video_wallpaper': return r.renderVideoWallpaper(cfg);
-    case 'carousel':        return r.renderCarousel(cfg);
-    default:                return '';
+    case 'custom': return r.renderCustom(cfg);
+    default:       return '';
   }
 }
 
@@ -7100,7 +6999,13 @@ function showDraftRecovery(d, callbacks) {
     if (!tpl2) { toast('找不到对应模板', 'error'); div.remove(); return; }
     S.setTpl(tpl2);
     S.setCfg(d.cfg || {});
-    S.setElements(d.elements || []);
+    // If draft has no elements and template has elements(), load from template
+    var els = d.elements || [];
+    if (els.length === 0 && tpl2.elements) {
+      var cfg = d.cfg || {};
+      els = tpl2.elements(cfg).map(function (el) { return JSON.parse(JSON.stringify(el)); });
+    }
+    S.setElements(els);
     if (d.uploadedFiles) S.setUploadedFiles(d.uploadedFiles);
     S.setDirty(true);
     resetHistory();
@@ -7316,7 +7221,12 @@ function openLibraryModal(stepCallbacks) {
         var newCfg = {};
         tpl.config.forEach(function (g) { g.fields.forEach(function (f) { newCfg[f.key] = card.cfg[f.key] !== undefined ? card.cfg[f.key] : f.default; }); });
         S.setCfg(newCfg);
-        S.setElements(card.elements || []);
+        // If card has no elements and template has elements(), load from template
+        var els = card.elements || [];
+        if (els.length === 0 && tpl.elements) {
+          els = tpl.elements(newCfg).map(function (el) { return JSON.parse(JSON.stringify(el)); });
+        }
+        S.setElements(els);
         S.setUploadedFiles({});
         S.setSelIdx(-1);
         S.setDirty(true);

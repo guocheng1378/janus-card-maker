@@ -15,20 +15,23 @@ export default {
       { key: 'demoLevel', label: '预览电量 (0-100)', type: 'range', min: 0, max: 100, default: 78 },
     ]},
   ],
+  elements(c) {
+    var safeW = Math.round(976 * (1 - 0.3)) - 40;
+    return [
+      { type: 'text', text: '电量', x: 10, y: 50, size: 18, color: c.textColor, locked: false, opacity: 60 },
+      { type: 'text', expression: "(#battery_level + '%')", text: c.demoLevel + '%', x: 10, y: 80, size: 56, color: c.textColor, bold: true, locked: false },
+      { type: 'text', expression: "ifelse((#battery_level >= 80), '电量充足', ifelse((#battery_level >= 20), '电量偏低', '电量极低'))", text: '电量充足', x: 10, y: 200, size: 16, color: c.textColor, locked: false, opacity: 50 },
+    ];
+  },
   gen(c) {
+    var safeW = Math.round(976 * (1 - 0.3)) - 40;
     return [
       generateAutoDetectMAML(),
       '  <Var name="safeW" type="number" expression="(#view_width - #marginL - 40)" />',
       '  <Var name="barW" type="number" expression="(#safeW * #battery_level / 100)" />',
       '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
-      '  <Group x="#marginL" y="0">',
-      '    <Text text="电量" x="0" y="50" size="18" color="' + c.textColor + '" alpha="153" />',
-      '    <Text textExp="(#battery_level + \'%\')" x="0" y="80" size="56" color="' + c.textColor + '" />',
-      '    <Rectangle x="0" y="160" w="#safeW" h="12" fillColor="#333333" cornerRadius="6" />',
-      '    <Rectangle x="0" y="160" w="#barW" h="12" fillColor="' + c.barColor + '" cornerRadius="6" />',
-      '    <Text textExp="ifelse((#battery_level >= 80), \'电量充足\', ifelse((#battery_level >= 20), \'电量偏低\', \'电量极低\'))"',
-      '          x="0" y="200" size="16" color="' + c.textColor + '" alpha="128" />',
-      '  </Group>',
+      '  <Rectangle x="#marginL" y="160" w="#safeW" h="12" fillColor="#333333" cornerRadius="6" />',
+      '  <Rectangle x="#marginL" y="160" w="#barW" h="12" fillColor="' + c.barColor + '" cornerRadius="6" />',
     ].join('\n');
   },
 };

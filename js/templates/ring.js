@@ -25,12 +25,22 @@ export default {
       { key: 'ringSize', label: '环粗细', type: 'range', min: 6, max: 20, default: 12 },
     ]},
   ],
+  elements(c) {
+    var isBattery = c.source === 'battery';
+    var unit = isBattery ? '%' : '步';
+    var label = isBattery ? '电量' : '步数';
+    var demoText = isBattery ? String(c.demoValue) : '6542';
+    var expr = isBattery ? '#battery_level' : '#step_count';
+    return [
+      { type: 'text', expression: expr, text: demoText, x: 380, y: 70, size: 48, color: c.textColor, bold: true, textAlign: 'center', w: 100, locked: false },
+      { type: 'text', text: unit, x: 420, y: 130, size: 16, color: c.labelColor, locked: false, opacity: 60 },
+      { type: 'text', text: label, x: 400, y: 220, size: 14, color: c.labelColor, textAlign: 'center', w: 60, locked: false, opacity: 50 },
+    ];
+  },
   gen(c) {
     var isBattery = c.source === 'battery';
     var goalN = parseInt(c.goal) || 10000;
     var pctExpr = isBattery ? '#battery_level' : 'ifelse((#step_count > ' + goalN + '), 100, (#step_count * 100 / ' + goalN + '))';
-    var label = isBattery ? '电量' : '步数';
-    var unit = isBattery ? '%' : '步';
     return [
       generateAutoDetectMAML(),
       '  <Var name="cx" type="number" expression="(#marginL + (#view_width - #marginL) / 2)" />',
@@ -40,9 +50,6 @@ export default {
       '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
       '  <Circle x="#cx" y="120" r="#ringR" fillColor="' + c.trackColor + '" />',
       '  <Circle x="#cx" y="120" r="(#ringR - #ringW)" fillColor="' + c.bgColor + '" />',
-      '  <Text textExp="#pct" x="(#cx - 50)" y="80" w="100" size="48" color="' + c.textColor + '" textAlign="center" bold="true" />',
-      '  <Text text="' + unit + '" x="(#cx - 20)" y="138" size="16" color="' + c.labelColor + '" alpha="153" />',
-      '  <Text text="' + label + '" x="(#cx - 30)" y="220" w="60" size="14" color="' + c.labelColor + '" alpha="128" textAlign="center" />',
     ].join('\n');
   },
 };

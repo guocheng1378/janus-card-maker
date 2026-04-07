@@ -72,7 +72,13 @@ export function showDraftRecovery(d, callbacks) {
     if (!tpl2) { toast('找不到对应模板', 'error'); div.remove(); return; }
     S.setTpl(tpl2);
     S.setCfg(d.cfg || {});
-    S.setElements(d.elements || []);
+    // If draft has no elements and template has elements(), load from template
+    var els = d.elements || [];
+    if (els.length === 0 && tpl2.elements) {
+      var cfg = d.cfg || {};
+      els = tpl2.elements(cfg).map(function (el) { return JSON.parse(JSON.stringify(el)); });
+    }
+    S.setElements(els);
     if (d.uploadedFiles) S.setUploadedFiles(d.uploadedFiles);
     S.setDirty(true);
     resetHistory();

@@ -142,7 +142,12 @@ export function openLibraryModal(stepCallbacks) {
         var newCfg = {};
         tpl.config.forEach(function (g) { g.fields.forEach(function (f) { newCfg[f.key] = card.cfg[f.key] !== undefined ? card.cfg[f.key] : f.default; }); });
         S.setCfg(newCfg);
-        S.setElements(card.elements || []);
+        // If card has no elements and template has elements(), load from template
+        var els = card.elements || [];
+        if (els.length === 0 && tpl.elements) {
+          els = tpl.elements(newCfg).map(function (el) { return JSON.parse(JSON.stringify(el)); });
+        }
+        S.setElements(els);
         S.setUploadedFiles({});
         S.setSelIdx(-1);
         S.setDirty(true);

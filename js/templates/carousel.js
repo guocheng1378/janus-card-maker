@@ -34,6 +34,13 @@ export default {
       { key: 'indicatorColor', label: '指示器颜色', type: 'color', default: '#ffffff' },
     ]},
   ],
+  elements(c) {
+    var els = [];
+    if (c.showCaption === 'true' && c.caption) {
+      els.push({ type: 'text', text: c.caption, x: 10, y: 596 - 36, size: 14, color: c.captionColor, fontFamily: 'mipro-normal', locked: false });
+    }
+    return els;
+  },
   gen(c) {
     var interval = (c.interval || 5) * 1000;
     var transition = c.transition || 'fade';
