@@ -1285,5 +1285,6 @@ Object.assign(window.JCM, {
   fmtSize: fmtSize,
   isInCameraZone: isInCameraZone,
   clearToken: function () { localStorage.removeItem('jcm-gh-token'); toast('🔑 Token 已清除', 'success'); },
+  hasToken: function () { return !!_getGH(); },
   elements: S.elements,
 });

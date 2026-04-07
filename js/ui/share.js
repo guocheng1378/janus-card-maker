@@ -21,6 +21,13 @@ export function shareTemplate() {
 
 export function checkShareURL(callbacks) {
   var hash = location.hash;
+  // Handle #market=gistId
+  if (hash.indexOf('#market=') === 0) {
+    var gistId = hash.substring(8);
+    import('../template-market.js').then(function (m) { m.importFromGist(gistId); });
+    history.replaceState(null, '', location.pathname);
+    return;
+  }
   if (hash.indexOf('#share=') !== 0) return;
   try {
     var encoded = hash.substring(7);
