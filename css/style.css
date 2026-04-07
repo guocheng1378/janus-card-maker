@@ -453,9 +453,10 @@ kbd{
   display:flex;flex-direction:row;overflow:hidden;
 }
 .config-live-left{
-  flex:1;overflow-y:auto;padding:28px 24px;
-  border-right:1px solid var(--border);
-  min-width:0;
+  flex:1;overflow-y:auto;min-width:0;
+}
+@media(min-width:901px){
+  .config-live-left{padding:28px 24px;border-right:1px solid var(--border)}
 }
 .config-live-right{
   width:420px;flex-shrink:0;
@@ -549,7 +550,7 @@ kbd{
   .config-live-left{padding:16px;border-right:none;max-height:none;overflow-y:auto;flex:1}
   .config-live-right{display:none}
   /* Category tabs: horizontal scroll on mobile */
-  .tpl-categories{flex-wrap:nowrap !important;overflow-x:auto !important;padding:0 16px 20px !important;gap:6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tpl-categories{flex-wrap:nowrap;overflow-x:auto;padding:0 16px 20px;gap:6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
   .tpl-categories::-webkit-scrollbar{display:none}
   .tpl-cat{flex-shrink:0}
 }
@@ -777,7 +778,10 @@ kbd{
 
 /* ─── Template Category Tabs ─── */
 .tpl-categories{
-  display:flex;gap:6px;padding:0 20px 12px;flex-wrap:wrap;
+  display:flex;gap:6px;
+}
+@media(min-width:769px){
+  .tpl-categories{padding:0 20px 12px;flex-wrap:wrap}
 }
 .tpl-cat{
   padding:5px 14px;font-size:12px;border-radius:20px;cursor:pointer;
@@ -828,8 +832,8 @@ kbd{
     width: 100% !important;
   }
   .config-live-left {
-    flex: 1 1 0% !important;
-    min-height: 0 !important;
+    flex: 1 1 0%;
+    min-height: 0;
   }
   .page-config-live {
     flex-direction: column !important;
