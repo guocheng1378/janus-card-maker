@@ -329,11 +329,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
   display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;
 }
 
+/* ─── Focus Visible (keyboard a11y) ────────────────────────── */
+*:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:2px;
+}
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+select:focus:not(:focus-visible){
+  outline:none;
+}
+
 /* ─── Toast (queue) ─── */
 .toast{
-  position:fixed;left:50%;transform:translateX(-50%) translateY(10px);
+  position:fixed;left:50%;bottom:80px;transform:translateX(-50%) translateY(10px);display:flex;flex-direction:column;align-items:center;
   padding:10px 24px;border-radius:10px;font-size:13px;font-weight:600;
-  opacity:0;transition:opacity .3s ease,transform .3s ease,bottom .3s ease;z-index:999;pointer-events:none;
+  opacity:0;transition:opacity .3s ease,transform .3s ease;bottom .3s ease;z-index:999;pointer-events:none;
   box-shadow:0 8px 24px rgba(0,0,0,.4);white-space:nowrap;
 }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -341,6 +353,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
 .toast.error{background:var(--red);color:#fff}
 .toast.info{background:var(--accent);color:#fff}
 .toast.warning{background:var(--orange);color:#1a1a2e}
+/* ─── Toast Items ───────────────────────────────────────────── */
+.toast-item{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;
+  margin-bottom:6px;white-space:nowrap;
+  animation:toast-in .3s ease;
+  box-shadow:0 4px 12px rgba(0,0,0,.3);
+}
+.toast-item.toast-success{background:var(--green);color:#fff}
+.toast-item.toast-error{background:var(--red);color:#fff}
+.toast-item.toast-info{background:var(--accent);color:#fff}
+.toast-item.toast-warning{background:var(--orange);color:#1a1a2e}
+.toast-item.fade-out{opacity:0;transform:translateY(-10px);transition:opacity .3s,transform .3s}
+@keyframes toast-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
 
 
 /* ─── Theme Toggle ─── */
@@ -496,7 +523,7 @@ kbd{
   .stepper{padding:6px 12px}
   .step-tab{padding:6px 10px}
   .step-tab .step-label{display:none}
-  .page-tpl,.page-preview{padding:20px 16px}
+  .page-tpl,.page-preview{padding:20px 16px;padding-bottom:calc(80px + var(--safe-bottom, 0px))}
   .tpl-grid{grid-template-columns:repeat(2,1fr);gap:10px}
   .config-grid{grid-template-columns:1fr}
   .preview-layout{grid-template-columns:1fr}
@@ -570,7 +597,7 @@ kbd{
 .ctx-divider{height:1px;background:var(--border);margin:4px 0}
 
 /* ─── Element drag sort ─── */
-.el-item{cursor:grab;user-select:none}
+
 .el-item:active{cursor:grabbing;opacity:0.7}
 .el-item.drag-over{border-top:2px solid var(--accent)}
 
@@ -578,7 +605,7 @@ kbd{
 .size-label{pointer-events:none;font-family:'SF Mono',Monaco,monospace}
 
 /* ─── Template favorite ─── */
-.tpl-card{position:relative}
+
 .tpl-fav{position:absolute;top:6px;right:6px;background:none;border:none;font-size:16px;cursor:pointer;z-index:2;opacity:0.4;transition:var(--transition);padding:4px;line-height:1}
 .tpl-fav:hover,.tpl-fav.active{opacity:1}
 
@@ -631,7 +658,6 @@ kbd{
 .toast-undo:hover{opacity:1;background:rgba(255,255,255,0.15)}
 
 /* ─── Config Section Collapse ─── */
-.config-section-title{cursor:pointer;user-select:none}
 .config-section-title:hover{color:var(--accent)}
 .config-section-title::after{
   content:'▾';float:right;font-size:10px;transition:transform .2s;
@@ -818,7 +844,6 @@ kbd{
   .step-label { display: none; }
   .step-num { margin-right: 0; }
   .steps { justify-content: center; gap: 4px; }
-  .tpl-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .tpl-card { padding: 8px; }
   .tpl-thumb { height: 60px; }
   .config-grid { gap: 6px; }
