@@ -14,7 +14,9 @@ import { getStep, goStep, moveStepSlider, syncDeviceSelect } from './steps.js';
 import { setupCodeEditor, updateCodeEditor, formatXML } from './code-editor.js';
 import {
   ElementDefaults, getSelectedDevice, isInCameraZone,
-  addElement, removeElement, alignElement, applyQuickSize, moveElementZ
+  addElement, removeElement, alignElement, applyQuickSize, moveElementZ,
+  distributeElements, matchSize, copyStyle, pasteStyle, hasStyleClipboard,
+  getStylePresets, saveStylePreset, applyStylePreset
 } from './elements.js';
 import {
   COLOR_PRESETS, renderTplGrid, filterTemplates, renderConfig,
@@ -693,6 +695,105 @@ function setupEvents() {
       }
       return;
     }
+    // MAML variable insert
+    var varBtn = e.target.closest('[data-var-insert]');
+    if (varBtn) {
+      e.stopPropagation();
+      var vi2 = Number(varBtn.dataset.varIdx);
+      if (vi2 >= 0 && vi2 < S.elements.length && S.elements[vi2].type === 'text') {
+        captureState('插入变量');
+        S.elements[vi2].text = (S.elements[vi2].text || '') + varBtn.dataset.varInsert;
+        S.setDirty(true);
+        renderConfig(getTemplateMAML);
+        toast('🔗 已插入 ' + varBtn.dataset.varInsert, 'info');
+      }
+      return;
+    }
+    // Save style preset
+    var saveStyleBtn = e.target.closest('[data-save-style]');
+    if (saveStyleBtn) {
+      e.stopPropagation();
+      var ssi = Number(saveStyleBtn.dataset.saveStyle);
+      var presetName = prompt('预设名称:');
+      if (presetName) saveStylePreset(presetName, ssi);
+      return;
+    }
+    // Apply style preset
+    var applyStyleBtn = e.target.closest('[data-apply-styles]');
+    if (applyStyleBtn) {
+      e.stopPropagation();
+      var presets = getStylePresets();
+      if (presets.length === 0) { toast('暂无保存的样式预设', 'info'); return; }
+      // Show preset picker
+      var presetHtml = '<div style="display:flex;flex-direction:column;gap:4px;max-height:300px;overflow-y:auto">';
+      presets.forEach(function (p, pi) {
+        var colorDots = '';
+        if (p.color) colorDots += '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' + p.color + ';margin-left:4px"></span>';
+        if (p.fillColor2) colorDots += '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' + p.fillColor2 + ';margin-left:2px"></span>';
+        presetHtml += '<div class="el-btn" data-apply-preset="' + pi + '" style="width:100%;justify-content:flex-start;font-size:11px;padding:8px 12px">' +
+          '<span style="flex:1">' + esc(p.name) + '</span>' +
+          '<span style="font-size:9px;color:var(--text3)">' + p.type + '</span>' + colorDots + '</div>';
+      });
+      presetHtml += '</div>';
+      // Render in a temp modal-ish way using the design tools area
+      var presetContainer = document.getElementById('presetPicker');
+      if (presetContainer) presetContainer.remove();
+      var div = document.createElement('div');
+      div.id = 'presetPicker';
+      div.style.cssText = 'margin-top:8px;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px';
+      div.innerHTML = '<div style="font-size:11px;font-weight:600;margin-bottom:6px">选择预设样式</div>' + presetHtml;
+      applyStyleBtn.parentElement.appendChild(div);
+      return;
+    }
+    // Apply specific preset
+    var applyPresetBtn = e.target.closest('[data-apply-preset]');
+    if (applyPresetBtn) {
+      e.stopPropagation();
+      var presets2 = getStylePresets();
+      var pi2 = Number(applyPresetBtn.dataset.applyPreset);
+      if (presets2[pi2] && S.selIdx >= 0) {
+        applyStylePreset(S.selIdx, presets2[pi2]);
+        renderConfig(getTemplateMAML);
+        _autoPreview();
+        var picker = document.getElementById('presetPicker');
+        if (picker) picker.remove();
+      }
+      return;
+    }
+    // Distribute elements
+    var distBtn = e.target.closest('[data-distribute]');
+    if (distBtn) {
+      e.stopPropagation();
+      distributeElements(distBtn.dataset.distribute);
+      renderConfig(getTemplateMAML);
+      _autoPreview();
+      return;
+    }
+    // Match size
+    var matchBtn = e.target.closest('[data-match-size]');
+    if (matchBtn) {
+      e.stopPropagation();
+      matchSize(matchBtn.dataset.matchSize);
+      renderConfig(getTemplateMAML);
+      _autoPreview();
+      return;
+    }
+    // Copy style
+    var copyStyleBtn = e.target.closest('[data-copy-style]');
+    if (copyStyleBtn) {
+      e.stopPropagation();
+      copyStyle(Number(copyStyleBtn.dataset.copyStyle));
+      return;
+    }
+    // Paste style
+    var pasteStyleBtn = e.target.closest('[data-paste-style]');
+    if (pasteStyleBtn) {
+      e.stopPropagation();
+      pasteStyle(Number(pasteStyleBtn.dataset.pasteStyle));
+      renderConfig(getTemplateMAML);
+      _autoPreview();
+      return;
+    }
     var swatch = e.target.closest('.color-swatch');
     if (swatch) { captureState(); S.elements[Number(swatch.dataset.cidx)][swatch.dataset.cprop] = swatch.dataset.color; S.setDirty(true); renderConfig(getTemplateMAML); return; }
     var colorDot = e.target.closest('.color-dot');
@@ -934,6 +1035,62 @@ function setupEvents() {
     }
   });
   document.querySelector('.content').addEventListener('dragover', function (e) { e.preventDefault(); e.stopPropagation(); });
+
+  // ── Right-click Context Menu ──
+  var ctxMenu = document.getElementById('contextMenu');
+  if (ctxMenu) {
+    document.addEventListener('contextmenu', function (e) {
+      var elTarget = e.target.closest('[data-el-idx]');
+      if (!elTarget) { ctxMenu.style.display = 'none'; return; }
+      var ci = parseInt(elTarget.dataset.elIdx, 10);
+      if (isNaN(ci) || ci >= S.elements.length) return;
+      e.preventDefault();
+      S.setSelIdx(ci);
+      renderConfig(getTemplateMAML);
+      ctxMenu.style.display = '';
+      ctxMenu.style.left = e.clientX + 'px';
+      ctxMenu.style.top = e.clientY + 'px';
+    });
+    ctxMenu.addEventListener('click', function (e) {
+      var item = e.target.closest('.ctx-item');
+      if (!item) return;
+      var action = item.dataset.ctx;
+      var ci = S.selIdx;
+      if (ci < 0 || ci >= S.elements.length) return;
+      switch (action) {
+        case 'duplicate':
+          captureState('复制元素');
+          var clone = JSON.parse(JSON.stringify(S.elements[ci]));
+          clone.x += 10; clone.y += 10;
+          S.elements.push(clone); S.setSelIdx(S.elements.length - 1); S.setDirty(true);
+          toast('📋 已复制', 'success'); break;
+        case 'delete':
+          removeElement(ci); break;
+        case 'lock':
+          S.elements[ci].locked = !S.elements[ci].locked;
+          toast(S.elements[ci].locked ? '🔒 已锁定' : '🔓 已解锁', 'info'); break;
+        case 'front':
+          captureState('置顶');
+          var frontEl = S.elements.splice(ci, 1)[0];
+          S.elements.push(frontEl); S.setSelIdx(S.elements.length - 1); S.setDirty(true);
+          toast('⬆ 已置顶', 'success'); break;
+        case 'back':
+          captureState('置底');
+          var backEl = S.elements.splice(ci, 1)[0];
+          S.elements.unshift(backEl); S.setSelIdx(0); S.setDirty(true);
+          toast('⬇ 已置底', 'success'); break;
+        case 'align-left': alignElement(ci, 'left'); break;
+        case 'align-center': alignElement(ci, 'hcenter'); break;
+        case 'align-right': alignElement(ci, 'right'); break;
+        case 'copy-style': copyStyle(ci); break;
+        case 'paste-style': pasteStyle(ci); break;
+      }
+      renderConfig(getTemplateMAML);
+      if (getStep() === 2) renderPreview();
+      ctxMenu.style.display = 'none';
+    });
+    document.addEventListener('click', function () { ctxMenu.style.display = 'none'; });
+  }
 }
 
 // ─── Init ─────────────────────────────────────────────────────────

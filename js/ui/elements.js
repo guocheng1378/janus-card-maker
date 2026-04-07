@@ -5,8 +5,8 @@ import { getDevice, cameraZoneWidth } from '../devices.js';
 import { toast } from './toast.js';
 
 export var ElementDefaults = {
-  text: function () { return { type: 'text', text: '新文字', x: 10, y: 60, size: 24, color: '#ffffff', fontFamily: 'default', textAlign: 'left', bold: false, multiLine: false, w: 200, shadow: 'none', opacity: 100, rotation: 0, lineHeight: 1.4, textGradient: 'none', gradientColor2: '#ff6b6b', textStroke: 0, textStrokeColor: '#000000', locked: false }; },
-  rectangle: function () { return { type: 'rectangle', x: 10, y: 60, w: 100, h: 40, color: '#333333', radius: 0, opacity: 100, rotation: 0, fillColor2: '', blur: 0, strokeWidth: 0, strokeColor: '#ffffff', locked: false }; },
+  text: function () { return { type: 'text', text: '新文字', x: 10, y: 60, size: 24, color: '#ffffff', fontFamily: 'default', textAlign: 'left', bold: false, underline: false, strikethrough: false, letterSpacing: 0, multiLine: false, w: 200, shadow: 'none', opacity: 100, rotation: 0, lineHeight: 1.4, textGradient: 'none', gradientColor2: '#ff6b6b', textStroke: 0, textStrokeColor: '#000000', expression: '', locked: false }; },
+  rectangle: function () { return { type: 'rectangle', x: 10, y: 60, w: 100, h: 40, color: '#333333', radius: 0, opacity: 100, rotation: 0, fillColor2: '', blur: 0, strokeWidth: 0, strokeColor: '#ffffff', brightness: 100, saturate: 100, hueRotate: 0, locked: false }; },
   circle: function () { return { type: 'circle', x: 50, y: 100, r: 30, color: '#6c5ce7', opacity: 100, rotation: 0, strokeWidth: 0, strokeColor: '#ffffff', locked: false }; },
   line: function () { return { type: 'rectangle', x: 10, y: 100, w: 200, h: 2, color: '#555555', radius: 1, opacity: 60, rotation: 0, _isLine: true, locked: false }; },
   arc: function () { return { type: 'arc', x: 50, y: 50, r: 40, startAngle: 0, endAngle: 270, color: '#6c5ce7', strokeWidth: 6, locked: false }; },
@@ -98,4 +98,100 @@ export function moveElementZ(idx, dir) {
   S.elements[newIdx] = tmp;
   S.setSelIdx(newIdx);
   S.setDirty(true);
+}
+
+// ── Distribute evenly (horizontal/vertical) ──
+export function distributeElements(dir) {
+  if (S.elements.length < 3) return;
+  captureState('分布排列');
+  var sorted = S.elements.map(function (el, i) { return { idx: i, el: el }; });
+  if (dir === 'horizontal') {
+    sorted.sort(function (a, b) { return a.el.x - b.el.x; });
+    var first = sorted[0].el.x, last = sorted[sorted.length - 1].el.x;
+    var totalSpace = last - first;
+    var step = totalSpace / (sorted.length - 1);
+    sorted.forEach(function (item, i) { if (i > 0 && i < sorted.length - 1) item.el.x = Math.round(first + step * i); });
+  } else {
+    sorted.sort(function (a, b) { return a.el.y - b.el.y; });
+    var firstY = sorted[0].el.y, lastY = sorted[sorted.length - 1].el.y;
+    var totalSpaceY = lastY - firstY;
+    var stepY = totalSpaceY / (sorted.length - 1);
+    sorted.forEach(function (item, i) { if (i > 0 && i < sorted.length - 1) item.el.y = Math.round(firstY + stepY * i); });
+  }
+  S.setDirty(true);
+  toast('📐 已分布排列', 'success');
+}
+
+// ── Match size (width/height/both) ──
+export function matchSize(prop) {
+  if (S.selIdx < 0 || S.elements.length < 2) return;
+  captureState('统一大小');
+  var src = S.elements[S.selIdx];
+  S.elements.forEach(function (el, i) {
+    if (i === S.selIdx) return;
+    if (prop === 'width' || prop === 'both') { if (el.w !== undefined && src.w !== undefined) el.w = src.w; }
+    if (prop === 'height' || prop === 'both') { if (el.h !== undefined && src.h !== undefined) el.h = src.h; }
+  });
+  S.setDirty(true);
+  toast('📐 已统一大小', 'success');
+}
+
+// ── Copy/Paste element style ──
+var _styleClipboard = null;
+export function copyStyle(idx) {
+  if (idx < 0 || idx >= S.elements.length) return;
+  var el = S.elements[idx];
+  _styleClipboard = {};
+  var styleProps = ['color', 'fillColor2', 'opacity', 'shadow', 'fontFamily', 'bold', 'underline', 'strikethrough', 'letterSpacing', 'textGradient', 'gradientColor2', 'textStroke', 'textStrokeColor', 'radius', 'blur', 'strokeWidth', 'strokeColor', 'brightness', 'saturate', 'hueRotate', 'fit', 'rotation'];
+  styleProps.forEach(function (p) { if (el[p] !== undefined) _styleClipboard[p] = el[p]; });
+  toast('📋 样式已复制', 'success');
+}
+export function pasteStyle(idx) {
+  if (!_styleClipboard || idx < 0 || idx >= S.elements.length) return;
+  captureState('粘贴样式');
+  var el = S.elements[idx];
+  Object.keys(_styleClipboard).forEach(function (p) {
+    // Only paste properties that make sense for the target element type
+    if (p === 'fontFamily' || p === 'bold' || p === 'underline' || p === 'strikethrough' || p === 'letterSpacing' || p === 'textGradient' || p === 'gradientColor2' || p === 'textStroke' || p === 'textStrokeColor' || p === 'shadow') {
+      if (el.type === 'text') el[p] = _styleClipboard[p];
+    } else if (p === 'fillColor2' || p === 'blur') {
+      if (el.type === 'rectangle') el[p] = _styleClipboard[p];
+    } else if (p === 'fit') {
+      if (el.type === 'image' || el.type === 'video') el[p] = _styleClipboard[p];
+    } else {
+      if (el[p] !== undefined) el[p] = _styleClipboard[p];
+    }
+  });
+  S.setDirty(true);
+  toast('📌 样式已粘贴', 'success');
+}
+export function hasStyleClipboard() { return !!_styleClipboard; }
+
+// ── Element style presets (localStorage) ──
+var STYLE_PRESET_KEY = 'jcm-style-presets';
+export function getStylePresets() {
+  try { return JSON.parse(localStorage.getItem(STYLE_PRESET_KEY) || '[]'); } catch(e) { return []; }
+}
+export function saveStylePreset(name, idx) {
+  if (idx < 0 || idx >= S.elements.length) return;
+  var el = S.elements[idx];
+  var preset = { name: name, type: el.type, timestamp: Date.now() };
+  var styleProps = ['color', 'fillColor2', 'opacity', 'shadow', 'fontFamily', 'size', 'bold', 'underline', 'strikethrough', 'letterSpacing', 'textGradient', 'gradientColor2', 'textStroke', 'textStrokeColor', 'radius', 'blur', 'strokeWidth', 'strokeColor', 'brightness', 'saturate', 'hueRotate', 'fit', 'w', 'h', 'rotation'];
+  styleProps.forEach(function (p) { if (el[p] !== undefined) preset[p] = el[p]; });
+  var presets = getStylePresets();
+  presets.unshift(preset);
+  if (presets.length > 20) presets = presets.slice(0, 20);
+  try { localStorage.setItem(STYLE_PRESET_KEY, JSON.stringify(presets)); } catch(e) {}
+  toast('💾 样式已保存: ' + name, 'success');
+}
+export function applyStylePreset(idx, preset) {
+  if (idx < 0 || idx >= S.elements.length || !preset) return;
+  captureState('应用预设样式');
+  var el = S.elements[idx];
+  Object.keys(preset).forEach(function (p) {
+    if (p === 'name' || p === 'type' || p === 'timestamp') return;
+    if (el[p] !== undefined) el[p] = preset[p];
+  });
+  S.setDirty(true);
+  toast('📦 已应用: ' + preset.name, 'success');
 }

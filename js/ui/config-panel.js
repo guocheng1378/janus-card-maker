@@ -415,14 +415,16 @@ function renderElementEditorInline(el, idx, device) {
     html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin-bottom:12px;background:rgba(225,112,85,0.1);border:1px solid rgba(225,112,85,0.3);border-radius:8px;font-size:12px;color:#e17055"><span>⚠️</span> 此元素位于摄像头遮挡区内，建议将 X 调整到 ≥ ' + safeX + '</div>';
   }
 
-  // Element type header with lock toggle
+  // Element type header with lock + visible toggle
   html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">';
   html += '<div style="display:flex;align-items:center;gap:8px">';
   html += '<span class="el-badge">' + el.type + '</span>';
   html += '<span style="font-size:13px;font-weight:600">' + getElementTypeLabel(el) + '</span>';
   html += '</div>';
-  html += '<label class="check-label" style="font-size:11px"><input type="checkbox" data-prop="locked" data-idx="' + idx + '"' + (el.locked ? ' checked' : '') + '> 🔒 锁定</label>';
-  html += '</div>';
+  html += '<div style="display:flex;gap:8px;align-items:center">';
+  html += '<label class="check-label" style="font-size:11px"><input type="checkbox" data-prop="visible" data-idx="' + idx + '"' + (el.visible !== false ? ' checked' : '') + '> 👁</label>';
+  html += '<label class="check-label" style="font-size:11px"><input type="checkbox" data-prop="locked" data-idx="' + idx + '"' + (el.locked ? ' checked' : '') + '> 🔒</label>';
+  html += '</div></div>';
 
   // ── Section: Position & Size ──
   html += '<div class="el-editor-section">';
@@ -434,7 +436,7 @@ function renderElementEditorInline(el, idx, device) {
   if (el.h !== undefined) html += fieldHtml('高', '<input type="number" value="' + (el.h || 100) + '" data-prop="h" data-idx="' + idx + '" min="1" max="9999">');
   if (el.r !== undefined) html += fieldHtml('半径', '<input type="number" value="' + (el.r || 30) + '" data-prop="r" data-idx="' + idx + '" min="1" max="999">');
   html += '</div>';
-  // Quick position/size buttons
+  // Align buttons
   html += '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px">';
   html += '<button class="el-btn" data-align="left" data-ai="' + idx + '" style="font-size:10px;padding:4px 8px">⬅ 左</button>';
   html += '<button class="el-btn" data-align="hcenter" data-ai="' + idx + '" style="font-size:10px;padding:4px 8px">↔ 中</button>';
@@ -443,7 +445,7 @@ function renderElementEditorInline(el, idx, device) {
   html += '<button class="el-btn" data-align="vcenter" data-ai="' + idx + '" style="font-size:10px;padding:4px 8px">↕ 中</button>';
   html += '<button class="el-btn" data-align="bottom" data-ai="' + idx + '" style="font-size:10px;padding:4px 8px">⬇ 底</button>';
   html += '</div>';
-  // Quick size buttons (for applicable types)
+  // Quick size buttons
   if (el.type === 'rectangle' || el.type === 'image' || el.type === 'video' || el.type === 'progress') {
     html += '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">';
     html += '<button class="el-btn" data-qsize="full" data-qi="' + idx + '" style="font-size:10px;padding:4px 8px">⛶ 全屏</button>';
@@ -474,6 +476,10 @@ function renderElementEditorInline(el, idx, device) {
         return '<button class="el-btn" data-prop="textAlign" data-idx="' + idx + '" data-val="' + a + '" style="flex:1;justify-content:center;font-size:12px;padding:6px;background:' + (isActive ? 'var(--accent-glow)' : '') + ';border-color:' + (isActive ? 'var(--accent)' : 'var(--border)') + '">' + icons[a] + '</button>';
       }).join('') + '</div></div>';
     html += fieldHtml('加粗', '<label class="toggle-switch"><input type="checkbox" data-prop="bold" data-idx="' + idx + '"' + (el.bold ? ' checked' : '') + '><span class="toggle-slider"></span></label>');
+    // Text decorations
+    html += fieldHtml('下划线', '<label class="toggle-switch"><input type="checkbox" data-prop="underline" data-idx="' + idx + '"' + (el.underline ? ' checked' : '') + '><span class="toggle-slider"></span></label>');
+    html += fieldHtml('删除线', '<label class="toggle-switch"><input type="checkbox" data-prop="strikethrough" data-idx="' + idx + '"' + (el.strikethrough ? ' checked' : '') + '><span class="toggle-slider"></span></label>');
+    html += fieldHtml('字间距', '<input type="number" value="' + (el.letterSpacing || 0) + '" data-prop="letterSpacing" data-idx="' + idx + '" min="-5" max="20" step="0.5">');
     html += fieldHtml('多行', '<label class="toggle-switch"><input type="checkbox" data-prop="multiLine" data-idx="' + idx + '"' + (el.multiLine ? ' checked' : '') + '><span class="toggle-slider"></span></label>');
     if (el.multiLine) {
       html += fieldHtml('行高', '<input type="range" min="10" max="30" value="' + Math.round((el.lineHeight || 1.4) * 10) + '" data-prop="lineHeight" data-idx="' + idx + '" step="1"><span style="font-size:10px;color:var(--text3)">' + (el.lineHeight || 1.4).toFixed(1) + '</span>');
@@ -482,7 +488,6 @@ function renderElementEditorInline(el, idx, device) {
 
   } else if (el.type === 'rectangle') {
     html += colorFieldHtml('颜色', el.color || '#333333', 'color', idx);
-    // Gradient toggle
     html += fieldHtml('渐变', '<div style="display:flex;gap:6px;align-items:center">' +
       colorFieldHtml2(el.fillColor2 || '', 'fillColor2', idx) +
       (el.fillColor2 ? '<button class="el-btn" data-clear-fill2 data-idx="' + idx + '" style="font-size:10px;padding:3px 6px">✕</button>' : '') +
@@ -512,12 +517,9 @@ function renderElementEditorInline(el, idx, device) {
       ['cover', 'contain', 'fill', 'none'].map(function (f) { return '<option value="' + f + '"' + ((el.fit || 'cover') === f ? ' selected' : '') + '>' + f + '</option>'; }).join('') +
       '</select></div>';
     html += fieldHtml('圆角', '<input type="number" value="' + (el.radius || 0) + '" data-prop="radius" data-idx="' + idx + '" min="0" max="500">');
-    if (el.type === 'image' && el.fileName) {
-      html += '<div style="grid-column:1/-1"><button class="el-btn" data-pick="image" style="font-size:11px">🖼 替换图片</button></div>';
-    }
-    if (el.type === 'video' && el.fileName) {
-      html += '<div style="grid-column:1/-1"><button class="el-btn" data-pick="video" style="font-size:11px">🎬 替换视频</button></div>';
-    }
+    // File replace buttons
+    if (el.type === 'image' && el.fileName) html += '<div style="grid-column:1/-1"><button class="el-btn" data-pick="image" style="font-size:11px">🖼 替换图片</button></div>';
+    if (el.type === 'video' && el.fileName) html += '<div style="grid-column:1/-1"><button class="el-btn" data-pick="video" style="font-size:11px">🎬 替换视频</button></div>';
 
   } else if (el.type === 'progress') {
     html += fieldHtml('进度', '<input type="range" min="0" max="100" value="' + (el.value || 60) + '" data-prop="value" data-idx="' + idx + '"><span style="font-size:10px;color:var(--text3)">' + (el.value || 60) + '%</span>');
@@ -526,7 +528,7 @@ function renderElementEditorInline(el, idx, device) {
     html += fieldHtml('圆角', '<input type="number" value="' + (el.radius || 4) + '" data-prop="radius" data-idx="' + idx + '" min="0" max="50">');
 
   } else if (el.type === 'lottie') {
-    html += '<div style="grid-column:1/-1;padding:12px;background:rgba(155,89,182,0.1);border-radius:8px;font-size:12px;color:#9b59b6">🎭 Lottie 动画仅支持浏览器预览，MAML 不支持此格式。<br>建议替换为 Image 或 Video 元素。</div>';
+    html += '<div style="grid-column:1/-1;padding:12px;background:rgba(155,89,182,0.1);border-radius:8px;font-size:12px;color:#9b59b6">🎭 Lottie 仅浏览器预览可用，建议替换为 Image 或 Video。</div>';
     html += fieldHtml('速度', '<input type="range" min="1" max="50" value="' + Math.round((el.speed || 1) * 10) + '" data-prop="speed" data-idx="' + idx + '"><span style="font-size:10px;color:var(--text3)">' + (el.speed || 1).toFixed(1) + 'x</span>');
   }
   html += '</div></div>';
@@ -545,7 +547,19 @@ function renderElementEditorInline(el, idx, device) {
         return '<option value="' + s.v + '"' + ((el.shadow || 'none') === s.v ? ' selected' : '') + '>' + s.l + '</option>';
       }).join('') + '</select></div>';
   }
+  // CSS Filters (image/video/rectangle)
+  if (el.type === 'image' || el.type === 'video' || el.type === 'rectangle') {
+    html += fieldHtml('亮度', '<input type="range" min="0" max="200" value="' + (el.brightness !== undefined ? el.brightness : 100) + '" data-prop="brightness" data-idx="' + idx + '"><span style="font-size:10px;color:var(--text3)">' + (el.brightness !== undefined ? el.brightness : 100) + '%</span>');
+    html += fieldHtml('饱和度', '<input type="range" min="0" max="200" value="' + (el.saturate !== undefined ? el.saturate : 100) + '" data-prop="saturate" data-idx="' + idx + '"><span style="font-size:10px;color:var(--text3)">' + (el.saturate !== undefined ? el.saturate : 100) + '%</span>');
+    html += fieldHtml('色相', '<input type="range" min="0" max="360" value="' + (el.hueRotate || 0) + '" data-prop="hueRotate" data-idx="' + idx + '"><span style="font-size:10px;color:var(--text3)">' + (el.hueRotate || 0) + '°</span>');
+  }
   html += '</div></div>';
+
+  // ── Section: MAML 变量绑定 ──
+  html += '<div class="el-editor-section">';
+  html += '<div class="el-editor-section-title">🔗 MAML 变量绑定</div>';
+  html += renderMamlVarBinding(el, idx);
+  html += '</div>';
 
   // ── Color presets ──
   if (el.color !== undefined) {
@@ -561,14 +575,77 @@ function renderElementEditorInline(el, idx, device) {
   html += '<div style="display:flex;gap:4px;flex-wrap:wrap">';
   html += '<button class="el-btn" data-duplicate="' + idx + '" style="font-size:11px">📋 复制</button>';
   if (S.clipboard) html += '<button class="el-btn" data-paste-el style="font-size:11px">📌 粘贴</button>';
+  html += '<button class="el-btn" data-copy-style="' + idx + '" style="font-size:11px">🎨 复制样式</button>';
+  if (hasStyleClipboard()) html += '<button class="el-btn" data-paste-style="' + idx + '" style="font-size:11px">📌 粘贴样式</button>';
   html += '<button class="el-btn" data-del="' + idx + '" style="font-size:11px;color:var(--red)">🗑️ 删除</button>';
+  html += '</div>';
+  // Distribute & match size (conditional)
+  if (S.elements.length >= 3) {
+    html += '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">';
+    html += '<button class="el-btn" data-distribute="horizontal" style="font-size:10px;padding:4px 8px">↔ 水平分布</button>';
+    html += '<button class="el-btn" data-distribute="vertical" style="font-size:10px;padding:4px 8px">↕ 垂直分布</button>';
+    html += '</div>';
+  }
+  if (S.elements.length >= 2) {
+    html += '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">';
+    html += '<button class="el-btn" data-match-size="width" style="font-size:10px;padding:4px 8px">📏 同宽</button>';
+    html += '<button class="el-btn" data-match-size="height" style="font-size:10px;padding:4px 8px">📐 同高</button>';
+    html += '<button class="el-btn" data-match-size="both" style="font-size:10px;padding:4px 8px">⬛ 同大小</button>';
+    html += '</div>';
+  }
+  // Style presets
+  html += '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">';
+  html += '<button class="el-btn" data-save-style="' + idx + '" style="font-size:11px">💾 保存样式</button>';
+  html += '<button class="el-btn" data-apply-styles style="font-size:11px">📦 应用样式</button>';
   html += '</div>';
   html += '</div>';
 
-  // ── Design Tools (collapsed by default) ──
+  // ── Design Tools ──
   html += renderDesignToolsInline(idx);
 
   html += '</div>';
+  return html;
+}
+
+// ── MAML Variable Binding Panel ──
+var MAML_VARS = [
+  { var: '#step', desc: '步数', group: '健康' },
+  { var: '#battery_level', desc: '电量百分比', group: '健康' },
+  { var: '#battery_charging', desc: '是否充电', group: '健康' },
+  { var: '#weather_temp', desc: '天气温度', group: '天气' },
+  { var: '#weather_desc', desc: '天气描述', group: '天气' },
+  { var: '#weather_humidity', desc: '湿度', group: '天气' },
+  { var: '#weather_city', desc: '城市名', group: '天气' },
+  { var: '#music_title', desc: '音乐标题', group: '音乐' },
+  { var: '#music_artist', desc: '音乐歌手', group: '音乐' },
+  { var: '#view_width', desc: '视图宽度', group: '系统' },
+  { var: '#view_height', desc: '视图高度', group: '系统' },
+  { var: '#marginL', desc: '左边距(摄像头)', group: '系统' },
+  { var: '#hour', desc: '当前小时', group: '时间' },
+  { var: '#minute', desc: '当前分钟', group: '时间' },
+  { var: '#month', desc: '当前月份', group: '时间' },
+  { var: '#day', desc: '当前日期', group: '时间' },
+  { var: '#day_of_week', desc: '星期几', group: '时间' },
+];
+
+function renderMamlVarBinding(el, idx) {
+  var html = '<div style="margin-bottom:6px"><input type="text" id="mamlVarSearch" placeholder="搜索变量..." style="width:100%;padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;outline:none"></div>';
+  var groups = {};
+  MAML_VARS.forEach(function (v) {
+    if (!groups[v.group]) groups[v.group] = [];
+    groups[v.group].push(v);
+  });
+  Object.keys(groups).forEach(function (g) {
+    html += '<div style="margin-bottom:4px"><div style="font-size:10px;color:var(--text3);font-weight:600;margin-bottom:2px">' + g + '</div>';
+    html += '<div style="display:flex;gap:3px;flex-wrap:wrap">';
+    groups[g].forEach(function (v) {
+      html += '<button class="el-btn maml-var-btn" data-var-insert="' + v.var + '" data-var-idx="' + idx + '" style="font-size:10px;padding:3px 8px" title="' + v.desc + '">' + v.var + '</button>';
+    });
+    html += '</div></div>';
+  });
+  // Expression editor
+  html += '<div style="margin-top:6px"><label style="font-size:10px;color:var(--text2)">表达式 (绑定到文字/宽度等)</label>';
+  html += '<input type="text" value="' + esc(el.expression || '') + '" data-prop="expression" data-idx="' + idx + '" placeholder="如: #step 步 或 #weather_temp°" style="width:100%;padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;outline:none;margin-top:3px"></div>';
   return html;
 }
 

@@ -318,6 +318,11 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
         }
         var w = el.multiLine || (el.textAlign && el.textAlign !== 'left') ? 'width:' + ((el.w || 200) * self.scale) + 'px;' : '';
         var lh = el.multiLine ? 'white-space:pre-wrap;line-height:' + (el.lineHeight || 1.4) + ';' : '';
+        var tDeco = '';
+        if (el.underline && el.strikethrough) tDeco = 'text-decoration:underline line-through;';
+        else if (el.underline) tDeco = 'text-decoration:underline;';
+        else if (el.strikethrough) tDeco = 'text-decoration:line-through;';
+        var lSpace = el.letterSpacing ? 'letter-spacing:' + (el.letterSpacing * self.scale) + 'px;' : '';
         var gradStyle = '';
         if (el.textGradient && el.textGradient !== 'none') {
           var gradColors = { sunset: '#ff6b6b,#feca57', ocean: '#0984e3,#00cec9', neon: '#ff00ff,#00ffff', gold: '#f39c12,#fdcb6e', aurora: '#6c5ce7,#00b894' };
@@ -330,11 +335,13 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
         }
         var textContent = self.esc(el.text || '');
         if (el.multiLine) textContent = textContent.replace(/\n/g, '<br>');
-        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;font-size:' + el.size * self.scale + 'px;color:' + el.color + ';' + ff + w + ta + fw + lh + sh + op + rot + gradStyle + strokeStyle + dc + '">' + textContent + '</div>';
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;font-size:' + el.size * self.scale + 'px;color:' + el.color + ';' + ff + w + ta + fw + lh + sh + op + rot + gradStyle + strokeStyle + tDeco + lSpace + dc + '">' + textContent + '</div>';
       }
       case 'rectangle':
         var rectBg = el.fillColor2 ? 'background:linear-gradient(135deg,' + el.color + ',' + el.fillColor2 + ')' : 'background:' + el.color;
-        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + el.w * self.scale + 'px;height:' + el.h * self.scale + 'px;' + rectBg + ';border-radius:' + (el.radius || 0) * self.scale + 'px;' + op + rot + dc + '"></div>' + rh + sizeLabel;
+        var rectBorder = el.strokeWidth > 0 ? 'border:' + (el.strokeWidth * self.scale) + 'px solid ' + (el.strokeColor || '#ffffff') + ';' : '';
+        var rectFilter = buildFilter(el);
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + el.w * self.scale + 'px;height:' + el.h * self.scale + 'px;' + rectBg + ';border-radius:' + (el.radius || 0) * self.scale + 'px;' + op + rot + rectBorder + rectFilter + dc + '"></div>' + rh + sizeLabel;
       case 'circle': {
         var circBorder = el.strokeWidth > 0 ? 'border:' + (el.strokeWidth * self.scale) + 'px solid ' + (el.strokeColor || '#ffffff') + ';' : '';
         return '<div data-el-idx="' + i + '" style="position:absolute;left:' + (self.camW + (el.x - el.r) * self.scale) + 'px;top:' + (el.y - el.r) * self.scale + 'px;width:' + el.r * 2 * self.scale + 'px;height:' + el.r * 2 * self.scale + 'px;background:' + el.color + ';border-radius:50%;' + circBorder + op + rot + dc + '"></div>';
@@ -359,12 +366,16 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
         return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 120) * self.scale + 'px;height:' + (el.h || 120) * self.scale + 'px;background:rgba(108,92,231,0.15);border:1px dashed rgba(108,92,231,0.4);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;color:#6c5ce7;gap:4px;' + dc + '">🎭<span style="font-size:8px;opacity:0.7">Lottie (仅预览)</span></div>' + sizeLabel;
       case 'image': {
         var fi = el.fileName ? files[el.fileName] : null;
-        if (fi) return '<img data-el-idx="' + i + '" src="' + fi.dataUrl + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 100) * self.scale + 'px;height:' + (el.h || 100) * self.scale + 'px;object-fit:' + (el.fit || 'cover') + ';border-radius:2px;' + dc + '">' + rh + sizeLabel;
+        var imgFilter = buildFilter(el);
+        var imgRadius = el.radius ? 'border-radius:' + (el.radius * self.scale) + 'px;' : '';
+        if (fi) return '<img data-el-idx="' + i + '" src="' + fi.dataUrl + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 100) * self.scale + 'px;height:' + (el.h || 100) * self.scale + 'px;object-fit:' + (el.fit || 'cover') + ';' + imgRadius + imgFilter + dc + '">' + rh + sizeLabel;
         return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 100) * self.scale + 'px;height:' + (el.h || 100) * self.scale + 'px;background:#222;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#666;' + dc + '">🖼</div>' + rh + sizeLabel;
       }
       case 'video': {
         var fi2 = el.fileName ? files[el.fileName] : null;
-        if (fi2) return '<video data-el-idx="' + i + '" src="' + fi2.dataUrl + '" muted loop autoplay style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 240) * self.scale + 'px;height:' + (el.h || 135) * self.scale + 'px;object-fit:' + (el.fit || 'cover') + ';border-radius:2px;' + dc + '"></video>' + rh + sizeLabel;
+        var vidFilter = buildFilter(el);
+        var vidRadius = el.radius ? 'border-radius:' + (el.radius * self.scale) + 'px;' : '';
+        if (fi2) return '<video data-el-idx="' + i + '" src="' + fi2.dataUrl + '" muted loop autoplay style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 240) * self.scale + 'px;height:' + (el.h || 135) * self.scale + 'px;object-fit:' + (el.fit || 'cover') + ';' + vidRadius + vidFilter + dc + '"></video>' + rh + sizeLabel;
         return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 240) * self.scale + 'px;height:' + (el.h || 135) * self.scale + 'px;background:#1a1a2e;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#555;' + dc + '">🎬</div>' + rh + sizeLabel;
       }
       case 'progress': {
@@ -688,3 +699,12 @@ function renderRealDevicePreview(device, showCam, tpl, cfg) {
 }
 
 export { PreviewRenderer };
+
+// ─── CSS Filter Builder ───────────────────────────────────────────
+function buildFilter(el) {
+  var filters = [];
+  if (el.brightness !== undefined && el.brightness !== 100) filters.push('brightness(' + el.brightness + '%)');
+  if (el.saturate !== undefined && el.saturate !== 100) filters.push('saturate(' + el.saturate + '%)');
+  if (el.hueRotate) filters.push('hue-rotate(' + el.hueRotate + 'deg)');
+  return filters.length > 0 ? 'filter:' + filters.join(' ') + ';' : '';
+}
