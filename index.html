@@ -36,6 +36,7 @@
       <button class="theme-toggle" id="snapshotsBtn" onclick="JCM.showSnapshots()" title="版本快照" aria-label="版本快照">📸</button>
       <button class="theme-toggle" id="helpBtn" onclick="JCM.toggleHelp()" title="快捷键帮助 (Ctrl+K)" aria-label="快捷键帮助">⌨️</button>
       <button class="theme-toggle" id="historyBtn" onclick="JCM.toggleHistory()" title="操作历史" aria-label="操作历史">📜</button>
+      <button class="theme-toggle layer-panel-toggle" id="layerPanelToggle" onclick="JCM.toggleLayerPanel()" title="图层管理 (Ctrl+L)" aria-label="图层管理">📚</button>
       <button class="theme-toggle" id="changelogBtn" onclick="JCM.toggleChangelog()" title="更新日志" aria-label="更新日志">📝</button>
       <button class="lang-switch" id="langSwitchBtn" onclick="JCM.switchLang()" title="切换语言">EN</button>
       <a class="theme-toggle" href="REAREYE_USAGE.md" target="_blank" title="REAREye 使用说明" aria-label="REAREye 使用说明">📱</a>
@@ -224,6 +225,15 @@
       </button>
     </div>
   </footer>
+<!-- Layer Panel -->
+<div class="layer-panel" id="layerPanel">
+  <div class="layer-panel-header">
+    <span>📚 图层管理</span>
+    <button class="layer-panel-close" onclick="JCM.toggleLayerPanel()" aria-label="关闭图层面板">✕</button>
+  </div>
+  <div id="layerPanelList"></div>
+</div>
+
 </div>
 
 <!-- Keyboard Shortcut Help Modal -->
