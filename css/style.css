@@ -1155,3 +1155,49 @@ kbd{
   color: var(--accent) !important;
   background: var(--accent-bg) !important;
 }
+
+/* ─── Toolbar Responsive ──────────────────────────────────────── */
+.desktop-only { display: flex; }
+.mobile-only { display: none; }
+
+@media (max-width: 768px) {
+  .desktop-only { display: none !important; }
+  .mobile-only { display: flex !important; }
+  .topbar-right { gap: 4px; }
+  .topbar-right .theme-toggle { width: 32px; height: 32px; font-size: 14px; }
+}
+
+/* More Menu Dropdown */
+.more-menu-wrap { position: relative; }
+.more-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+  min-width: 180px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+}
+.more-menu button,
+.more-menu a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 6px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.more-menu button:hover,
+.more-menu a:hover { background: var(--hover); }
