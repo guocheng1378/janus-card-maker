@@ -2,7 +2,7 @@
 import * as S from '../state.js';
 import { getDevice, cameraZoneWidth } from '../devices.js';
 import { TEMPLATES, TPL_CATEGORIES, TPL_CATEGORY_MAP } from '../templates/index.js';
-import { renderTemplatePreview } from '../live-preview.js';
+import { renderTemplatePreview, PreviewRenderer } from '../live-preview.js';
 import { escHtml, getRecentColors, addRecentColor, getFavorites, toggleFavorite } from '../utils.js';
 import { isInCameraZone } from './elements.js';
 
@@ -39,7 +39,13 @@ export function generateTplThumbnail(tpl) {
   tpl.config.forEach(function (g) { g.fields.forEach(function (f) { cfg[f.key] = f.default; }); });
   var s = 0.22, w = 420 * s, h = 252 * s;
   try {
-    var html = renderTemplatePreview({ width: 976, height: 596, cameraZoneRatio: 0.3 }, false, tpl, cfg);
+    var device = { width: 976, height: 596, cameraZoneRatio: 0.3 };
+    var html = renderTemplatePreview(device, false, tpl, cfg);
+    // For templates with elements(), also render elements in the thumbnail
+    if (tpl.elements) {
+      var els = tpl.elements(cfg);
+      html += new PreviewRenderer(device, false).renderElements(els, {}, -1);
+    }
     var result = '<div style="width:' + w + 'px;height:' + h + 'px;border-radius:6px;overflow:hidden;position:relative;flex-shrink:0"><div style="position:absolute;left:0;top:0;width:' + (976 * s) + 'px;height:' + (596 * s) + 'px;transform-origin:top left;transform:scale(' + s + ')">' + html + '</div></div>';
     _thumbCache[tpl.id] = result;
     return result;
