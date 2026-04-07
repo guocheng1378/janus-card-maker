@@ -386,7 +386,7 @@ PreviewRenderer.prototype.renderLyrics = function (c) {
   var lyricS = Math.round((c.lyricSize || 22) * this.scale);
   var subS = Math.max(10, lyricS - 4);
   var demoLyric = '我已经爱上你\n疯狂地爱上你';
-  var demoTrans = 'I've fallen for you\nCrazy in love with you';
+  var demoTrans = "I've fallen for you\nCrazy in love with you";
   var demoRom = 'Wo yi jing ai shang ni';
 
   var html = this.bg(c.bgColor, '');

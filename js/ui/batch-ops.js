@@ -30,7 +30,7 @@ export function openBatchOpsModal(callbacks) {
   html += '<div id="boElementList" style="max-height:120px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:4px">';
   S.elements.forEach(function (el, i) {
     var label = el.type === 'text' ? (el.text || '文字').substring(0, 10) : el.type + ' #' + (i + 1);
-    html += '<label style="display:flex;align-items:center;gap:6px;padding:4px 6px;cursor:pointer;font-size:12px;border-radius:4px" onmouseover="this.style.background='var(--surface3)'" onmouseout="this.style.background=''">' +
+    html += '<label style="display:flex;align-items:center;gap:6px;padding:4px 6px;cursor:pointer;font-size:12px;border-radius:4px" onmouseover="this.style.background=\'var(--surface3)\'" onmouseout="this.style.background=\'\'">' +
       '<input type="checkbox" class="bo-check" data-bo-idx="' + i + '" checked> ' +
       '<span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:' + (el.color || '#333') + ';border:1px solid var(--border)"></span>' +
       '<span style="color:var(--text2)">' + el.type + '</span> ' +
