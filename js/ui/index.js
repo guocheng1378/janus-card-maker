@@ -25,7 +25,7 @@ import { openLibraryModal } from './card-library-ui.js';
 import { saveToLibrary } from '../card-library.js';
 import { openMarketModal } from './template-market.js';
 import { showQRModal } from './qr-share.js';
-import { t, getLang, setLang, getAvailableLangs } from '../i18n.js';
+import { t, getLang, setLang, getAvailableLangs, applyI18n } from '../i18n.js';
 import { openDesignTools } from './design-tools.js';
 import { openBindingWizard } from './binding-wizard.js';
 import { openCommandPalette, isCommandPaletteOpen } from './command-palette.js';
@@ -867,6 +867,7 @@ export function initUI() {
   } catch (e) {}
 
   renderTplGrid();
+  applyI18n();
   setupEvents();
   setupCodeEditor();
   initSimpleMode();
@@ -1045,6 +1046,7 @@ Object.assign(window.JCM, {
     var next = getLang() === 'zh' ? 'en' : 'zh';
     setLang(next);
     toast(next === 'zh' ? '已切换到中文' : 'Switched to English', 'success');
+    applyI18n();
     // Update language button text
     var langBtn = document.getElementById('langSwitchBtn');
     if (langBtn) langBtn.textContent = next === 'zh' ? 'EN' : '中';

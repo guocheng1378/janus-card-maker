@@ -26,12 +26,13 @@ import schedule from './schedule.js';
 import notification from './notification.js';
 import carousel from './carousel.js';
 import quick_settings from './quick_settings.js';
+import composite from './composite.js';
 
 export const TEMPLATES = [
   clock, quote, battery, status, countdown, music, gradient,
   weather, steps, calendar, dualclock, dailyquote, ring, dashboard,
   image, custom, weather_real, music_real, lyrics, video_wallpaper,
-  health, schedule, notification, carousel, quick_settings,
+  health, schedule, notification, carousel, quick_settings, composite,
 ];
 
 export const TPL_CATEGORIES = [

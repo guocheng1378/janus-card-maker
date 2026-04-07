@@ -581,6 +581,52 @@ PreviewRenderer.prototype.renderCarousel = function (c) {
   return html;
 };
 
+
+PreviewRenderer.prototype.renderComposite = function (c) {
+  var bg = c.bgColor || '#0a0e1a';
+  var demoSteps = c.demoSteps || 6542;
+  var goal = parseInt(c.goal) || 10000;
+  var pct = Math.min(Math.round(demoSteps / goal * 100), 100);
+  var ringR = Math.round(42 * this.scale);
+  var ringW = Math.round((c.ringSize || 8) * this.scale);
+  var lx = this.camW;
+  var sw = PREVIEW_W - lx;
+  var ringCx = lx + sw * 0.3;
+  var weatherX = lx + sw * 0.6;
+
+  var html = this.bg(bg, '');
+
+  // Ring background
+  html += '<svg style="position:absolute;inset:0;width:100%;height:100%" viewBox="0 0 ' + PREVIEW_W + ' 252">';
+  html += '<circle cx="' + ringCx + '" cy="85" r="' + ringR + '" fill="none" stroke="' + (c.ringTrack || '#1a1f2e') + '" stroke-width="' + ringW + '" />';
+  html += '<circle cx="' + ringCx + '" cy="85" r="' + ringR + '" fill="none" stroke="' + (c.ringColor || '#6c5ce7') + '" stroke-width="' + ringW + '" ' +
+    'stroke-dasharray="' + (2 * Math.PI * ringR * pct / 100) + ' ' + (2 * Math.PI * ringR) + '" ' +
+    'stroke-linecap="round" transform="rotate(-90 ' + ringCx + ' 85)" />';
+  html += '</svg>';
+
+  // Step value
+  html += '<div style="position:absolute;left:' + (ringCx - 30) + 'px;top:' + (85 - Math.round(16 * this.scale)) + 'px;width:60px;text-align:center;font-size:' + Math.round(24 * this.scale) + 'px;color:' + (c.textColor || '#fff') + ';font-weight:700">' + demoSteps.toLocaleString() + '</div>';
+  html += '<div style="position:absolute;left:' + (ringCx - 8) + 'px;top:' + (85 + Math.round(6 * this.scale)) + 'px;font-size:' + Math.round(10 * this.scale) + 'px;color:' + (c.labelColor || '#666') + '">步</div>';
+
+  // Weather
+  html += '<div style="position:absolute;left:' + weatherX + 'px;top:45px;font-size:' + Math.round(30 * this.scale) + 'px;color:' + (c.tempColor || '#fff') + ';font-weight:700">23°</div>';
+  html += '<div style="position:absolute;left:' + weatherX + 'px;top:' + (45 + Math.round(34 * this.scale)) + 'px;font-size:' + Math.round(11 * this.scale) + 'px;color:' + (c.descColor || '#888') + '">晴</div>';
+  html += '<div style="position:absolute;left:' + weatherX + 'px;top:' + (45 + Math.round(34 * this.scale) + 18) + 'px;font-size:' + Math.round(10 * this.scale) + 'px;color:' + (c.descColor || '#888') + ';opacity:0.5">最高26° 最低18°</div>';
+
+  // Divider
+  var divX = lx + sw * 0.5;
+  html += '<div style="position:absolute;left:' + divX + 'px;top:30px;width:1px;height:130px;background:' + (c.labelColor || '#666') + ';opacity:0.1"></div>';
+
+  // City label
+  html += '<div style="position:absolute;left:' + (ringCx - 20) + 'px;top:148px;width:40px;text-align:center;font-size:' + Math.round(9 * this.scale) + 'px;color:' + (c.labelColor || '#666') + ';opacity:0.6">' + this.esc(c.city || '北京') + '</div>';
+
+  // Time
+  html += '<div style="position:absolute;left:' + lx + 'px;top:185px;font-size:' + Math.round(18 * this.scale) + 'px;color:' + (c.textColor || '#fff') + ';font-weight:700;padding-left:10px">' + this.fmtTime(new Date(), 'HH:mm') + '</div>';
+  html += '<div style="position:absolute;left:' + (lx + Math.round(60 * this.scale)) + 'px;top:' + (185 + Math.round(4 * this.scale)) + 'px;font-size:' + Math.round(10 * this.scale) + 'px;color:' + (c.descColor || '#888') + '">' + this.fmtDate(new Date(), 'MM/dd E') + '</div>';
+
+  return html;
+};
+
 // ─── Render Template Preview (dispatch) ───────────────────────────
 export function renderTemplatePreview(device, showCam, tpl, cfg) {
   if (tpl.rawXml) {
@@ -606,6 +652,7 @@ export function renderTemplatePreview(device, showCam, tpl, cfg) {
     case 'custom':          return r.renderCustom(cfg);
     case 'video_wallpaper': return r.renderVideoWallpaper(cfg);
     case 'carousel':        return r.renderCarousel(cfg);
+    case 'composite':       return r.renderComposite(cfg);
     default:                return '';
   }
 }
