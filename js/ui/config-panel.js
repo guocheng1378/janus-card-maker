@@ -396,19 +396,6 @@ function renderDesignToolsInline(idx) {
 
   return html;
 }
-  var html = '<div class="color-presets">' +
-    COLOR_PRESETS.map(function (c) {
-      return '<div class="color-swatch" style="background:' + c + '" data-color="' + c + '" data-cprop="' + prop + '" data-cidx="' + idx + '" title="' + c + '"></div>';
-    }).join('') + '</div>';
-  html += '<div class="theme-presets">';
-  THEME_PRESETS.forEach(function (theme) {
-    html += '<div class="theme-preset" data-theme-cprop="' + prop + '" data-theme-cidx="' + idx + '" title="' + theme.name + '">' +
-      theme.colors.map(function (c) { return '<div class="theme-dot" style="background:' + c + '"></div>'; }).join('') +
-      '<span class="theme-name">' + theme.name + '</span></div>';
-  });
-  html += '</div>';
-  return html;
-}
 
 function renderElementEditorInline(el, idx, device) {
   var html = '<div class="el-detail">';
