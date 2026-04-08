@@ -17,22 +17,95 @@ function _setMarketGistId(id) {
 
 // Fallback hardcoded templates
 var LOCAL_TEMPLATES = [
-  { id: 'ct_cyberpunk_clock', name: '赛博朋克时钟', author: 'community', icon: '🌃', desc: '霓虹风格时钟，深紫背景 + 荧光绿时间', likes: 128,
-    template: { tplId: 'clock', cfg: { cardName: '赛博朋克时钟', bgColor: '#0d0221', timeColor: '#39ff14', dateColor: '#ff00ff', timeSize: 56, dateFormat: 'MM/dd EEEE' } } },
-  { id: 'ct_minimal_weather', name: '极简天气', author: 'community', icon: '🌤️', desc: '纯白背景，大字温度，极简风格', likes: 95,
-    template: { tplId: 'weather', cfg: { cardName: '极简天气', bgColor: '#ffffff', tempColor: '#1a1a2e', tempSize: 64, descColor: '#888888', city: '北京' } } },
-  { id: 'ct_sunset_gradient', name: '日落渐变', author: 'community', icon: '🌅', desc: '温暖日落色调渐变背景 + 励志文字', likes: 87,
-    template: { tplId: 'gradient', cfg: { cardName: '日落渐变', bgColor1: '#e55039', bgColor2: '#f39c12', textColor: '#ffffff', textSize: 28, text: '每一天都是\\n新的开始' } } },
-  { id: 'ct_retro_battery', name: '复古电池', author: 'community', icon: '🔋', desc: '复古游戏机风格电池显示', likes: 72,
-    template: { tplId: 'battery', cfg: { cardName: '复古电池', bgColor: '#1a1a1a', textColor: '#00ff00', barColor: '#00ff41', accentColor: '#ff6600', demoLevel: 78 } } },
-  { id: 'ct_night_steps', name: '夜间步数', author: 'community', icon: '🌙', desc: '深蓝夜间主题步数卡片', likes: 63,
+  // ─── 时钟类 ───
+  { id: 'ct_cyberpunk_clock', name: '赛博朋克时钟', author: 'REAREye', icon: '🌃', desc: '霓虹风格，深紫背景 + 荧光绿时间', likes: 256,
+    template: { tplId: 'clock', cfg: { cardName: '赛博朋克时钟', bgColor: '#0d0221', timeColor: '#39ff14', dateColor: '#ff00ff', timeSize: 56, dateFormat: 'MM/dd EEEE', timeFormat: 'HH:mm' } } },
+  { id: 'ct_ocean_clock', name: '海洋时钟', author: 'REAREye', icon: '🌊', desc: '海蓝色调 + 大号时间显示', likes: 198,
+    template: { tplId: 'clock', cfg: { cardName: '海洋时钟', bgColor: '#0c2461', timeColor: '#48dbfb', dateColor: '#74b9ff', timeSize: 60, dateFormat: 'MM/dd EEEE', timeFormat: 'HH:mm' } } },
+  { id: 'ct_neon_clock', name: '霓虹时钟', author: 'REAREye', icon: '💜', desc: '纯黑底 + 紫色霓虹光效', likes: 187,
+    template: { tplId: 'clock', cfg: { cardName: '霓虹时钟', bgColor: '#000000', timeColor: '#a29bfe', dateColor: '#6c5ce7', timeSize: 64, dateFormat: 'yyyy/MM/dd EEEE', timeFormat: 'HH:mm' } } },
+  { id: 'ct_minimal_clock', name: '极简时钟', author: 'REAREye', icon: '⬜', desc: '白底黑字，干净利落', likes: 175,
+    template: { tplId: 'clock', cfg: { cardName: '极简时钟', bgColor: '#ffffff', timeColor: '#1a1a2e', dateColor: '#888888', timeSize: 64, dateFormat: 'MM-dd EEEE', timeFormat: 'HH:mm' } } },
+  { id: 'ct_retro_clock', name: '复古时钟', author: 'REAREye', icon: '🕹️', desc: '绿色终端风格，老式计算机', likes: 142,
+    template: { tplId: 'clock', cfg: { cardName: '复古时钟', bgColor: '#0a0a0a', timeColor: '#00ff41', dateColor: '#008f11', timeSize: 56, dateFormat: 'yyyy/MM/dd', timeFormat: 'HH:mm:ss' } } },
+  { id: 'ct_warm_clock', name: '暖色时钟', author: 'REAREye', icon: '🔥', desc: '深棕底色 + 暖橙色时间', likes: 134,
+    template: { tplId: 'clock', cfg: { cardName: '暖色时钟', bgColor: '#1a0f00', timeColor: '#fdcb6e', dateColor: '#e17055', timeSize: 60, dateFormat: 'MM/dd EEEE', timeFormat: 'HH:mm' } } },
+
+  // ─── 名言类 ───
+  { id: 'ct_aurora_quote', name: '极光名言', author: 'REAREye', icon: '✨', desc: '深蓝渐变 + 励志名言', likes: 201,
+    template: { tplId: 'quote', cfg: { cardName: '极光名言', bgColor: '#0a1628', textColor: '#ffffff', authorColor: '#a29bfe', accentColor: '#6c5ce7', textSize: 22, text: '万物皆有裂痕\n那是光照进来的地方', author: '— Leonard Cohen' } } },
+  { id: 'ct_sunset_quote', name: '日落名言', author: 'REAREye', icon: '🌅', desc: '温暖日落渐变 + 励志文字', likes: 189,
+    template: { tplId: 'quote', cfg: { cardName: '日落名言', bgColor: '#e55039', textColor: '#ffffff', authorColor: '#ffeaa7', accentColor: '#f39c12', textSize: 24, text: '凡是过往\n皆为序章', author: '— 莎士比亚' } } },
+  { id: 'ct_forest_quote', name: '森林名言', author: 'REAREye', icon: '🌲', desc: '深绿森林色调 + 自然名言', likes: 156,
+    template: { tplId: 'quote', cfg: { cardName: '森林名言', bgColor: '#0a1a0a', textColor: '#badc58', authorColor: '#6ab04c', accentColor: '#4a7c23', textSize: 22, text: '山川异域\n风月同天', author: '— 古诗' } } },
+  { id: 'ct_snow_quote', name: '雪夜名言', author: 'REAREye', icon: '❄️', desc: '冷白色调 + 冬日意境', likes: 148,
+    template: { tplId: 'quote', cfg: { cardName: '雪夜名言', bgColor: '#1a1a2e', textColor: '#dfe6e9', authorColor: '#74b9ff', accentColor: '#0984e3', textSize: 20, text: '晚来天欲雪\n能饮一杯无', author: '— 白居易' } } },
+
+  // ─── 渐变类 ───
+  { id: 'ct_sunset_gradient', name: '日落渐变', author: 'REAREye', icon: '🌇', desc: '橙红渐变 + 励志文字', likes: 210,
+    template: { tplId: 'gradient', cfg: { cardName: '日落渐变', bgColor1: '#e55039', bgColor2: '#f39c12', textColor: '#ffffff', textSize: 28, text: '每一天都是\n新的开始' } } },
+  { id: 'ct_ocean_gradient', name: '深海渐变', author: 'REAREye', icon: '🌀', desc: '蓝紫深海渐变', likes: 178,
+    template: { tplId: 'gradient', cfg: { cardName: '深海渐变', bgColor1: '#0c2461', bgColor2: '#6c5ce7', textColor: '#ffffff', textSize: 32, text: '深海\n宁静' } } },
+  { id: 'ct_candy_gradient', name: '糖果渐变', author: 'REAREye', icon: '🍬', desc: '粉蓝渐变，甜美风格', likes: 165,
+    template: { tplId: 'gradient', cfg: { cardName: '糖果渐变', bgColor1: '#ff9ff3', bgColor2: '#48dbfb', textColor: '#ffffff', textSize: 28, text: 'Sweet\nDay' } } },
+  { id: 'ct_galaxy_gradient', name: '银河渐变', author: 'REAREye', icon: '🌌', desc: '紫黑银河深空渐变', likes: 192,
+    template: { tplId: 'gradient', cfg: { cardName: '银河渐变', bgColor1: '#0d0221', bgColor2: '#3d157e', textColor: '#e2b0ff', textSize: 24, text: '星辰大海\n皆为征途' } } },
+
+  // ─── 电池类 ───
+  { id: 'ct_retro_battery', name: '复古电池', author: 'REAREye', icon: '🔋', desc: '复古游戏机风格', likes: 167,
+    template: { tplId: 'battery', cfg: { cardName: '复古电池', bgColor: '#1a1a1a', textColor: '#00ff00', barColor: '#00ff41', demoLevel: 78 } } },
+  { id: 'ct_flame_battery', name: '烈焰电池', author: 'REAREye', icon: '🔥', desc: '红色火焰风格电量显示', likes: 143,
+    template: { tplId: 'battery', cfg: { cardName: '烈焰电池', bgColor: '#1a0500', textColor: '#ff6b6b', barColor: '#e17055', demoLevel: 65 } } },
+  { id: 'ct_ice_battery', name: '冰霜电池', author: 'REAREye', icon: '🧊', desc: '蓝白色调冰晶风格', likes: 128,
+    template: { tplId: 'battery', cfg: { cardName: '冰霜电池', bgColor: '#0a1628', textColor: '#74b9ff', barColor: '#48dbfb', demoLevel: 82 } } },
+
+  // ─── 步数类 ───
+  { id: 'ct_night_steps', name: '夜间步数', author: 'REAREye', icon: '🌙', desc: '深蓝夜间主题', likes: 155,
     template: { tplId: 'steps', cfg: { cardName: '夜间步数', bgColor: '#0a1628', textColor: '#e0e0e0', barColor: '#4ecdc4', accentColor: '#74b9ff', goal: '10000' } } },
-  { id: 'ct_ocean_clock', name: '海洋时钟', author: 'community', icon: '🌊', desc: '海蓝色调 + 大号时间显示', likes: 58,
-    template: { tplId: 'clock', cfg: { cardName: '海洋时钟', bgColor: '#0c2461', timeColor: '#48dbfb', dateColor: '#74b9ff', timeSize: 60, dateFormat: 'MM/dd EEEE' } } },
-  { id: 'ct_golden_ring', name: '金色环形', author: 'community', icon: '🏆', desc: '金色环形进度 + 暗色背景', likes: 45,
-    template: { tplId: 'ring', cfg: { cardName: '金色环形', bgColor: '#0a0a0a', ringColor: '#f39c12', trackColor: '#2a2a2a', textColor: '#ffffff', labelColor: '#888888', ringSize: 8, demoValue: 72, source: 'battery' } } },
-  { id: 'ct_aurora_quote', name: '极光名言', author: 'community', icon: '✨', desc: '极光色渐变背景 + 励志名言', likes: 41,
-    template: { tplId: 'quote', cfg: { cardName: '极光名言', bgColor: '#0a1628', textColor: '#ffffff', authorColor: '#a29bfe', accentColor: '#6c5ce7', textSize: 22, text: '万物皆有裂痕\\n那是光照进来的地方', author: '— Leonard Cohen' } } },
+  { id: 'ct_sport_steps', name: '运动步数', author: 'REAREye', icon: '🏃', desc: '活力红橙运动风格', likes: 139,
+    template: { tplId: 'steps', cfg: { cardName: '运动步数', bgColor: '#1a0a00', textColor: '#ffffff', barColor: '#ff6b6b', accentColor: '#fdcb6e', goal: '8000' } } },
+  { id: 'ct_nature_steps', name: '自然步数', author: 'REAREye', icon: '🌿', desc: '绿色自然风格', likes: 121,
+    template: { tplId: 'steps', cfg: { cardName: '自然步数', bgColor: '#0a1a0a', textColor: '#badc58', barColor: '#6ab04c', accentColor: '#55efc4', goal: '10000' } } },
+
+  // ─── 环形进度 ───
+  { id: 'ct_golden_ring', name: '金色环形', author: 'REAREye', icon: '🏆', desc: '金色环形 + 暗色背景', likes: 176,
+    template: { tplId: 'ring', cfg: { cardName: '金色环形', bgColor: '#0a0a0a', ringColor: '#f39c12', trackColor: '#2a2a2a', textColor: '#ffffff', labelColor: '#888888', ringSize: 8, demoValue: 72, source: 'battery', goal: '10000' } } },
+  { id: 'ct_rainbow_ring', name: '彩虹环形', author: 'REAREye', icon: '🌈', desc: '多彩渐变环形进度', likes: 164,
+    template: { tplId: 'ring', cfg: { cardName: '彩虹环形', bgColor: '#0a0a1a', ringColor: '#ff6b6b', trackColor: '#1a1a2e', textColor: '#ffffff', labelColor: '#a29bfe', ringSize: 10, demoValue: 85, source: 'step', goal: '10000' } } },
+  { id: 'ct_emerald_ring', name: '翡翠环形', author: 'REAREye', icon: '💎', desc: '翠绿色环形 + 黑底', likes: 148,
+    template: { tplId: 'ring', cfg: { cardName: '翡翠环形', bgColor: '#000000', ringColor: '#00b894', trackColor: '#1a1a1a', textColor: '#ffffff', labelColor: '#55efc4', ringSize: 8, demoValue: 68, source: 'step', goal: '10000' } } },
+
+  // ─── 倒计时 ───
+  { id: 'ct_newyear_countdown', name: '新年倒计时', author: 'REAREye', icon: '🎆', desc: '紫色星空 + 新年倒数', likes: 195,
+    template: { tplId: 'countdown', cfg: { cardName: '新年倒计时', bgColor: '#1a0a2e', eventName: '距离新年', targetDate: '0101', accentColor: '#a29bfe', textColor: '#ffffff' } } },
+  { id: 'ct_birthday_countdown', name: '生日倒计时', author: 'REAREye', icon: '🎂', desc: '粉色系生日倒数', likes: 158,
+    template: { tplId: 'countdown', cfg: { cardName: '生日倒计时', bgColor: '#1a0a1a', eventName: '距离生日', targetDate: '0601', accentColor: '#fd79a8', textColor: '#ffffff' } } },
+  { id: 'ct_vacation_countdown', name: '假期倒计时', author: 'REAREye', icon: '🏖️', desc: '蓝色海洋 + 假期倒数', likes: 172,
+    template: { tplId: 'countdown', cfg: { cardName: '假期倒计时', bgColor: '#0a1628', eventName: '距离暑假', targetDate: '0701', accentColor: '#48dbfb', textColor: '#ffffff' } } },
+
+  // ─── 日历 ───
+  { id: 'ct_minimal_calendar', name: '极简日历', author: 'REAREye', icon: '📅', desc: '白底大字日期 + 日程', likes: 161,
+    template: { tplId: 'calendar', cfg: { cardName: '极简日历', bgColor: '#ffffff', dayColor: '#1a1a2e', daySize: 72, accentColor: '#6c5ce7', textColor: '#888888', event1: '09:00 团队会议', event2: '14:30 代码评审', event3: '' } } },
+  { id: 'ct_dark_calendar', name: '暗色日历', author: 'REAREye', icon: '🗓️', desc: '深色主题日历 + 日程', likes: 144,
+    template: { tplId: 'calendar', cfg: { cardName: '暗色日历', bgColor: '#0f0f1a', dayColor: '#ffffff', daySize: 72, accentColor: '#6c5ce7', textColor: '#888888', event1: '10:00 站会', event2: '15:00 1v1', event3: '18:00 健身' } } },
+
+  // ─── 仪表盘 ───
+  { id: 'ct_sci_dashboard', name: '科幻仪表盘', author: 'REAREye', icon: '📊', desc: '蓝色科技风聚合面板', likes: 188,
+    template: { tplId: 'dashboard', cfg: { cardName: '科幻仪表盘', bgColor: '#0a0e1a', timeColor: '#48dbfb', accentColor: '#0984e3', textColor: '#cccccc', dimColor: '#333355' } } },
+  { id: 'ct_warm_dashboard', name: '暖色仪表盘', author: 'REAREye', icon: '🌅', desc: '暖橙色聚合信息面板', likes: 152,
+    template: { tplId: 'dashboard', cfg: { cardName: '暖色仪表盘', bgColor: '#1a0f00', timeColor: '#fdcb6e', accentColor: '#e17055', textColor: '#f0c090', dimColor: '#886644' } } },
+
+  // ─── 每日一句 ───
+  { id: 'ct_poetry_daily', name: '诗词每日', author: 'REAREye', icon: '📜', desc: '7天循环古诗词', likes: 183,
+    template: { tplId: 'dailyquote', cfg: { cardName: '诗词每日', bgColor: '#0a0a1a', quote1: '人生若只如初见\n何事秋风悲画扇', quote2: '大鹏一日同风起\n扶摇直上九万里', quote3: '长风破浪会有时\n直挂云帆济沧海', quote4: '天生我材必有用\n千金散尽还复来', quote5: '海内存知己\n天涯若比邻', quote6: '落霞与孤鹜齐飞\n秋水共长天一色', quote7: '但愿人长久\n千里共婵娟' } } },
+  { id: 'ct_motivation_daily', name: '励志每日', author: 'REAREye', icon: '💪', desc: '7天循环励志语录', likes: 167,
+    template: { tplId: 'dailyquote', cfg: { cardName: '励志每日', bgColor: '#0a0e1a', quote1: 'Stay hungry\nStay foolish', quote2: 'The only way to do great work\nis to love what you do', quote3: 'Innovation distinguishes\nbetween a leader\nand a follower', quote4: 'Your time is limited\ndon\'t waste it', quote5: 'Think different', quote6: 'Less is more', quote7: 'Just do it' } } },
+
+  // ─── 双时钟 ───
+  { id: 'ct_world_clock', name: '世界时钟', author: 'REAREye', icon: '🌍', desc: '北京 + 纽约双时区', likes: 155,
+    template: { tplId: 'dualclock', cfg: { cardName: '世界时钟', bgColor: '#000000', city1: '北京', offset1: 8, timeColor1: '#ffffff', city2: '纽约', offset2: -5, timeColor2: '#6c5ce7', timeSize: 44 } } },
+  { id: 'ct_work_clock', name: '工作时钟', author: 'REAREye', icon: '💼', desc: '本地 + 伦敦工作时间', likes: 138,
+    template: { tplId: 'dualclock', cfg: { cardName: '工作时钟', bgColor: '#0a0a1a', city1: '上海', offset1: 8, timeColor1: '#48dbfb', city2: '伦敦', offset2: 0, timeColor2: '#fdcb6e', timeSize: 44 } } },
 ];
 
 var _marketModal = null;
