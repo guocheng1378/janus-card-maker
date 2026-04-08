@@ -1099,6 +1099,97 @@ kbd{
 .empty-state-icon{font-size:48px;animation:empty-bounce 2s ease-in-out infinite}
 .empty-state-text{font-size:14px;line-height:1.5;max-width:240px}
 @keyframes empty-bounce{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-6px) rotate(-3deg)}75%{transform:translateY(-3px) rotate(2deg)}}
+
+/* ─── Mock Data Toggle ─── */
+.mock-toggle{
+  display:flex;align-items:center;gap:6px;padding:6px 12px;
+  border-radius:8px;border:1px solid var(--border);background:var(--surface2);
+  font-size:12px;color:var(--text2);cursor:pointer;transition:var(--transition);
+  font-family:inherit;white-space:nowrap;
+}
+.mock-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.mock-toggle.active{background:var(--accent-glow);border-color:var(--accent);color:var(--accent2)}
+.mock-toggle-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);transition:all .2s ease}
+.mock-toggle.active .mock-toggle-dot{background:var(--green);box-shadow:0 0 6px var(--green)}
+
+/* ─── Expression Debugger ─── */
+.expr-debug-modal{max-width:520px}
+.expr-debug-field{display:flex;flex-direction:column;gap:6px}
+.expr-debug-field label{font-size:12px;color:var(--text2);font-weight:600}
+.expr-var-chips{display:flex;flex-wrap:wrap;gap:4px}
+.expr-var-chip{
+  padding:3px 8px;border-radius:6px;font-size:11px;font-family:monospace;
+  background:var(--surface2);border:1px solid var(--border);color:var(--text2);
+  cursor:pointer;transition:var(--transition);
+}
+.expr-var-chip:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-glow)}
+
+/* ─── Performance Dashboard ─── */
+.perf-score-ring{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  margin:0 auto 20px;width:100px;height:100px;border-radius:50%;
+  border:3px solid var(--border);position:relative;
+}
+.perf-score-value{font-size:32px;font-weight:800}
+.perf-score-label{font-size:11px;color:var(--text2);margin-top:2px}
+.perf-excellent .perf-score-value{color:var(--green)}
+.perf-good .perf-score-value{color:#74b9ff}
+.perf-fair .perf-score-value{color:var(--orange)}
+.perf-poor .perf-score-value{color:var(--red)}
+.perf-excellent{border-color:var(--green)}
+.perf-good{border-color:#74b9ff}
+.perf-fair{border-color:var(--orange)}
+.perf-poor{border-color:var(--red)}
+.perf-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.perf-stat{
+  text-align:center;padding:10px 4px;border-radius:8px;
+  background:var(--surface2);border:1px solid var(--border);
+}
+.perf-stat-value{font-size:18px;font-weight:700;color:var(--accent2)}
+.perf-stat-label{font-size:10px;color:var(--text3);margin-top:2px}
+.perf-warnings{display:flex;flex-direction:column;gap:6px}
+.perf-warn-item{
+  padding:8px 12px;border-radius:8px;font-size:12px;
+  background:rgba(253,203,110,.08);border:1px solid rgba(253,203,110,.2);
+  color:var(--orange);
+}
+
+/* ─── Template Compare Overlay ─── */
+.template-compare-overlay{
+  position:absolute;inset:0;z-index:50;background:var(--bg);
+  display:flex;flex-direction:column;animation:fadeIn .25s ease;
+}
+.template-compare-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 20px;border-bottom:1px solid var(--border);flex-shrink:0;
+  font-size:13px;font-weight:600;
+}
+.template-compare-label-left{color:var(--accent);font-weight:700}
+.template-compare-label-right{color:var(--green);font-weight:700}
+.template-compare-body{
+  display:grid;grid-template-columns:1fr 1fr;gap:16px;
+  padding:20px;flex:1;overflow-y:auto;
+}
+.template-compare-pane{
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--border);border-radius:var(--radius);padding:16px;
+  background:var(--surface);
+}
+.compare-tpl-list{display:flex;flex-direction:column;gap:6px}
+.compare-tpl-item{
+  display:flex;align-items:center;gap:12px;padding:10px 14px;
+  border-radius:8px;border:1px solid var(--border);cursor:pointer;
+  transition:var(--transition);
+}
+.compare-tpl-item:hover{border-color:var(--accent);background:var(--accent-glow)}
+
+/* ─── Dev Tools Toolbar ─── */
+.dev-tools-bar{
+  display:flex;gap:6px;flex-wrap:wrap;align-items:center;
+  padding:8px 0;
+}
+.dev-tools-bar .btn{font-size:11px;padding:5px 10px;border-radius:6px}
+
 .align-guide {
   position: absolute;
   z-index: 100;

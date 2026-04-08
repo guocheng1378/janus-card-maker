@@ -66,6 +66,14 @@ PreviewRenderer.prototype.calcCountdown = function (str) {
 
 // ─── Expression Evaluator (for template elements with textExp) ────
 PreviewRenderer.prototype.evalExpression = function (expr) {
+  // If mock mode is disabled, return raw expression
+  try {
+    if (typeof window.JCM !== 'undefined' && window.JCM.toggleMockMode) {
+      // Check via a global flag
+      if (window.__mockMode === false) return '{' + expr + '}';
+    }
+  } catch (e) {}
+
   var now = new Date();
   // formatDate('FORMAT', #variable)
   var fm = expr.match(/formatDate\s*\(\s*'([^']+)'\s*,\s*([^)]+)\)/);

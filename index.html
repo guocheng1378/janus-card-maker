@@ -142,6 +142,8 @@
           <input type="checkbox" id="showGrid" onchange="JCM.toggleGrid()"> <span data-i18n="preview.grid">网格</span>
           <label class="check-label"><input type="checkbox" id="showThemeCompare" onchange="JCM.toggleThemeCompare()"> <span data-i18n="preview.themeCompare">双主题</span></label>
         </label>
+        <button class="mock-toggle active" id="mockToggle" title="模拟数据: ON"><span class="mock-toggle-dot"></span> 🎭 模拟</button>
+        <button class="mock-toggle" id="compareTplBtn" onclick="JCM.toggleTemplateCompare()" title="模板对比"><span>🔄</span> 对比</button>
         <div class="zoom-controls">
           <button onclick="JCM.zoomOut()" title="缩小">−</button>
           <span class="zoom-label" id="zoomLabel">100%</span>
@@ -184,6 +186,11 @@
             <button class="btn btn-secondary" onclick="JCM.renderPreview()"><span class="btn-icon">🔄</span> 生成预览</button>
             <button class="btn btn-export" onclick="JCM.handleExport()"><span class="btn-icon">📦</span> 导出 ZIP</button>
             <button class="btn btn-secondary" onclick="JCM.copyXML()"><span class="btn-icon">📋</span> 复制 XML</button>
+          </div>
+          <!-- 开发工具 -->
+          <div class="dev-tools-bar">
+            <button class="btn btn-secondary" onclick="JCM.openExprDebugger()"><span class="btn-icon">🧪</span> 表达式调试</button>
+            <button class="btn btn-secondary" onclick="JCM.openPerfDashboard()"><span class="btn-icon">📊</span> 性能仪表盘</button>
           </div>
           <!-- 高级工具：默认折叠 -->
           <details class="advanced-tools">

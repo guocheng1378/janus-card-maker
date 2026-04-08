@@ -37,6 +37,7 @@ import { lintMAML, showLintResults, analyzePerformance, showPerfResults, checkAc
 import { autoSnapshot, showSnapshotsModal } from './version-snapshots.js';
 import { showADBPush, exportGIF, exportPDF } from './export-adb.js';
 import { renderLayerPanel, toggleLayerPanel, isLayerPanelVisible, initLayerPanel } from './layer-panel.js';
+import { isMockMode, toggleMockMode, openExprDebugger, closeExprDebugger, insertVar, evalExpr, insertExprPreset, openPerfDashboard, toggleTemplateCompare, cancelCompare, initDevTools } from './dev-tools.js';
 
 // re-export from export.js, transcode.js, storage.js (loaded as ES modules)
 import { exportZip, exportPNG, exportSVG, exportTemplateJSON, importTemplateJSON, importZip, exportRearEyeFormat, importRearEyeFormat } from '../export.js';
@@ -1170,6 +1171,9 @@ export function initUI() {
     renderLivePreview: renderLivePreview,
   });
 
+  // Init dev tools
+  initDevTools();
+
   checkShareURL(stepCallbacks);
   requestAnimationFrame(function () { moveStepSlider(0); });
   window.addEventListener('resize', function () { moveStepSlider(getStep()); });
@@ -1528,4 +1532,17 @@ Object.assign(window.JCM, {
   clearToken: function () { localStorage.removeItem('jcm-gh-token'); toast('🔑 Token 已清除', 'success'); },
   hasToken: function () { return !!_getGH(); },
   elements: S.elements,
+  // Dev tools
+  toggleMockMode: function () {
+    toggleMockMode();
+    renderPreview(); renderLivePreview();
+  },
+  openExprDebugger: openExprDebugger,
+  closeExprDebugger: closeExprDebugger,
+  insertVar: insertVar,
+  evalExpr: evalExpr,
+  insertExprPreset: insertExprPreset,
+  openPerfDashboard: openPerfDashboard,
+  toggleTemplateCompare: toggleTemplateCompare,
+  cancelCompare: cancelCompare,
 });
