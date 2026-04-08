@@ -386,14 +386,14 @@ function handleFilePicked(e) {
 // ─── Zoom ─────────────────────────────────────────────────────────
 function applyZoom() {
   var phone = document.querySelector('#page2 .preview-phone');
-  if (phone) phone.style.transform = 'scale(' + (_zoomLevel / 100) + ')';
+  if (phone) phone.style.transform = 'perspective(800px) rotateY(-2deg) rotateX(1deg) scale(' + (_zoomLevel / 100) + ')';
   var label = document.getElementById('zoomLabel');
   if (label) label.textContent = _zoomLevel + '%';
 }
 
 function applyCfgZoom() {
   var phone = document.querySelector('.config-preview-phone');
-  if (phone) phone.style.transform = 'scale(' + (_cfgZoomLevel / 100) + ')';
+  if (phone) phone.style.transform = 'perspective(800px) rotateY(-1.5deg) rotateX(1deg) scale(' + (_cfgZoomLevel / 100) + ')';
   var label = document.getElementById('cfgZoomLabel');
   if (label) label.textContent = _cfgZoomLevel + '%';
 }
