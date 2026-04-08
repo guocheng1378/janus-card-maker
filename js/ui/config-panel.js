@@ -167,7 +167,8 @@ export function renderConfig(getTemplateMAML) {
     '<button class="el-btn" data-add="group"><span class="el-btn-icon">📦</span> Group</button>' +
     '<button class="el-btn" data-add="layer"><span class="el-btn-icon">🎨</span> Layer</button>' +
     '<button class="el-btn" data-add="musiccontrol"><span class="el-btn-icon">🎵</span> Music</button>' +
-    '<button class="el-btn" data-action="importZip"><span class="el-btn-icon">📦</span> 导入ZIP</button>';
+    '<button class="el-btn" data-action="importZip"><span class="el-btn-icon">📦</span> 导入ZIP</button>' +
+    '<button class="el-btn" data-action="importMAML"><span class="el-btn-icon">📄</span> 导入MAML</button>';
 
   var elementSectionInner = '<div class="el-toolbar">' + coreAddBtns +
     '<div class="el-toolbar-more-wrap">' +
@@ -580,7 +581,29 @@ function renderElementEditorInline(el, idx, device) {
     html += fieldHtml('垂直对齐', '<select data-prop="alignV" data-idx="' + idx + '">' +
       ['', 'top', 'center', 'bottom'].map(function (a) { return '<option value="' + a + '"' + ((el.alignV || '') === a ? ' selected' : '') + '>' + (a || '无') + '</option>'; }).join('') + '</select>');
     html += fieldHtml('描述', '<input type="text" value="' + esc(el.contentDescription || '') + '" data-prop="contentDescription" data-idx="' + idx + '" placeholder="contentDescriptionExp">');
-
+    // 子元素管理
+    html += '<div style="grid-column:1/-1;margin-top:8px;padding:8px;background:rgba(124,109,240,0.08);border-radius:6px">';
+    html += '<div style="font-size:11px;font-weight:600;margin-bottom:6px;color:var(--accent)">📦 子元素 (' + (el.children ? el.children.length : 0) + ')</div>';
+    html += '<div style="display:flex;gap:4px;flex-wrap:wrap">';
+    html += '<button class="el-btn" data-add-child="' + idx + '" data-child-type="text" style="font-size:10px;padding:3px 8px">+ 文字</button>';
+    html += '<button class="el-btn" data-add-child="' + idx + '" data-child-type="rectangle" style="font-size:10px;padding:3px 8px">+ 矩形</button>';
+    html += '<button class="el-btn" data-add-child="' + idx + '" data-child-type="circle" style="font-size:10px;padding:3px 8px">+ 圆形</button>';
+    html += '<button class="el-btn" data-add-child="' + idx + '" data-child-type="image" style="font-size:10px;padding:3px 8px">+ 图片</button>';
+    html += '<button class="el-btn" data-add-child="' + idx + '" data-child-type="group" style="font-size:10px;padding:3px 8px">+ Group</button>';
+    html += '</div>';
+    if (el.children && el.children.length > 0) {
+      html += '<div style="margin-top:6px;max-height:120px;overflow-y:auto">';
+      el.children.forEach(function (child, ci) {
+        var childIcon = LAYER_ICONS[child.type] || '❓';
+        html += '<div style="display:flex;align-items:center;gap:4px;padding:2px 0;font-size:11px">';
+        html += '<span>' + childIcon + '</span>';
+        html += '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (child.name || child.text || child.type) + '</span>';
+        html += '<button class="el-btn" data-remove-child="' + idx + '" data-child-idx="' + ci + '" style="font-size:9px;padding:1px 4px;color:var(--red)">✕</button>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
   } else if (el.type === 'layer') {
     html += fieldHtml('名称', '<input type="text" value="' + esc(el.name || '') + '" data-prop="name" data-idx="' + idx + '" placeholder="MAML name">');
     html += fieldHtml('层类型', '<select data-prop="layerType" data-idx="' + idx + '">' +

@@ -40,7 +40,7 @@ import { renderLayerPanel, toggleLayerPanel, isLayerPanelVisible, initLayerPanel
 import { isMockMode, toggleMockMode, openExprDebugger, closeExprDebugger, insertVar, evalExpr, insertExprPreset, openPerfDashboard, toggleTemplateCompare, cancelCompare, initDevTools } from './dev-tools.js';
 
 // re-export from export.js, transcode.js, storage.js (loaded as ES modules)
-import { exportZip, exportPNG, exportSVG, exportTemplateJSON, importTemplateJSON, importZip, exportRearEyeFormat, importRearEyeFormat } from '../export.js';
+import { exportZip, exportPNG, exportSVG, exportTemplateJSON, importTemplateJSON, importZip, exportRearEyeFormat, importRearEyeFormat, importMAML } from '../export.js';
 import { needsTranscode, transcodeToH264, forceTranscodeAsset } from '../transcode.js';
 import { saveDraft as _saveDraft, loadDraft as _loadDraft, clearDraft as _clearDraft } from '../storage.js';
 
@@ -358,6 +358,21 @@ function handleImportZip() {
     }).catch(function (e) { toast('导入失败: ' + e.message, 'error'); });
   };
   input.click();
+}
+
+// ─── MAML XML 导入 ─────────────────────────────────────────
+function importMAMLFromXml(xmlString) {
+  var data = importMAML(xmlString);
+  S.setTpl(TEMPLATES.find(function (t) { return t.id === 'custom'; }));
+  S.setCfg({ cardName: data.cardName, bgColor: data.bgColor });
+  S.setElements(data.elements);
+  S.setUploadedFiles({});
+  S.setSelIdx(-1);
+  S.setDirty(true);
+  resetHistory();
+  renderTplGrid();
+  goStep(1, stepCallbacks);
+  toast('✅ MAML 已导入 (' + data.elements.length + ' 个元素)', 'success');
 }
 
 // ─── File Handling ────────────────────────────────────────────────
@@ -689,6 +704,7 @@ function setupEvents() {
     if (actionBtn) {
       var a = actionBtn.dataset.action;
       if (a === 'importZip') handleImportZip();
+      else if (a === 'importMAML') { /* handled by separate listener below */ }
       else if (a === 'shareTemplate') shareTemplate();
       else if (a === 'shareQR') JCM.showQR();
       else if (a === 'exportTemplate') { exportTemplateJSON(S.tpl ? S.tpl.id : 'custom', S.cfg, S.elements); toast('✅ 配置已导出', 'success'); }
@@ -947,6 +963,66 @@ function setupEvents() {
       renderConfig(getTemplateMAML);
       toast('📌 已粘贴', 'success');
     }
+  });
+
+  // Group/Layer/MusicControl 子元素管理
+  document.getElementById('cfgContent').addEventListener('click', function (e) {
+    var addBtn = e.target.closest('[data-add-child]');
+    if (addBtn) {
+      var parentIdx = Number(addBtn.dataset.addChild);
+      var childType = addBtn.dataset.childType;
+      if (parentIdx >= 0 && parentIdx < S.elements.length && ElementDefaults[childType]) {
+        captureState('添加子元素');
+        var parent = S.elements[parentIdx];
+        if (!parent.children) parent.children = [];
+        var newChild = JSON.parse(JSON.stringify(ElementDefaults[childType]()));
+        newChild.x = 0;
+        newChild.y = parent.children.length * 30;
+        parent.children.push(newChild);
+        S.setDirty(true);
+        renderConfig(getTemplateMAML);
+        toast('📦 已添加子元素: ' + childType, 'success');
+      }
+      return;
+    }
+    var removeBtn = e.target.closest('[data-remove-child]');
+    if (removeBtn) {
+      var pIdx = Number(removeBtn.dataset.removeChild);
+      var cIdx = Number(removeBtn.dataset.childIdx);
+      if (pIdx >= 0 && pIdx < S.elements.length) {
+        var par = S.elements[pIdx];
+        if (par.children && cIdx >= 0 && cIdx < par.children.length) {
+          captureState('删除子元素');
+          par.children.splice(cIdx, 1);
+          S.setDirty(true);
+          renderConfig(getTemplateMAML);
+          toast('🗑️ 已删除子元素', 'success');
+        }
+      }
+      return;
+    }
+  });
+
+  // MAML 导入
+  document.getElementById('cfgContent').addEventListener('click', function (e) {
+    var importBtn = e.target.closest('[data-action="importMAML"]');
+    if (!importBtn) return;
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.xml';
+    input.onchange = function () {
+      if (!input.files || !input.files[0]) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        try {
+          importMAMLFromXml(reader.result);
+        } catch (err) {
+          toast('❌ 导入失败: ' + err.message, 'error');
+        }
+      };
+      reader.readAsText(input.files[0]);
+    };
+    input.click();
   });
 
   // Element list drag reorder

@@ -31,12 +31,7 @@ export function exportZip(maml, cardName, elements, files, isCustom, bgImage) {
   }
 
   var usedFiles = {};
-  elements.forEach(function (el) {
-    var fname = el.fileName || el.src;
-    if ((el.type === 'image' || el.type === 'video') && fname && files[fname]) {
-      usedFiles[fname] = files[fname];
-    }
-  });
+  collectUsedFiles(elements, files, usedFiles);
 
   // 背景图
   if (bgImage && bgImage.indexOf('data:') === 0) {
@@ -145,13 +140,12 @@ export function importZip(file) {
           var doc = parser.parseFromString(xml, 'application/xml');
           var parseError = doc.querySelector('parsererror');
           if (!parseError) {
-            // DOM parsing succeeded
-            var widgets = doc.querySelectorAll('Text, Rectangle, Circle, Image, Video');
-            widgets.forEach(function (node) {
+            // DOM parsing succeeded - recursively parse node list
+            function parseMamlNode(node) {
               var tag = node.tagName.toLowerCase();
               var a = function (name) { return node.getAttribute(name) || ''; };
               if (tag === 'text') {
-                result.elements.push({
+                return {
                   type: 'text', text: a('text'), x: Number(a('x')) || 0, y: Number(a('y')) || 0,
                   size: Number(a('size')) || 24, color: a('color') || '#ffffff',
                   textAlign: a('textAlign') || 'left', bold: a('bold') === 'true',
@@ -159,9 +153,9 @@ export function importZip(file) {
                   opacity: a('alpha') ? Math.round(parseFloat(a('alpha')) * 100) : 100,
                   rotation: Number(a('rotation')) || 0,
                   fontFamily: a('fontFamily') || 'default',
-                });
+                };
               } else if (tag === 'rectangle') {
-                result.elements.push({
+                return {
                   type: 'rectangle', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
                   w: Number(a('w')) || 100, h: Number(a('h')) || 40,
                   color: a('fillColor') || '#333333', radius: Number(a('cornerRadius')) || 0,
@@ -169,31 +163,112 @@ export function importZip(file) {
                   rotation: Number(a('rotation')) || 0,
                   fillColor2: a('fillColor2') || '',
                   blur: Number(a('blur')) || 0,
-                });
+                };
               } else if (tag === 'circle') {
-                result.elements.push({
+                return {
                   type: 'circle', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
                   r: Number(a('r')) || 30, color: a('fillColor') || '#6c5ce7',
                   opacity: a('alpha') ? Math.round(parseFloat(a('alpha')) * 100) : 100,
                   strokeWidth: Number(a('stroke')) || 0,
                   strokeColor: a('strokeColor') || '#ffffff',
-                });
+                };
               } else if (tag === 'image') {
                 var imgSrc = (a('src') || '').replace(/^images\//, '');
-                result.elements.push({
+                return {
                   type: 'image', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
                   w: Number(a('w')) || 100, h: Number(a('h')) || 100,
                   fileName: imgSrc, src: imgSrc,
                   fit: a('fitMode') || 'cover',
-                });
+                };
               } else if (tag === 'video') {
                 var vidSrc = (a('src') || '').replace(/^videos\//, '');
-                result.elements.push({
+                return {
                   type: 'video', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
                   w: Number(a('w')) || 240, h: Number(a('h')) || 135,
                   fileName: vidSrc, src: vidSrc,
-                });
+                };
+              } else if (tag === 'lottie') {
+                return {
+                  type: 'lottie', x: Number(a('x')) || 50, y: Number(a('y')) || 50,
+                  w: Number(a('w')) || 120, h: Number(a('h')) || 120,
+                  src: a('src') || '', name: a('name') || '',
+                  align: a('align') || 'center',
+                  loop: Number(a('loop')) || 0,
+                  autoplay: a('autoplay') !== 'false',
+                };
+              } else if (tag === 'group') {
+                var children = [];
+                for (var ci = 0; ci < node.childNodes.length; ci++) {
+                  var child = node.childNodes[ci];
+                  if (child.nodeType === 1 && child.tagName) {
+                    var parsed = parseMamlNode(child);
+                    if (parsed) children.push(parsed);
+                  }
+                }
+                return {
+                  type: 'group', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+                  w: Number(a('w')) || 200, h: Number(a('h')) || 200,
+                  name: a('name') || '',
+                  alpha: a('alpha') ? Number(a('alpha')) : 1,
+                  visibility: a('visibility') || '',
+                  folmeMode: a('folmeMode') === 'true',
+                  align: a('align') || '',
+                  alignV: a('alignV') || '',
+                  children: children,
+                };
+              } else if (tag === 'layer') {
+                var layerChildren = [];
+                for (var li = 0; li < node.childNodes.length; li++) {
+                  var lchild = node.childNodes[li];
+                  if (lchild.nodeType === 1 && lchild.tagName) {
+                    var lparsed = parseMamlNode(lchild);
+                    if (lparsed) layerChildren.push(lparsed);
+                  }
+                }
+                return {
+                  type: 'layer', name: a('name') || '',
+                  alpha: a('alpha') ? Number(a('alpha')) : 1,
+                  visibility: a('visibility') || '',
+                  layerType: a('layerType') || 'bottom',
+                  blurRadius: Number(a('blurRadius')) || 0,
+                  blurColors: a('blurColors') || '',
+                  colorModes: Number(a('colorModes')) || 0,
+                  frameRate: Number(a('frameRate')) || -1,
+                  children: layerChildren,
+                };
+              } else if (tag === 'musiccontrol') {
+                var mcChildren = [];
+                for (var mi = 0; mi < node.childNodes.length; mi++) {
+                  var mchild = node.childNodes[mi];
+                  if (mchild.nodeType === 1 && mchild.tagName) {
+                    var mparsed = parseMamlNode(mchild);
+                    if (mparsed) mcChildren.push(mparsed);
+                  }
+                }
+                return {
+                  type: 'musiccontrol', name: a('name') || 'music_control',
+                  w: Number(a('w')) || 0, h: Number(a('h')) || 0,
+                  x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+                  autoShow: a('autoShow') !== 'false',
+                  autoRefresh: a('autoRefresh') !== 'false',
+                  enableLyric: a('enableLyric') === 'true',
+                  updateLyricInterval: Number(a('updateLyricInterval')) || 100,
+                  children: mcChildren,
+                };
               }
+              return null; // Unknown tag (framework tags, etc.)
+            }
+
+            var allNodes = doc.querySelectorAll('Text, Rectangle, Circle, Image, Video, Lottie, Group, Layer, MusicControl');
+            allNodes.forEach(function (node) {
+              // Skip nested nodes (children of Group/Layer are handled recursively)
+              if (node.parentElement && ['Group', 'Layer', 'MusicControl'].indexOf(node.parentElement.tagName) >= 0) return;
+              // Skip nodes inside Widget > Group (the marginL wrapper)
+              if (node.parentElement && node.parentElement.tagName === 'Group' && node.parentElement.parentElement && node.parentElement.parentElement.tagName === 'Widget') {
+                // This is inside a top-level Group, which is fine - parse it
+              }
+              var parsed = parseMamlNode(node);
+              if (parsed) result.elements.push(parsed);
             });
           } else {
             // Fallback to regex parsing
@@ -370,8 +445,10 @@ export function exportPNG(cardName, cfg, elements, tpl, uploadedFiles, getDevice
     }
 
     var imageLoaders = [];
-    if (elements) {
-      elements.forEach(function (el) {
+    // 展平嵌套元素（Group/Layer/MusicControl 子元素）
+    var flatElements = flattenElements(elements);
+    if (flatElements.length > 0) {
+      flatElements.forEach(function (el) {
         if (el.type !== 'image') return;
         var fi = el.fileName ? uploadedFiles[el.fileName] : null;
         if (!fi || !fi.dataUrl) return;
@@ -390,8 +467,8 @@ export function exportPNG(cardName, cfg, elements, tpl, uploadedFiles, getDevice
         if (item) imgMap[item.el.fileName] = item.img;
       });
 
-      if (elements) {
-        elements.forEach(function (el) {
+      if (flatElements.length > 0) {
+        flatElements.forEach(function (el) {
           ctx.save();
           var opacity = (el.opacity !== undefined ? el.opacity : 100) / 100;
           ctx.globalAlpha = opacity;
@@ -521,7 +598,8 @@ export function exportSVG(cardName, cfg, elements, uploadedFiles, getDeviceFn) {
   svgParts.push('<svg xmlns="http://www.w3.org/2000/svg" width="' + device.width + '" height="' + device.height + '" viewBox="0 0 ' + device.width + ' ' + device.height + '">');
   svgParts.push('<rect width="100%" height="100%" fill="' + (cfg.bgColor || '#000000') + '"/>');
 
-  elements.forEach(function (el) {
+  var flatElements = flattenElements(elements);
+  flatElements.forEach(function (el) {
     var opacity = (el.opacity !== undefined ? el.opacity : 100) / 100;
     var opAttr = opacity < 1 ? ' opacity="' + opacity + '"' : '';
 
@@ -690,4 +768,176 @@ export function importRearEyeFormat(file) {
     };
     reader.readAsText(file);
   });
+}
+
+// ─── MAML XML 导入 ──────────────────────────────────────────
+export function importMAML(xmlString) {
+  var result = { cardName: '导入的 MAML', bgColor: '#000000', elements: [], updater: '' };
+
+  // Extract attributes from Widget tag
+  var widgetMatch = xmlString.match(/<Widget\s+([^>]+)>/);
+  if (widgetMatch) {
+    var attrs = {};
+    var re = /(\w+)="([^"]*)"/g;
+    var m;
+    while ((m = re.exec(widgetMatch[1])) !== null) attrs[m[1]] = m[2];
+    result.cardName = attrs.name || '导入的 MAML';
+    if (attrs.useVariableUpdater) result.updater = attrs.useVariableUpdater;
+  }
+
+  // Extract bg color
+  var bgMatch = xmlString.match(/<Rectangle\s[^>]*w="#view_width"[^>]*h="#view_height"[^>]*fillColor="(#[0-9a-fA-F]{6})"/);
+  if (bgMatch) result.bgColor = bgMatch[1];
+
+  // Parse elements
+  try {
+    var parser = new DOMParser();
+    var doc = parser.parseFromString(xmlString, 'application/xml');
+    var parseError = doc.querySelector('parsererror');
+    if (!parseError) {
+      function parseNode(node) {
+        var tag = node.tagName;
+        if (!tag) return null;
+        var a = function (name) { return node.getAttribute(name) || ''; };
+        var tagLower = tag.toLowerCase();
+
+        if (tagLower === 'text') {
+          return {
+            type: 'text', text: a('text') || a('textExp') || '', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+            size: Number(a('size')) || 24, color: a('color') || '#ffffff',
+            textAlign: a('textAlign') || 'left', bold: a('bold') === 'true',
+            multiLine: a('multiLine') === 'true', w: Number(a('w')) || 200,
+            opacity: a('alpha') ? Math.round(parseFloat(a('alpha')) * 100) : 100,
+            rotation: Number(a('rotation')) || 0,
+            fontFamily: a('fontFamily') || 'default',
+            expression: a('textExp') || '',
+          };
+        } else if (tagLower === 'rectangle') {
+          return {
+            type: 'rectangle', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+            w: Number(a('w')) || 100, h: Number(a('h')) || 40,
+            color: a('fillColor') || '#333333', radius: Number(a('cornerRadius')) || 0,
+            opacity: a('alpha') ? Math.round(parseFloat(a('alpha')) * 100) : 100,
+            rotation: Number(a('rotation')) || 0, fillColor2: a('fillColor2') || '',
+            blur: Number(a('blur')) || 0,
+          };
+        } else if (tagLower === 'circle') {
+          return {
+            type: 'circle', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+            r: Number(a('r')) || 30, color: a('fillColor') || '#6c5ce7',
+            opacity: a('alpha') ? Math.round(parseFloat(a('alpha')) * 100) : 100,
+          };
+        } else if (tagLower === 'image') {
+          var imgSrc = (a('src') || '').replace(/^images\//, '');
+          return {
+            type: 'image', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+            w: Number(a('w')) || 100, h: Number(a('h')) || 100,
+            fileName: imgSrc, src: imgSrc, fit: a('fitMode') || 'cover',
+          };
+        } else if (tagLower === 'video') {
+          var vidSrc = (a('src') || '').replace(/^videos\//, '');
+          return {
+            type: 'video', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+            w: Number(a('w')) || 240, h: Number(a('h')) || 135,
+            fileName: vidSrc, src: vidSrc,
+          };
+        } else if (tagLower === 'lottie') {
+          return {
+            type: 'lottie', x: Number(a('x')) || 50, y: Number(a('y')) || 50,
+            w: Number(a('w')) || 120, h: Number(a('h')) || 120,
+            src: a('src') || '', name: a('name') || '',
+          };
+        } else if (tagLower === 'group') {
+          var children = [];
+          for (var i = 0; i < node.childNodes.length; i++) {
+            var ch = node.childNodes[i];
+            if (ch.nodeType === 1) { var p = parseNode(ch); if (p) children.push(p); }
+          }
+          return {
+            type: 'group', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+            w: Number(a('w')) || 200, h: Number(a('h')) || 200,
+            name: a('name') || '', alpha: a('alpha') ? Number(a('alpha')) : 1,
+            visibility: a('visibility') || '', folmeMode: a('folmeMode') === 'true',
+            align: a('align') || '', alignV: a('alignV') || '',
+            children: children,
+          };
+        } else if (tagLower === 'layer') {
+          var lChildren = [];
+          for (var j = 0; j < node.childNodes.length; j++) {
+            var lc = node.childNodes[j];
+            if (lc.nodeType === 1) { var lp = parseNode(lc); if (lp) lChildren.push(lp); }
+          }
+          return {
+            type: 'layer', name: a('name') || '', alpha: a('alpha') ? Number(a('alpha')) : 1,
+            visibility: a('visibility') || '', layerType: a('layerType') || 'bottom',
+            blurRadius: Number(a('blurRadius')) || 0,
+            children: lChildren,
+          };
+        } else if (tagLower === 'musiccontrol') {
+          var mcChildren = [];
+          for (var k = 0; k < node.childNodes.length; k++) {
+            var mcc = node.childNodes[k];
+            if (mcc.nodeType === 1) { var mcp = parseNode(mcc); if (mcp) mcChildren.push(mcp); }
+          }
+          return {
+            type: 'musiccontrol', name: a('name') || 'music_control',
+            w: Number(a('w')) || 0, h: Number(a('h')) || 0,
+            enableLyric: a('enableLyric') === 'true',
+            children: mcChildren,
+          };
+        }
+        return null;
+      }
+
+      var widget = doc.querySelector('Widget');
+      if (widget) {
+        for (var ci = 0; ci < widget.childNodes.length; ci++) {
+          var child = widget.childNodes[ci];
+          if (child.nodeType === 1 && child.tagName) {
+            var parsed = parseNode(child);
+            if (parsed) result.elements.push(parsed);
+          }
+        }
+      }
+    }
+  } catch (e) { /* fallback: empty elements */ }
+
+  return result;
+}
+
+// ─── 递归工具：收集文件 / 展平元素 ──────────────────────────
+function collectUsedFiles(elements, files, usedFiles) {
+  if (!elements) return;
+  elements.forEach(function (el) {
+    var fname = el.fileName || el.src;
+    if ((el.type === 'image' || el.type === 'video') && fname && files[fname]) {
+      usedFiles[fname] = files[fname];
+    }
+    if (el.children && el.children.length > 0) {
+      collectUsedFiles(el.children, files, usedFiles);
+    }
+  });
+}
+
+// 展平嵌套元素列表（Group/Layer/MusicControl → 递归展开子元素）
+function flattenElements(elements, offsetX, offsetY) {
+  var result = [];
+  if (!elements) return result;
+  var ox = offsetX || 0;
+  var oy = offsetY || 0;
+  elements.forEach(function (el) {
+    if (el.type === 'group' || el.type === 'layer' || el.type === 'musiccontrol') {
+      var childOx = ox + (el.x || 0);
+      var childOy = oy + (el.y || 0);
+      if (el.children && el.children.length > 0) {
+        result = result.concat(flattenElements(el.children, childOx, childOy));
+      }
+    } else {
+      var flat = Object.assign({}, el);
+      flat.x = (flat.x || 0) + ox;
+      flat.y = (flat.y || 0) + oy;
+      result.push(flat);
+    }
+  });
+  return result;
 }

@@ -122,9 +122,32 @@ PreviewRenderer.prototype.evalExpression = function (expr) {
     .replace(/#year/g, now.getFullYear())
     .replace(/#month/g, now.getMonth() + 1)
     .replace(/#date/g, now.getDate())
-    .replace(/#dayIdx/g, 0);
+    .replace(/#dayIdx/g, 0)
+    .replace(/#time_sys/g, now.getTime())
+    .replace(/#step/g, 6542)
+    .replace(/#weather_humidity/g, 45);
   try {
-    var scope = 'var ifelse = function(c,a,b){return c?a:b;};';
+    // MAML 函数 → JS 映射
+    var scope = 'var ifelse = function(c,a,b){return c?a:b;};' +
+      'var concat = function(){return Array.prototype.slice.call(arguments).join("");};' +
+      'var clamp = function(v,lo,hi){return Math.min(Math.max(v,lo),hi);};' +
+      'var floor = function(v){return Math.floor(v);};' +
+      'var ceil = function(v){return Math.ceil(v);};' +
+      'var abs = function(v){return Math.abs(v);};' +
+      'var mod = function(a,b){return a%b;};' +
+      'var div = function(a,b){return Math.floor(a/b);};' +
+      'var gt = function(a,b){return a>b?1:0;};' +
+      'var lt = function(a,b){return a<b?1:0;};' +
+      'var neg = function(v){return -v;};' +
+      'var eq = function(a,b){return a===b?1:0;};' +
+      'var eqs = function(a,b){return String(a)===String(b)?1:0;};' +
+      'var max = function(a,b){return Math.max(a,b);};' +
+      'var min = function(a,b){return Math.min(a,b);};' +
+      'var sqrt = function(v){return Math.sqrt(v);};' +
+      'var rand = function(){return Math.random();};' +
+      'var strIsEmpty = function(s){return !s||s.length===0?1:0;};' +
+      'var len = function(s){return s?s.length:0;};' +
+      'var ** = function(a,b){return (a&&b)?1:0;};';
     var result = Function('"use strict";' + scope + 'return (' + cleaned + ')')();
     if (result != null) return String(result);
   } catch (e) {}
