@@ -1,18 +1,18 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 [data-theme=dark]{
-  --bg:#08080d;--surface:#111118;--surface2:#1a1a24;--surface3:#222230;
-  --border:#2a2a3a;--border2:#3a3a50;
-  --text:#e8e8f0;--text2:#8888a0;--text3:#5a5a70;
-  --accent:#6c5ce7;--accent2:#a29bfe;--accent-glow:rgba(108,92,231,.15);
-  --green:#00b894;--green2:#00d9a7;
-  --red:#e17055;--orange:#fdcb6e;
-  --shadow:0 8px 32px rgba(0,0,0,.4);
+  --bg:#06060c;--surface:#10101a;--surface2:#1a1a28;--surface3:#242438;
+  --border:#2c2c44;--border2:#3e3e5a;
+  --text:#eaeaf4;--text2:#9090ac;--text3:#5e5e78;
+  --accent:#7c6df0;--accent2:#a89bfc;--accent-glow:rgba(124,109,240,.15);
+  --green:#00c9a0;--green2:#00ddb2;
+  --red:#ef7a62;--orange:#fdcb6e;
+  --shadow:0 8px 32px rgba(0,0,0,.5);
 }
 [data-theme=light]{
-  --bg:#f0f2f5;--surface:#ffffff;--surface2:#f5f6f8;--surface3:#ebedf0;
-  --border:#dcdfe5;--border2:#c8ccd4;
-  --text:#1a1a2e;--text2:#6b7280;--text3:#9ca3af;
-  --accent:#6c5ce7;--accent2:#5a4bd1;--accent-glow:rgba(108,92,231,.1);
+  --bg:#f0f2f5;--surface:#ffffff;--surface2:#f5f7fa;--surface3:#e9ecf2;
+  --border:#dcdfe5;--border2:#c0c6d2;
+  --text:#1a1a2e;--text2:#5a6072;--text3:#9098a8;
+  --accent:#6c5ce7;--accent2:#5a4bd1;--accent-glow:rgba(108,92,231,.08);
   --green:#00b894;--green2:#00a884;
   --red:#e17055;--orange:#f0932b;
   --shadow:0 4px 16px rgba(0,0,0,.08);
@@ -23,7 +23,14 @@
 }
 
 html,body{height:100%;overflow:hidden}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif;background:var(--bg);color:var(--text);transition:background .3s,color .3s}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif;background:var(--bg);color:var(--text);transition:background .4s,color .4s}
+
+/* Global Scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--border2)}
+*{scrollbar-width:thin;scrollbar-color:var(--border) transparent}
 
 /* ─── Layout ─── */
 .app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
@@ -34,6 +41,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
   padding:12px 24px;padding-top:calc(12px + var(--safe-top, env(safe-area-inset-top, 0px)));
   background:var(--surface);border-bottom:1px solid var(--border);
   flex-shrink:0;z-index:100;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
 }
 .topbar-left{display:flex;align-items:center;gap:12px}
 .topbar-right{display:flex;align-items:center;gap:8px}
@@ -51,33 +59,40 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
 /* ─── Steps ─── */
 .steps{display:flex;align-items:center;position:relative;gap:0}
 .step-tab{
-  display:flex;align-items:center;gap:6px;padding:8px 16px;
+  display:flex;align-items:center;gap:8px;padding:10px 20px;
   font-size:12px;font-weight:600;color:var(--text3);cursor:pointer;
-  transition:color .3s ease;position:relative;z-index:1;white-space:nowrap;
+  transition:all .3s ease;position:relative;z-index:1;white-space:nowrap;
 }
-.step-tab:hover{color:var(--text2)}
+.step-tab:hover{color:var(--text2);background:var(--surface2);border-radius:8px}
 .step-tab.active{color:var(--accent2)}
 .step-num{
-  width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  font-size:10px;font-weight:700;background:var(--surface2);border:1px solid var(--border);
-  transition:background .3s,border-color .3s,color .3s;
+  width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;background:var(--surface2);border:2px solid var(--border);
+  transition:all .3s cubic-bezier(.4,0,.2,1);
 }
-.step-tab.active .step-num{background:var(--accent);border-color:var(--accent);color:#fff}
+.step-tab.active .step-num{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 0 12px rgba(124,109,240,.4)}
 .step-tab.done .step-num{background:var(--green);border-color:var(--green);color:#fff}
 .step-tab.done{color:var(--green)}
+/* Progress connector between steps */
+.step-tab::after{
+  content:'';position:absolute;right:-16px;top:50%;width:32px;height:2px;
+  background:var(--border);z-index:0;transition:background .4s ease;
+}
+.step-tab:last-child::after{display:none}
+.step-tab.done::after{background:var(--green)}
 .step-slider{
-  position:absolute;bottom:0;height:2.5px;background:var(--accent);
-  border-radius:2px;transition:left .35s cubic-bezier(.4,0,.2,1),width .35s cubic-bezier(.4,0,.2,1);
+  position:absolute;bottom:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));
+  border-radius:2px;transition:left .4s cubic-bezier(.4,0,.2,1),width .4s cubic-bezier(.4,0,.2,1);
 }
 
 /* ─── Content ─── */
 .content{flex:1;overflow:hidden;position:relative}
 .page{
   position:absolute;inset:0;display:flex;flex-direction:column;
-  opacity:0;pointer-events:none;transform:translateX(20px);
-  transition:opacity .3s ease,transform .3s ease;
+  opacity:0;pointer-events:none;transform:translateY(12px);
+  transition:opacity .35s ease,transform .35s cubic-bezier(.4,0,.2,1);
 }
-.page.active{opacity:1;pointer-events:auto;transform:translateX(0)}
+.page.active{opacity:1;pointer-events:auto;transform:translateY(0)}
 
 /* ─── Template Grid ─── */
 .page-tpl{padding:16px 32px;overflow-y:auto}
@@ -93,9 +108,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
   content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--accent-glow),transparent);
   opacity:0;transition:opacity .3s;
 }
-.tpl-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:var(--shadow)}
-.tpl-card:hover::before{opacity:.5}
-.tpl-card.active{border-color:var(--accent);background:var(--accent-glow);box-shadow:0 0 0 1px var(--accent),var(--shadow)}
+.tpl-card:hover{border-color:var(--accent);transform:translateY(-4px) scale(1.02);box-shadow:0 12px 40px rgba(124,109,240,.18),0 4px 12px rgba(0,0,0,.3)}
+.tpl-card:hover::before{opacity:.6}
+.tpl-card.active{border-color:var(--accent);background:linear-gradient(135deg,var(--accent-glow),var(--surface));box-shadow:0 0 0 2px var(--accent),0 12px 36px rgba(124,109,240,.25);transform:translateY(-2px)}
 .tpl-card.active::before{opacity:1}
 .tpl-icon{font-size:28px;margin-bottom:10px;display:block;position:relative}
 .tpl-card-name{font-size:14px;font-weight:700;margin-bottom:4px;position:relative}
@@ -107,7 +122,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
 
 /* ─── Config Page ─── */
 .page-config{padding:28px 32px;overflow-y:auto}
-.config-header{display:flex;align-items:center;gap:16px;margin-bottom:24px}
+.config-header{display:flex;align-items:center;gap:16px;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--border);position:relative}
+.config-header::after{content:'';position:absolute;bottom:-1px;left:0;width:60px;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:1px}
 .config-header .tpl-icon{font-size:32px}
 .config-header h2{font-size:18px;font-weight:700}
 .config-header p{font-size:12px;color:var(--text2);margin-top:2px}
@@ -125,9 +141,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
 .field label{font-size:12px;color:var(--text2);font-weight:500}
 .field input[type=text],.field input[type=number],.field select,.field textarea{
   padding:9px 12px;background:var(--surface2);border:1px solid var(--border);
-  border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;transition:var(--transition);font-family:inherit;
+  border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;transition:all .2s ease;font-family:inherit;
 }
-.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);transform:translateY(-1px)}
+.field input:hover,.field select:hover,.field textarea:hover{border-color:var(--border2)}
 .field input[type=color]{height:40px;padding:4px;cursor:pointer;border-radius:var(--radius-sm)}
 .field input[type=range]{padding:0;background:transparent;border:none;height:36px}
 .field .hint{font-size:10px;color:var(--text3)}
@@ -150,10 +167,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
 .el-item{
   display:flex;align-items:center;gap:10px;padding:10px 14px;
   background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);
-  cursor:pointer;transition:var(--transition);
+  cursor:pointer;transition:all .2s cubic-bezier(.4,0,.2,1);
+  animation:el-slide-in .3s ease backwards;
 }
-.el-item:hover{border-color:var(--border2)}
-.el-item.active{border-color:var(--accent);background:var(--accent-glow)}
+.el-item:hover{border-color:var(--accent);transform:translateX(2px);box-shadow:0 2px 8px rgba(124,109,240,.1)}
+.el-item.active{border-color:var(--accent);background:var(--accent-glow);box-shadow:0 0 0 1px var(--accent)}
 .el-badge{
   font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;
   background:var(--accent);color:#fff;text-transform:uppercase;letter-spacing:.3px;flex-shrink:0;
@@ -187,8 +205,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
   width:22px;height:22px;border-radius:4px;cursor:pointer;border:2px solid transparent;
   transition:var(--transition);flex-shrink:0;
 }
-.color-swatch:hover{transform:scale(1.2);border-color:var(--accent)}
-.color-swatch:active{transform:scale(0.95)}
+.color-swatch:hover{transform:scale(1.25);border-color:var(--accent);box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.color-swatch:active{transform:scale(.95)}
 
 /* ─── Element Detail ─── */
 .el-detail{
@@ -196,6 +214,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
   border-radius:var(--radius);animation:fadeIn .2s ease;
 }
 @keyframes fadeIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@keyframes el-slide-in{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
 
 /* ─── Element Editor Sections ─── */
 .el-editor-section{
@@ -217,7 +236,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
   background:var(--surface);border:1.5px dashed var(--border);border-radius:var(--radius-sm);
   cursor:pointer;transition:var(--transition);margin-bottom:12px;
 }
-.media-picker:hover{border-color:var(--accent);background:var(--accent-glow)}
+.media-picker:hover{border-color:var(--accent);background:var(--accent-glow);transform:translateY(-1px);box-shadow:0 4px 12px rgba(124,109,240,.1)}
 .media-picker.has-file{border-style:solid;border-color:var(--green)}
 .media-picker-icon{font-size:24px;flex-shrink:0}
 .media-picker-info{flex:1;min-width:0}
@@ -240,6 +259,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
   width:420px;height:252px;border-radius:20px;overflow:hidden;position:relative;
   background:#111;border:2px solid var(--border);
   box-shadow:0 20px 60px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.05);
+  transform:perspective(800px) rotateY(-2deg) rotateX(1deg);
+  transition:transform .5s cubic-bezier(.4,0,.2,1),box-shadow .5s ease;
+}
+.preview-phone:hover{
+  transform:perspective(800px) rotateY(0) rotateX(0);
+  box-shadow:0 24px 70px rgba(0,0,0,.5),0 0 0 1px var(--accent),inset 0 0 0 1px rgba(255,255,255,.08);
 }
 .preview-screen{width:100%;height:100%;position:relative;overflow:hidden}
 .preview-camera{
@@ -324,12 +349,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
   cursor:pointer;transition:var(--transition);display:flex;align-items:center;gap:7px;font-family:inherit;
 }
 .btn:active{transform:scale(.97)}
-.btn-primary{background:var(--accent);color:#fff}
-.btn-primary:hover{background:var(--accent2);box-shadow:0 4px 16px rgba(108,92,231,.3)}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#8b7cf7);color:#fff}
+.btn-primary:hover{background:linear-gradient(135deg,var(--accent2),#9d8fff);box-shadow:0 6px 20px rgba(124,109,240,.35);transform:translateY(-1px)}
 .btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
-.btn-secondary:hover{border-color:var(--accent);color:var(--accent2)}
-.btn-export{background:var(--green);color:#fff}
-.btn-export:hover{background:var(--green2);box-shadow:0 4px 16px rgba(0,184,148,.3)}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent2);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
+.btn-export{background:linear-gradient(135deg,var(--green),#00d9a7);color:#fff}
+.btn-export:hover{box-shadow:0 6px 20px rgba(0,200,160,.35);transform:translateY(-1px)}
 .btn-back{background:transparent;color:var(--text2);border:1px solid var(--border)}
 .btn-back:hover{border-color:var(--text2);color:var(--text)}
 .btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
@@ -340,6 +365,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
   display:flex;align-items:center;justify-content:space-between;
   padding:12px 24px;padding-bottom:calc(12px + var(--safe-bottom, env(safe-area-inset-bottom, 0px)));
   background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
 }
 .bottombar-left,.bottombar-right{display:flex;gap:10px}
 .device-row{display:flex;align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap}
@@ -381,7 +407,7 @@ select:focus:not(:focus-visible){
   display:flex;align-items:center;gap:8px;
   padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;
   margin-bottom:6px;white-space:nowrap;
-  animation:toast-in .3s ease;
+  animation:toast-spring .4s cubic-bezier(.34,1.56,.64,1);
   box-shadow:0 4px 12px rgba(0,0,0,.3);
 }
 .toast-item.toast-success{background:var(--green);color:#fff}
@@ -390,6 +416,7 @@ select:focus:not(:focus-visible){
 .toast-item.toast-warning{background:var(--orange);color:#1a1a2e}
 .toast-item.fade-out{opacity:0;transform:translateY(-10px);transition:opacity .3s,transform .3s}
 @keyframes toast-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes toast-spring{0%{opacity:0;transform:translateY(20px) scale(.9)}60%{transform:translateY(-4px) scale(1.02)}100%{opacity:1;transform:translateY(0) scale(1)}}
 
 /* ─── Theme Toggle ─── */
 .theme-toggle{
@@ -398,7 +425,8 @@ select:focus:not(:focus-visible){
   display:flex;align-items:center;justify-content:center;transition:var(--transition);
   flex-shrink:0;
 }
-.theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent);transform:rotate(15deg) scale(1.1)}
+.theme-toggle:active{transform:scale(.95)}
 a.theme-toggle{text-decoration:none}
 .github-link{display:flex;align-items:center;justify-content:center}
 .github-link svg{transition:var(--transition)}
@@ -414,7 +442,8 @@ a.theme-toggle{text-decoration:none}
 .modal-overlay{
   position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;
   display:flex;align-items:center;justify-content:center;
-  backdrop-filter:blur(4px);animation:fadeIn .2s ease;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  animation:fadeIn .2s ease;
 }
 .modal{
   background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
@@ -472,6 +501,11 @@ kbd{
   width:380px!important;height:228px!important;
   border-radius:16px!important;
   box-shadow:0 12px 40px rgba(0,0,0,.5),inset 0 0 0 1px rgba(255,255,255,.05)!important;
+  transform:perspective(800px) rotateY(-1.5deg) rotateX(1deg);
+  transition:transform .5s cubic-bezier(.4,0,.2,1),box-shadow .5s ease!important;
+}
+.config-preview-phone:hover{
+  transform:perspective(800px) rotateY(0) rotateX(0)!important;
 }
 .config-live-device-row{
   display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;
@@ -572,6 +606,8 @@ kbd{
   pointer-events: none;
 }
 .tpl-search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.tpl-search input { transition: var(--transition); }
+.tpl-search input:hover { border-color: var(--border2); }
 
 /* ─── Preview Grid Overlay ─── */
 .preview-grid-overlay {
