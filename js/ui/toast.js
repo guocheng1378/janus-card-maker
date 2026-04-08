@@ -1,45 +1,56 @@
-// ─── Toast: 通知系统 ──────────────────────────────────────────────
+// ─── Toast: 消息提示（队列支持）──────────────────────────────
+var _toastQueue = [];
+var _toastTimer = null;
+var _toastEl = null;
 
-export function toast(msg, type, undoFn) {
-  var el = document.getElementById('toast');
+function getToastEl() {
+  if (!_toastEl) _toastEl = document.getElementById('toast');
+  return _toastEl;
+}
+
+export function toast(msg, type, duration) {
+  type = type || 'info';
+  duration = duration || (type === 'error' ? 4000 : 2500);
+  
+  var el = getToastEl();
   if (!el) return;
-  var div = document.createElement('div');
-  div.className = 'toast-item toast-' + (type || 'info');
-  var span = document.createElement('span');
-  span.textContent = msg;
-  div.appendChild(span);
-  if (undoFn) {
-    var btn = document.createElement('button');
-    btn.className = 'toast-undo';
-    btn.textContent = '撤销';
-    btn.onclick = function () { undoFn(); div.remove(); };
-    div.appendChild(btn);
-  }
-  el.appendChild(div);
-  setTimeout(function () {
-    div.classList.add('fade-out');
-    setTimeout(function () { div.remove(); }, 300);
-  }, 3000);
+  
+  // Create toast item
+  var item = document.createElement('div');
+  item.className = 'toast-item toast-' + type;
+  item.textContent = msg;
+  el.appendChild(item);
+  
+  // Auto remove
+  setTimeout(function() {
+    item.classList.add('fade-out');
+    setTimeout(function() { 
+      if (item.parentNode) item.parentNode.removeChild(item); 
+    }, 300);
+  }, duration);
 }
 
 export function toastProgress(msg) {
-  var el = document.getElementById('toast');
-  if (!el) return { update: function () {}, close: function () {} };
-  var div = document.createElement('div');
-  div.className = 'toast-item toast-info';
-  var span = document.createElement('span');
-  span.textContent = msg;
-  div.appendChild(span);
-  el.appendChild(div);
+  var el = getToastEl();
+  if (!el) return { close: function() {} };
+  
+  var item = document.createElement('div');
+  item.className = 'toast-item toast-info';
+  item.innerHTML = msg;
+  el.appendChild(item);
+  
   return {
-    update: function (m) { div.querySelector('span').textContent = m; },
-    close: function (m, t) {
-      div.querySelector('span').textContent = m;
-      div.className = 'toast-item toast-' + t;
-      setTimeout(function () {
-        div.classList.add('fade-out');
-        setTimeout(function () { div.remove(); }, 300);
-      }, 2000);
+    close: function(newMsg, newType) {
+      if (newMsg) {
+        item.className = 'toast-item toast-' + (newType || 'success');
+        item.textContent = newMsg;
+      }
+      setTimeout(function() {
+        item.classList.add('fade-out');
+        setTimeout(function() { 
+          if (item.parentNode) item.parentNode.removeChild(item); 
+        }, 300);
+      }, 1500);
     }
   };
 }
