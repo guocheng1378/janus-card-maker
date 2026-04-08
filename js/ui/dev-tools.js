@@ -123,7 +123,7 @@ export function evalExpr() {
   };
 
   // Try formatDate first
-  var fm = expr.match(/formatDate\s*\(\s*'([^']+)'\s*,\s*#time_sys\s*\)/);
+  var fm = expr.match(/formatDate\s*\(\s*'([^']+)'\s*,\s*([^)]+)\)/);
   if (fm) {
     var renderer = new PreviewRenderer(device, false);
     var result = renderer.fmtDate(now, fm[1]);
@@ -149,7 +149,25 @@ export function evalExpr() {
   });
 
   try {
-    var scope = 'var ifelse = function(c,a,b){return c?a:b;};';
+    var scope = 'var ifelse = function(c,a,b){return c?a:b;};' +
+      'var concat = function(){return Array.prototype.slice.call(arguments).join("");};' +
+      'var clamp = function(v,lo,hi){return Math.min(Math.max(v,lo),hi);};' +
+      'var floor = function(v){return Math.floor(v);};' +
+      'var ceil = function(v){return Math.ceil(v);};' +
+      'var abs = function(v){return Math.abs(v);};' +
+      'var mod = function(a,b){return a%b;};' +
+      'var div = function(a,b){return Math.floor(a/b);};' +
+      'var gt = function(a,b){return a>b?1:0;};' +
+      'var lt = function(a,b){return a<b?1:0;};' +
+      'var neg = function(v){return -v;};' +
+      'var eq = function(a,b){return a===b?1:0;};' +
+      'var eqs = function(a,b){return String(a)===String(b)?1:0;};' +
+      'var max = function(a,b){return Math.max(a,b);};' +
+      'var min = function(a,b){return Math.min(a,b);};' +
+      'var sqrt = function(v){return Math.sqrt(v);};' +
+      'var rand = function(){return Math.random();};' +
+      'var strIsEmpty = function(s){return !s||s.length===0?1:0;};' +
+      'var len = function(s){return s?s.length:0;};';
     var result = Function('"use strict";' + scope + 'return (' + cleaned + ')')();
     if (result != null) {
       resultEl.textContent = String(result);
