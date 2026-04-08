@@ -78,6 +78,14 @@ function selectTemplate(id) {
   });
 
   S.setTpl(tpl);
+  // Track recent templates
+  try {
+    var recent = JSON.parse(localStorage.getItem('jcm-recent') || '[]');
+    recent = recent.filter(function(id) { return id !== tpl.id; });
+    recent.unshift(tpl.id);
+    if (recent.length > 5) recent = recent.slice(0, 5);
+    localStorage.setItem('jcm-recent', JSON.stringify(recent));
+  } catch(e) {}
   var newCfg = {};
   tpl.config.forEach(function (g) { g.fields.forEach(function (f) { newCfg[f.key] = f.default; }); });
   S.setCfg(newCfg);
@@ -1036,6 +1044,35 @@ function setupEvents() {
     toast('↕ 已调整顺序', 'success');
   });
 
+
+  // Double-click element in preview to scroll to editor
+  document.getElementById('previewContent').addEventListener('dblclick', function(e) {
+    var elTarget = e.target.closest('[data-el-idx]');
+    if (elTarget) {
+      var idx = parseInt(elTarget.dataset.elIdx, 10);
+      if (!isNaN(idx) && idx < S.elements.length) {
+        S.setSelIdx(idx);
+        renderConfig(getTemplateMAML);
+        // Scroll to element detail section
+        var detail = document.querySelector('.el-detail');
+        if (detail) detail.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  });
+
+  document.getElementById('cfgPreviewContent').addEventListener('dblclick', function(e) {
+    var elTarget = e.target.closest('[data-el-idx]');
+    if (elTarget) {
+      var idx = parseInt(elTarget.dataset.elIdx, 10);
+      if (!isNaN(idx) && idx < S.elements.length) {
+        S.setSelIdx(idx);
+        renderConfig(getTemplateMAML);
+        var detail = document.querySelector('.el-detail');
+        if (detail) detail.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  });
+
   // File inputs
   document.getElementById('fileImagePick').addEventListener('change', handleFilePicked);
   document.getElementById('fileVideoPick').addEventListener('change', handleFilePicked);
@@ -1497,9 +1534,9 @@ Object.assign(window.JCM, {
       if (wrap2) wrap2.style.display = '';
     }
   },
-  zoomIn: function () { _zoomLevel = Math.min(_zoomLevel + 25, 200); applyZoom(); },
-  zoomOut: function () { _zoomLevel = Math.max(_zoomLevel - 25, 50); applyZoom(); },
-  zoomReset: function () { _zoomLevel = 100; applyZoom(); },
+  zoomIn: function () { _zoomLevel = Math.min(_zoomLevel + 25, 200); applyZoom(); try { sessionStorage.setItem('jcm-zoom', _zoomLevel); } catch(e) {} },
+  zoomOut: function () { _zoomLevel = Math.max(_zoomLevel - 25, 50); applyZoom(); try { sessionStorage.setItem('jcm-zoom', _zoomLevel); } catch(e) {} },
+  zoomReset: function () { _zoomLevel = 100; applyZoom(); try { sessionStorage.setItem('jcm-zoom', 100); } catch(e) {} },
   cfgZoomIn: function () { _cfgZoomLevel = Math.min(_cfgZoomLevel + 25, 200); applyCfgZoom(); },
   cfgZoomOut: function () { _cfgZoomLevel = Math.max(_cfgZoomLevel - 25, 50); applyCfgZoom(); },
   cfgZoomReset: function () { _cfgZoomLevel = 100; applyCfgZoom(); },
@@ -1544,6 +1581,14 @@ Object.assign(window.JCM, {
         var TPLS = window.__jcm_templates;
         var tpl = TPLS.find(function (t) { return t.id === data.templateId; }) || TPLS.find(function (t) { return t.id === 'custom'; });
         S.setTpl(tpl);
+  // Track recent templates
+  try {
+    var recent = JSON.parse(localStorage.getItem('jcm-recent') || '[]');
+    recent = recent.filter(function(id) { return id !== tpl.id; });
+    recent.unshift(tpl.id);
+    if (recent.length > 5) recent = recent.slice(0, 5);
+    localStorage.setItem('jcm-recent', JSON.stringify(recent));
+  } catch(e) {}
         S.setCfg(data.config || {});
         S.setElements(data.elements || []);
         S.setDirty(true);
@@ -1563,6 +1608,14 @@ Object.assign(window.JCM, {
         if (data.templateId) {
           var tpl = TEMPLATES.find(function (t) { return t.id === data.templateId; }) || TEMPLATES.find(function (t) { return t.id === 'custom'; });
           S.setTpl(tpl);
+  // Track recent templates
+  try {
+    var recent = JSON.parse(localStorage.getItem('jcm-recent') || '[]');
+    recent = recent.filter(function(id) { return id !== tpl.id; });
+    recent.unshift(tpl.id);
+    if (recent.length > 5) recent = recent.slice(0, 5);
+    localStorage.setItem('jcm-recent', JSON.stringify(recent));
+  } catch(e) {}
           S.setCfg(data.config || {});
           S.setElements(data.elements || []);
           S.setDirty(true); resetHistory();
