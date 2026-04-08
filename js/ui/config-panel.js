@@ -31,6 +31,8 @@ export function generateTplThumbnail(tpl) {
     if (tpl.elements) {
       var els = tpl.elements(cfg);
       html += new PreviewRenderer(device, false).renderElements(els, {}, -1);
+    } else if (tpl.id === 'custom' && typeof S !== 'undefined' && S.elements) {
+      html += new PreviewRenderer(device, false).renderElements(S.elements, S.uploadedFiles || {}, -1);
     }
     var result = '<div style="width:' + w + 'px;height:' + h + 'px;border-radius:6px;overflow:hidden;position:relative;flex-shrink:0"><div style="position:absolute;left:0;top:0;width:' + (976 * s) + 'px;height:' + (596 * s) + 'px;transform-origin:top left;transform:scale(' + s + ')">' + html + '</div></div>';
     _thumbCache[tpl.id] = result;
