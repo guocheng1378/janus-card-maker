@@ -45,6 +45,21 @@ const JS_FILES = [
   'js/templates/world_clock3.js',
   'js/templates/todo.js',
   // 新增模板 end
+  'js/templates/lunar.js',
+  'js/templates/pomodoro.js',
+  'js/templates/analog_clock.js',
+  'js/templates/counter.js',
+  'js/templates/photo_calendar.js',
+  'js/templates/quote_carousel.js',
+  'js/templates/multi_countdown.js',
+  'js/templates/hitokoto.js',
+  'js/templates/news.js',
+  'js/templates/exchange_rate.js',
+  'js/templates/bilibili.js',
+  'js/templates/dice.js',
+  'js/templates/flip_clock.js',
+  'js/templates/breathing.js',
+  'js/templates/pixel_clock.js',
   'js/templates/index.js',  // 汇总所有模板
   // Core
   'js/live-preview.js',
