@@ -487,25 +487,189 @@ function renderRealDevicePreview(device, showCam, tpl, cfg) {
     case 'notification':  return r.renderNotification(cfg);
     case 'quick_settings':return r.renderQuickSettings(cfg);
   }
-  // Fallback for weather_real / music_real
+  // Specific renderers for new templates
   var camW = showCam ? 420 * device.cameraZoneRatio : 0;
   var bg = cfg.bgColor || '#0a1628';
-  var dc = cfg.descColor || '#888888';
+  var sw = 420 - camW - 24;
+  var lx = camW + 12;
+
   if (tpl.id === 'weather_real') {
-    return '<div style="position:absolute;inset:0;background:' + bg + '"></div>' +
-      '<div style="position:absolute;left:' + (camW + 10) + 'px;top:20px;font-size:40px;color:' + (cfg.timeColor || '#fff') + ';font-weight:700">09:41</div>' +
-      '<div style="position:absolute;left:' + (camW + 10) + 'px;top:68px;font-size:12px;color:' + dc + '">4月6日 星期日</div>' +
-      '<div style="position:absolute;left:' + (camW + 10) + 'px;top:88px;font-size:32px;color:' + (cfg.tempColor || '#fff') + ';font-weight:700">23°</div>' +
-      '<div style="position:absolute;left:' + (camW + 10) + 'px;top:128px;font-size:11px;color:' + dc + '">北京 · 晴</div>' +
-      '<div style="position:absolute;right:8px;bottom:6px;font-size:8px;color:' + dc + ';opacity:0.3">需真实设备数据</div>';
+    var dc = cfg.descColor || '#888888';
+    return r.bg(bg, '') +
+      '<div style="position:absolute;left:' + lx + 'px;top:20px;font-size:40px;color:' + (cfg.timeColor || '#fff') + ';font-weight:700">09:41</div>' +
+      '<div style="position:absolute;left:' + lx + 'px;top:68px;font-size:12px;color:' + dc + '">4月6日 星期日</div>' +
+      '<div style="position:absolute;left:' + lx + 'px;top:88px;font-size:32px;color:' + (cfg.tempColor || '#fff') + ';font-weight:700">23°</div>' +
+      '<div style="position:absolute;left:' + lx + 'px;top:128px;font-size:11px;color:' + dc + '">北京 · 晴</div>';
   }
   if (tpl.id === 'music_real') {
-    return '<div style="position:absolute;inset:0;background:' + bg + '"></div>' +
-      '<div style="position:absolute;left:' + (camW + 14) + 'px;top:18px;font-size:15px;color:' + (cfg.titleColor || '#fff') + ';font-weight:700">歌曲名称</div>' +
-      '<div style="position:absolute;left:' + (camW + 14) + 'px;top:40px;font-size:10px;color:' + (cfg.artistColor || '#888') + '">歌手名称</div>' +
-      '<div style="position:absolute;right:8px;bottom:6px;font-size:8px;color:' + dc + ';opacity:0.3">需真实设备数据</div>';
+    return r.bg(bg, '') +
+      '<div style="position:absolute;left:' + (lx + 2) + 'px;top:18px;font-size:15px;color:' + (cfg.titleColor || '#fff') + ';font-weight:700">歌曲名称</div>' +
+      '<div style="position:absolute;left:' + (lx + 2) + 'px;top:40px;font-size:10px;color:' + (cfg.artistColor || '#888') + '">歌手名称</div>';
   }
-  return '<div style="position:absolute;inset:0;background:' + bg + '"></div>';
+
+  // Pomodoro
+  if (tpl.id === 'pomodoro') {
+    var work = cfg.workMin || 25;
+    return r.bg(bg, '') +
+      '<div style="position:absolute;left:' + lx + 'px;top:14px;font-size:13px;color:' + (cfg.timerColor || '#fff') + ';font-weight:600">🍅 番茄钟</div>' +
+      '<div style="position:absolute;left:' + lx + 'px;top:34px;font-size:48px;color:' + (cfg.timerColor || '#fff') + ';font-weight:700">' + work + ':00</div>' +
+      '<div style="position:absolute;left:' + lx + 'px;top:92px;font-size:11px;color:' + (cfg.workColor || '#e74c3c') + '">专注中</div>' +
+      '<div style="position:absolute;left:' + lx + 'px;top:110px;width:' + sw + 'px;height:4px;background:' + (cfg.trackColor || '#333') + ';border-radius:2px"></div>' +
+      '<div style="position:absolute;left:' + lx + 'px;top:110px;width:' + (sw * 0.6) + 'px;height:4px;background:' + (cfg.workColor || '#e74c3c') + ';border-radius:2px"></div>';
+  }
+
+  // Lunar
+  if (tpl.id === 'lunar') {
+    return r.bg(bg, '') +
+      '<div style="position:absolute;left:' + lx + 'px;top:20px;font-size:11px;color:' + (cfg.solarColor || '#fff') + ';opacity:0.6">2026年</div>' +
+      '<div style="position:absolute;left:' + lx + 'px;top:34px;font-size:42px;color:' + (cfg.solarColor || '#fff') + ';font-weight:700">04/08</div>' +
+      '<div style="position:absolute;left:' + lx + 'px;top:82px;font-size:12px;color:' + (cfg.solarColor || '#fff') + ';opacity:0.5">星期二</div>' +
+      '<div style="position:absolute;left:' + lx + 'px;top:100px;width:24px;height:2px;background:' + (cfg.accentColor || '#e74c3c') + ';border-radius:1px"></div>' +
+      '<div style="position:absolute;left:' + lx + 'px;top:110px;font-size:15px;color:' + (cfg.lunarColor || '#e74c3c') + ';font-weight:600">农历 ' + (cfg.lunarText || '二月十六') + '</div>' +
+      '<div style="position:absolute;left:' + lx + 'px;top:132px;font-size:11px;color:' + (cfg.termColor || '#f39c12') + '">✦ ' + (cfg.termText || '清明') + '</div>' +
+      '<div style="position:absolute;left:' + lx + 'px;top:156px;font-size:10px;color:' + (cfg.yiColor || '#00b894') + '">宜 ' + (cfg.yiText || '出行 签约') + '</div>' +
+      '<div style="position:absolute;left:' + lx + 'px;top:172px;font-size:10px;color:' + (cfg.jiColor || '#e74c3c') + '">忌 ' + (cfg.jiText || '搬家 动土') + '</div>';
+  }
+
+  // Flip clock
+  if (tpl.id === 'flip_clock') {
+    var dw = 36, dg = 5;
+    var digits = ['0','9',':','4','1'];
+    var html = r.bg(cfg.bgColor || '#000', '');
+    var dx = lx;
+    digits.forEach(function (d, i) {
+      if (d === ':') {
+        html += '<div style="position:absolute;left:' + dx + 'px;top:30px;font-size:36px;color:' + (cfg.sepColor || '#6c5ce7') + ';font-weight:700">:</div>';
+        dx += 18;
+      } else {
+        html += '<div style="position:absolute;left:' + dx + 'px;top:20px;width:' + dw + 'px;height:52px;background:' + (cfg.cardBgColor || '#1a1a2e') + ';border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:36px;color:' + (cfg.digitColor || '#fff') + ';font-weight:700">' + d + '</div>';
+        dx += dw + dg;
+      }
+    });
+    html += '<div style="position:absolute;left:' + lx + 'px;top:82px;font-size:10px;color:' + (cfg.cardBgColor || '#1a1a2e') + ';opacity:0.8">2026/04/08 周二</div>';
+    return html;
+  }
+
+  // Pixel clock
+  if (tpl.id === 'pixel_clock') {
+    return r.bg(cfg.bgColor || '#0a0a0a', '') +
+      '<div style="position:absolute;left:' + lx + 'px;top:24px;font-size:48px;color:' + (cfg.pixelOn || '#00ff41') + ';font-weight:700;font-family:monospace">09:41</div>' +
+      '<div style="position:absolute;left:' + lx + 'px;top:82px;font-size:10px;color:' + (cfg.dateColor || '#555') + '">2026/04/08 周二</div>' +
+      '<div style="position:absolute;left:' + lx + 'px;top:100px;display:flex;gap:2px;flex-wrap:wrap;width:' + sw + 'px">' +
+      Array(60).fill('<div style="width:5px;height:5px;background:' + (cfg.pixelOff || '#1a1a1a') + ';border-radius:1px"></div>').join('') + '</div>';
+  }
+
+  // Breathing
+  if (tpl.id === 'breathing') {
+    return '<div style="position:absolute;inset:0;background:linear-gradient(135deg,' + (cfg.color1 || '#6c5ce7') + ',' + (cfg.color2 || '#00cec9') + ')"></div>' +
+      '<div style="position:absolute;right:0;top:0;width:50%;height:100%;background:' + (cfg.color3 || '#e17055') + ';opacity:0.4"></div>' +
+      (cfg.showText !== 'false' && cfg.text ? '<div style="position:absolute;left:' + lx + 'px;top:40%;width:' + sw + 'px;text-align:center;font-size:28px;color:' + (cfg.textColor || '#fff') + '">' + cfg.text + '</div>' : '');
+  }
+
+  // Water
+  if (tpl.id === 'water') {
+    var goal = cfg.goalCups || 8;
+    var html = r.bg(bg, '');
+    html += '<div style="position:absolute;left:' + lx + 'px;top:14px;font-size:13px;color:' + (cfg.textColor || '#fff') + ';font-weight:600">💧 今日饮水</div>';
+    html += '<div style="position:absolute;left:' + lx + 'px;top:32px;font-size:9px;color:' + (cfg.textColor || '#fff') + ';opacity:0.5">目标 ' + goal + ' 杯</div>';
+    var cols = Math.min(goal, 4);
+    for (var wi = 0; wi < goal; wi++) {
+      var wcol = wi % cols, wrow = Math.floor(wi / cols);
+      html += '<div style="position:absolute;left:' + (lx + wcol * 34) + 'px;top:' + (50 + wrow * 48) + 'px;width:26px;height:34px;background:' + (cfg.trackColor || '#1a2040') + ';border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:14px;opacity:0.3">💧</div>';
+    }
+    return html;
+  }
+
+  // Stopwatch
+  if (tpl.id === 'stopwatch') {
+    return r.bg(cfg.bgColor || '#000', '') +
+      '<div style="position:absolute;left:' + lx + 'px;top:14px;font-size:11px;color:' + (cfg.labelColor || '#666') + '">⏱️ 秒表</div>' +
+      '<div style="position:absolute;left:' + lx + 'px;top:30px;font-size:52px;color:' + (cfg.timeColor || '#fff') + ';font-weight:700">0:00</div>' +
+      '<div style="position:absolute;left:' + lx + 'px;top:88px;font-size:24px;color:' + (cfg.accentColor || '#6c5ce7') + ';opacity:0.7">.00</div>';
+  }
+
+  // Counter
+  if (tpl.id === 'counter') {
+    return r.bg(bg, '') +
+      '<div style="position:absolute;left:' + lx + 'px;top:20px;font-size:11px;color:' + (cfg.labelColor || '#888') + '">' + (cfg.label || '计数') + '</div>' +
+      '<div style="position:absolute;left:' + lx + 'px;top:36px;font-size:60px;color:' + (cfg.numberColor || '#fff') + ';font-weight:700">' + (cfg.startValue || '0') + '</div>' +
+      '<div style="position:absolute;left:' + lx + 'px;top:104px;width:' + sw + 'px;height:1px;background:#222"></div>' +
+      '<div style="position:absolute;left:' + lx + 'px;top:112px;font-size:9px;color:' + (cfg.labelColor || '#888') + ';opacity:0.5">步长: ' + (cfg.step || 1) + '</div>';
+  }
+
+  // World clock 3
+  if (tpl.id === 'world_clock3') {
+    var cw = sw / 3;
+    var cities3 = [
+      { name: cfg.city1 || '北京', color: cfg.color1 || '#fff' },
+      { name: cfg.city2 || '东京', color: cfg.color2 || '#6c5ce7' },
+      { name: cfg.city3 || '纽约', color: cfg.color3 || '#00b894' },
+    ];
+    var html = r.bg(cfg.bgColor || '#000', '');
+    cities3.forEach(function (c, i) {
+      html += '<div style="position:absolute;left:' + (lx + i * cw) + 'px;top:20px;width:' + cw + 'px"><div style="font-size:10px;color:' + (cfg.dateColor || '#666') + '">' + c.name + '</div><div style="font-size:24px;color:' + c.color + ';font-weight:700">09:41</div><div style="font-size:8px;color:' + (cfg.dateColor || '#666') + ';opacity:0.5">04/08</div></div>';
+    });
+    return html;
+  }
+
+  // Multi countdown
+  if (tpl.id === 'multi_countdown') {
+    var events3 = [
+      { name: cfg.event1Name || '新年', color: cfg.event1Color || '#ff6b6b' },
+      { name: cfg.event2Name || '春节', color: cfg.event2Color || '#feca57' },
+      { name: cfg.event3Name || '国庆节', color: cfg.event3Color || '#6c5ce7' },
+    ];
+    var html = r.bg(bg, '');
+    html += '<div style="position:absolute;left:' + lx + 'px;top:12px;font-size:13px;color:' + (cfg.textColor || '#fff') + ';font-weight:600">📋 倒数日</div>';
+    events3.forEach(function (ev, i) {
+      html += '<div style="position:absolute;left:' + lx + 'px;top:' + (32 + i * 52) + 'px;width:' + sw + 'px;height:40px;background:#141418;border-radius:6px;padding:6px 10px;box-sizing:border-box"><div style="font-size:10px;color:' + (cfg.textColor || '#fff') + '">' + ev.name + '</div><div style="font-size:20px;color:' + ev.color + ';font-weight:700">' + (30 + i * 15) + ' <span style="font-size:10px;color:' + (cfg.labelColor || '#888') + '">天</span></div></div>';
+    });
+    return html;
+  }
+
+  // Photo calendar
+  if (tpl.id === 'photo_calendar') {
+    var a = ((cfg.overlayAlpha || 60) / 100);
+    return r.bg(cfg.bgColor || '#000', '') +
+      '<div style="position:absolute;left:0;bottom:0;width:100%;height:70px;background:' + (cfg.overlayColor || '#000') + ';opacity:' + a + '"></div>' +
+      '<div style="position:absolute;left:' + lx + 'px;bottom:10px"><div style="font-size:10px;color:' + (cfg.dayColor || '#aaa') + '">2026年04月</div><div style="font-size:36px;color:' + (cfg.dateColor || '#fff') + ';font-weight:700">08</div><div style="font-size:10px;color:' + (cfg.accentColor || '#ff6b6b') + '">星期二</div></div>';
+  }
+
+  // Quote carousel
+  if (tpl.id === 'quote_carousel') {
+    return r.bg(bg, '') +
+      '<div style="position:absolute;left:' + (lx - 2) + 'px;top:30px;width:2px;height:30px;background:' + (cfg.authorColor || '#6c5ce7') + ';border-radius:1px"></div>' +
+      '<div style="position:absolute;left:' + (lx + 8) + 'px;top:30px;font-size:18px;color:' + (cfg.textColor || '#fff') + ';width:' + (sw - 12) + 'px;line-height:1.5">Stay hungry.<br>Stay foolish.</div>' +
+      '<div style="position:absolute;left:50%;transform:translateX(-50%);bottom:16px;display:flex;gap:6px">' +
+      '<div style="width:6px;height:6px;border-radius:50%;background:' + (cfg.authorColor || '#6c5ce7') + '"></div>' +
+      '<div style="width:6px;height:6px;border-radius:50%;background:' + (cfg.authorColor || '#6c5ce7') + ';opacity:0.3"></div>' +
+      '<div style="width:6px;height:6px;border-radius:50%;background:' + (cfg.authorColor || '#6c5ce7') + ';opacity:0.3"></div></div>';
+  }
+
+  // Todo
+  if (tpl.id === 'todo') {
+    var items = ['完成项目文档', '回复邮件', '代码审查'];
+    var html = r.bg(bg, '');
+    html += '<div style="position:absolute;left:' + lx + 'px;top:12px;font-size:13px;color:' + (cfg.titleColor || '#fff') + ';font-weight:600">✅ 待办</div>';
+    items.forEach(function (item, i) {
+      var done = i === 0;
+      html += '<div style="position:absolute;left:' + lx + 'px;top:' + (32 + i * 30) + 'px;display:flex;align-items:center;gap:6px">' +
+        '<div style="width:10px;height:10px;border-radius:50%;background:' + (done ? (cfg.checkColor || '#00b894') : '#333') + '"></div>' +
+        '<span style="font-size:11px;color:' + (done ? (cfg.doneColor || '#555') : (cfg.itemColor || '#ccc')) + '">' + item + '</span></div>';
+    });
+    return html;
+  }
+
+  // Generic fallback for remaining templates
+  var accent = cfg.accentColor || cfg.barColor || cfg.ringColor || '#6c5ce7';
+  var textColor = cfg.textColor || cfg.timeColor || cfg.titleColor || '#ffffff';
+  return r.bg(bg, '') +
+    '<div style="position:absolute;left:' + lx + 'px;top:20px;font-size:28px">' + tpl.icon + '</div>' +
+    '<div style="position:absolute;left:' + lx + 'px;top:58px;font-size:14px;color:' + textColor + ';font-weight:600">' + tpl.name + '</div>' +
+    '<div style="position:absolute;left:' + lx + 'px;top:78px;font-size:10px;color:' + (cfg.labelColor || '#888') + '">' + tpl.desc + '</div>' +
+    '<div style="position:absolute;left:' + lx + 'px;top:100px;width:' + sw + 'px;height:4px;background:#222;border-radius:2px"></div>' +
+    '<div style="position:absolute;left:' + lx + 'px;top:100px;width:' + (sw * 0.7) + 'px;height:4px;background:' + accent + ';border-radius:2px"></div>' +
+    '<div style="position:absolute;right:8px;bottom:6px;font-size:7px;color:#555;opacity:0.5">预览</div>';
 }
 
 export { PreviewRenderer };
