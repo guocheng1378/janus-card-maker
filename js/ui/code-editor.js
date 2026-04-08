@@ -10,6 +10,10 @@ export function highlightXML(code) {
 }
 
 export function updateCodeEditor() {
+  var _ta = document.getElementById('codeContent');
+  if (_ta && _ta.value.length > 500000) {
+    _ta.value = _ta.value.substring(0, 500000) + '\n<!-- Truncated -->';
+  }
   var textarea = document.getElementById('codeContent');
   var gutter = document.getElementById('codeGutter');
   var highlight = document.getElementById('codeHighlight');
