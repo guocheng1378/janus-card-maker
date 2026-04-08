@@ -141,6 +141,10 @@ export function renderConfig(getTemplateMAML) {
       group.fields.map(function (f) { return renderField(f); }).join('') + '</div>');
   });
 
+
+  // Reset to defaults button
+  html += '<div style="margin-bottom:16px"><button class="el-btn" data-reset-defaults style="width:100%;justify-content:center;color:var(--text2);font-size:12px">🔄 恢复默认设置</button></div>';
+
   // ── Element toolbar (simplified on mobile) ──
   var coreAddBtns =
     '<button class="el-btn" data-add="text"><span class="el-btn-icon">T</span> 文字</button>' +
