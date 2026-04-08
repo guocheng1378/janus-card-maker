@@ -200,7 +200,7 @@ export function renderConfig(getTemplateMAML) {
       '</span></div>';
   }
   if (S.elements.length === 0) {
-    elementSectionInner += '<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">点击上方按钮添加元素</div>';
+    elementSectionInner += '<div style="text-align:center;padding:28px 20px;color:var(--text3);font-size:12px"><div style="font-size:32px;margin-bottom:8px;opacity:.3">📐</div>点击上方按钮添加元素</div>';
   }
   elementSectionInner += '</div>';
 
