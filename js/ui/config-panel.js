@@ -50,10 +50,19 @@ export function renderTplGrid() {
   // Get custom order from localStorage
   var customOrder = [];
   try { customOrder = JSON.parse(localStorage.getItem('jcm-tpl-order') || '[]'); } catch(e) {}
+  // Recent templates
+  var recentIds = [];
+  try { recentIds = JSON.parse(localStorage.getItem('jcm-recent') || '[]'); } catch(e) {}
+  
   var sorted = TEMPLATES.slice().sort(function (a, b) {
     var aFav = favs.indexOf(a.id) >= 0 ? 0 : 1;
     var bFav = favs.indexOf(b.id) >= 0 ? 0 : 1;
     if (aFav !== bFav) return aFav - bFav;
+    var aRecent = recentIds.indexOf(a.id);
+    var bRecent = recentIds.indexOf(b.id);
+    if (aRecent >= 0 && bRecent >= 0) return aRecent - bRecent;
+    if (aRecent >= 0) return -1;
+    if (bRecent >= 0) return 1;
     var aOrd = customOrder.indexOf(a.id);
     var bOrd = customOrder.indexOf(b.id);
     if (aOrd >= 0 && bOrd >= 0) return aOrd - bOrd;
@@ -66,6 +75,7 @@ export function renderTplGrid() {
     var isFav = favs.indexOf(t.id) >= 0;
     return '<div class="tpl-card' + (S.tpl && S.tpl.id === t.id ? ' active' : '') + '" data-tpl="' + t.id + '">' +
       '<button class="tpl-fav' + (isFav ? ' active' : '') + '" data-fav="' + t.id + '">' + (isFav ? '⭐' : '☆') + '</button>' +
+      (recentIds.indexOf(t.id) >= 0 && (!S.tpl || S.tpl.id !== t.id) ? '<span class="tpl-recent-badge">最近</span>' : '') +
       (TPL_USAGE[t.id] ? '<button class="tpl-info-btn" data-usage="' + t.id + '" title="使用说明">❓</button>' : '') +
       '<div class="tpl-thumb">' + thumb + '</div>' +
       '<div class="tpl-card-name">' + esc(t.name) + '</div>' +
