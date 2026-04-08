@@ -68,7 +68,7 @@ export function renderTplGrid() {
       '<button class="tpl-fav' + (isFav ? ' active' : '') + '" data-fav="' + t.id + '">' + (isFav ? '⭐' : '☆') + '</button>' +
       (TPL_USAGE[t.id] ? '<button class="tpl-info-btn" data-usage="' + t.id + '" title="使用说明">❓</button>' : '') +
       '<div class="tpl-thumb">' + thumb + '</div>' +
-      '<div class="tpl-card-name">' + t.name + '</div>' +
+      '<div class="tpl-card-name">' + esc(t.name) + '</div>' +
       '<div class="tpl-card-desc">' + t.desc + '</div></div>';
   }).join('');
   renderTplCategories();
