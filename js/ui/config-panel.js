@@ -164,8 +164,7 @@ export function renderConfig(getTemplateMAML) {
     '</div>';
 
   // Element list with layer-panel style: drag reorder, visibility, lock, delete, camera warning
-  // Element list with layer-panel style: drag reorder, visibility, lock, delete, camera warning
-  var elementSectionInner = '';
+  elementSectionInner += '<div class="el-list" id="elListDrag">';
   // Render in reverse order (top layer first) like the layer panel
   for (var li = S.elements.length - 1; li >= 0; li--) {
     var el = S.elements[li];
