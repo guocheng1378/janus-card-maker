@@ -146,8 +146,7 @@ PreviewRenderer.prototype.evalExpression = function (expr) {
       'var sqrt = function(v){return Math.sqrt(v);};' +
       'var rand = function(){return Math.random();};' +
       'var strIsEmpty = function(s){return !s||s.length===0?1:0;};' +
-      'var len = function(s){return s?s.length:0;};' +
-      'var ** = function(a,b){return (a&&b)?1:0;};';
+      'var len = function(s){return s?s.length:0;};';
     var result = Function('"use strict";' + scope + 'return (' + cleaned + ')')();
     if (result != null) return String(result);
   } catch (e) {}
