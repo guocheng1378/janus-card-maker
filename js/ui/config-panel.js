@@ -27,7 +27,7 @@ export function generateTplThumbnail(tpl) {
   try {
     var device = { width: 976, height: 596, cameraZoneRatio: 0.3 };
     var html = renderTemplatePreview(device, false, tpl, cfg);
-    // For templates with elements(), also render elements in the thumbnail
+    // For templates with elements(), render them in the thumbnail
     if (tpl.elements) {
       var els = tpl.elements(cfg);
       html += new PreviewRenderer(device, false).renderElements(els, {}, -1);

@@ -464,12 +464,9 @@ PreviewRenderer.prototype.renderQuickSettings = function (c) {
 // ─── Render Template Preview (dispatch) ───────────────────────────
 export function renderTemplatePreview(device, showCam, tpl, cfg) {
   var r = new PreviewRenderer(device, showCam);
-  // Templates with elements() → render via elements for live preview
+  // Templates with elements() → just render background (elements are in S.elements)
   if (tpl.elements) {
-    var elements = tpl.elements(cfg);
-    var html = r.bg(cfg.bgColor || '#000000', '');
-    html += r.renderElements(elements, {}, -1);
-    return html;
+    return r.bg(cfg.bgColor || '#000000', '');
   }
   // rawXml-only templates (device-binding) → use dedicated preview renderers
   if (tpl.rawXml) {
