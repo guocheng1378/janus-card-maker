@@ -642,7 +642,7 @@ kbd{
   .preview-phone{width:320px;height:192px}
   .bottombar{padding:10px 16px;padding-bottom:calc(10px + var(--safe-bottom, env(safe-area-inset-bottom, 0px)))}
   .page-config-live{flex-direction:column}
-  .config-live-left{padding:16px;border-right:none;max-height:none;overflow-y:auto;flex:1}
+  .config-live-left{padding:16px;padding-bottom:80px;border-right:none;max-height:none;overflow-y:auto;flex:1}
   .config-live-right{display:none}
   /* Category tabs: horizontal scroll on mobile */
   .tpl-categories{flex-wrap:nowrap;overflow-x:auto;padding:0 16px 20px;gap:6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
