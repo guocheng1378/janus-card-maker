@@ -122,14 +122,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
 /* ─── Template Thumbnails ─── */
 .tpl-thumb{margin-bottom:10px;position:relative;border-radius:8px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
 .tpl-thumb-fallback{width:100%;height:64px;border-radius:6px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0}
-/* Stagger animation for grid cards */
-.tpl-card:nth-child(1){animation-delay:.02s}
-.tpl-card:nth-child(2){animation-delay:.04s}
-.tpl-card:nth-child(3){animation-delay:.06s}
-.tpl-card:nth-child(4){animation-delay:.08s}
-.tpl-card:nth-child(5){animation-delay:.10s}
-.tpl-card:nth-child(6){animation-delay:.12s}
-.tpl-card{animation:card-pop .35s ease backwards}
+/* Stagger animation for grid cards - only on first load */
+.tpl-grid-initial .tpl-card:nth-child(1){animation-delay:.02s}
+.tpl-grid-initial .tpl-card:nth-child(2){animation-delay:.04s}
+.tpl-grid-initial .tpl-card:nth-child(3){animation-delay:.06s}
+.tpl-grid-initial .tpl-card:nth-child(4){animation-delay:.08s}
+.tpl-grid-initial .tpl-card:nth-child(5){animation-delay:.10s}
+.tpl-grid-initial .tpl-card:nth-child(6){animation-delay:.12s}
+.tpl-grid-initial .tpl-card{animation:card-pop .35s ease backwards}
 @keyframes card-pop{from{opacity:0;transform:translateY(16px) scale(.96)}to{opacity:1;transform:none}}
 
 /* ─── Config Page ─── */
@@ -179,10 +179,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
 .el-item{
   display:flex;align-items:center;gap:10px;padding:10px 14px;
   background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);
-  cursor:pointer;transition:all .2s cubic-bezier(.4,0,.2,1);
-  animation:el-slide-in .3s ease backwards;
+  cursor:pointer;transition:border-color .2s ease,background .2s ease;
 }
-.el-item:hover{border-color:var(--accent);transform:translateX(2px);box-shadow:0 2px 8px rgba(124,109,240,.1)}
+.el-item:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(124,109,240,.1)}
 .el-item.active{border-color:var(--accent);background:var(--accent-glow);box-shadow:0 0 0 1px var(--accent)}
 .el-badge{
   font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;
@@ -308,9 +307,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   height:100%;color:var(--text3);gap:8px;
 }
-.preview-placeholder span{font-size:40px;animation:placeholder-float 3s ease-in-out infinite}
+.preview-placeholder span{font-size:40px}
 .preview-placeholder p{font-size:13px;opacity:.7}
-@keyframes placeholder-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 .preview-device-label{font-size:11px;color:var(--text3);text-align:center}
 .preview-side{display:flex;flex-direction:column;gap:16px}
 .preview-side h3{font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px}
@@ -1096,9 +1094,8 @@ kbd{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:40px 20px;text-align:center;color:var(--text3);gap:12px;
 }
-.empty-state-icon{font-size:48px;animation:empty-bounce 2s ease-in-out infinite}
+.empty-state-icon{font-size:48px}
 .empty-state-text{font-size:14px;line-height:1.5;max-width:240px}
-@keyframes empty-bounce{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-6px) rotate(-3deg)}75%{transform:translateY(-3px) rotate(2deg)}}
 
 /* ─── Mock Data Toggle ─── */
 .mock-toggle{

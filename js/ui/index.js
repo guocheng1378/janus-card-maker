@@ -1535,7 +1535,8 @@ Object.assign(window.JCM, {
   // Dev tools
   toggleMockMode: function () {
     toggleMockMode();
-    renderPreview(); renderLivePreview();
+    try { renderPreview(); } catch (e) {}
+    try { renderLivePreview(); } catch (e) {}
   },
   openExprDebugger: openExprDebugger,
   closeExprDebugger: closeExprDebugger,
