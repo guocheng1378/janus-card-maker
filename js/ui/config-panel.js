@@ -130,7 +130,10 @@ export function filterTemplates(query) {
       var name = (nameEl || {}).textContent || '';
       var desc = (descEl || {}).textContent || '';
       var catMatch = _activeCategory === 'all' || TPL_CATEGORY_MAP[tplId] === _activeCategory;
-      var searchMatch = !q || name.toLowerCase().indexOf(q) >= 0 || desc.toLowerCase().indexOf(q) >= 0 || tplId.indexOf(q) >= 0;
+      var catName = '';
+      var catId = TPL_CATEGORY_MAP[tplId] || '';
+      TPL_CATEGORIES.forEach(function(c) { if (c.id === catId) catName = c.label; });
+      var searchMatch = !q || name.toLowerCase().indexOf(q) >= 0 || desc.toLowerCase().indexOf(q) >= 0 || tplId.indexOf(q) >= 0 || catName.toLowerCase().indexOf(q) >= 0;
       card.style.display = (catMatch && searchMatch) ? '' : 'none';
       // Highlight matching text
       if (q && searchMatch && nameEl) nameEl.innerHTML = hlText(name, q);
