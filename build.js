@@ -66,6 +66,7 @@ const JS_FILES = [
   'js/ui/export-adb.js',
   'js/ui/snippets.js',
   'js/ui/batch-ops.js',
+  'js/ui/dev-tools.js',
   'js/ui/index.js',         // UI 入口（依赖所有上面的）
   'js/main.js',             // 应用入口
 ];

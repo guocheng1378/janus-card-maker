@@ -15,19 +15,19 @@
 <script src="js/early-init.js"></script>
 <style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 [data-theme=dark]{
-  --bg:#08080d;--surface:#111118;--surface2:#1a1a24;--surface3:#222230;
-  --border:#2a2a3a;--border2:#3a3a50;
-  --text:#e8e8f0;--text2:#8888a0;--text3:#5a5a70;
-  --accent:#6c5ce7;--accent2:#a29bfe;--accent-glow:rgba(108,92,231,.15);
-  --green:#00b894;--green2:#00d9a7;
-  --red:#e17055;--orange:#fdcb6e;
-  --shadow:0 8px 32px rgba(0,0,0,.4);
+  --bg:#06060c;--surface:#10101a;--surface2:#1a1a28;--surface3:#242438;
+  --border:#2c2c44;--border2:#3e3e5a;
+  --text:#eaeaf4;--text2:#9090ac;--text3:#5e5e78;
+  --accent:#7c6df0;--accent2:#a89bfc;--accent-glow:rgba(124,109,240,.15);
+  --green:#00c9a0;--green2:#00ddb2;
+  --red:#ef7a62;--orange:#fdcb6e;
+  --shadow:0 8px 32px rgba(0,0,0,.5);
 }
 [data-theme=light]{
-  --bg:#f0f2f5;--surface:#ffffff;--surface2:#f5f6f8;--surface3:#ebedf0;
-  --border:#dcdfe5;--border2:#c8ccd4;
-  --text:#1a1a2e;--text2:#6b7280;--text3:#9ca3af;
-  --accent:#6c5ce7;--accent2:#5a4bd1;--accent-glow:rgba(108,92,231,.1);
+  --bg:#f0f2f5;--surface:#ffffff;--surface2:#f5f7fa;--surface3:#e9ecf2;
+  --border:#dcdfe5;--border2:#c0c6d2;
+  --text:#1a1a2e;--text2:#5a6072;--text3:#9098a8;
+  --accent:#6c5ce7;--accent2:#5a4bd1;--accent-glow:rgba(108,92,231,.08);
   --green:#00b894;--green2:#00a884;
   --red:#e17055;--orange:#f0932b;
   --shadow:0 4px 16px rgba(0,0,0,.08);
@@ -38,7 +38,16 @@
 }
 
 html,body{height:100%;overflow:hidden}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif;background:var(--bg);color:var(--text);transition:background .3s,color .3s}
+/* Selection */
+::selection{background:rgba(124,109,240,.3);color:inherit}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif;background:var(--bg);color:var(--text);transition:background .4s,color .4s}
+
+/* Global Scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--border2)}
+*{scrollbar-width:thin;scrollbar-color:var(--border) transparent}
 
 /* ─── Layout ─── */
 .app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
@@ -49,6 +58,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
   padding:12px 24px;padding-top:calc(12px + var(--safe-top, env(safe-area-inset-top, 0px)));
   background:var(--surface);border-bottom:1px solid var(--border);
   flex-shrink:0;z-index:100;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
 }
 .topbar-left{display:flex;align-items:center;gap:12px}
 .topbar-right{display:flex;align-items:center;gap:8px}
@@ -66,33 +76,40 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
 /* ─── Steps ─── */
 .steps{display:flex;align-items:center;position:relative;gap:0}
 .step-tab{
-  display:flex;align-items:center;gap:6px;padding:8px 16px;
+  display:flex;align-items:center;gap:8px;padding:10px 20px;
   font-size:12px;font-weight:600;color:var(--text3);cursor:pointer;
-  transition:color .3s ease;position:relative;z-index:1;white-space:nowrap;
+  transition:all .3s ease;position:relative;z-index:1;white-space:nowrap;
 }
-.step-tab:hover{color:var(--text2)}
+.step-tab:hover{color:var(--text2);background:var(--surface2);border-radius:8px}
 .step-tab.active{color:var(--accent2)}
 .step-num{
-  width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  font-size:10px;font-weight:700;background:var(--surface2);border:1px solid var(--border);
-  transition:background .3s,border-color .3s,color .3s;
+  width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;background:var(--surface2);border:2px solid var(--border);
+  transition:all .3s cubic-bezier(.4,0,.2,1);
 }
-.step-tab.active .step-num{background:var(--accent);border-color:var(--accent);color:#fff}
+.step-tab.active .step-num{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 0 12px rgba(124,109,240,.4)}
 .step-tab.done .step-num{background:var(--green);border-color:var(--green);color:#fff}
 .step-tab.done{color:var(--green)}
+/* Progress connector between steps */
+.step-tab::after{
+  content:'';position:absolute;right:-16px;top:50%;width:32px;height:2px;
+  background:var(--border);z-index:0;transition:background .4s ease;
+}
+.step-tab:last-child::after{display:none}
+.step-tab.done::after{background:var(--green)}
 .step-slider{
-  position:absolute;bottom:0;height:2.5px;background:var(--accent);
-  border-radius:2px;transition:left .35s cubic-bezier(.4,0,.2,1),width .35s cubic-bezier(.4,0,.2,1);
+  position:absolute;bottom:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));
+  border-radius:2px;transition:left .4s cubic-bezier(.4,0,.2,1),width .4s cubic-bezier(.4,0,.2,1);
 }
 
 /* ─── Content ─── */
 .content{flex:1;overflow:hidden;position:relative}
 .page{
   position:absolute;inset:0;display:flex;flex-direction:column;
-  opacity:0;pointer-events:none;transform:translateX(20px);
-  transition:opacity .3s ease,transform .3s ease;
+  opacity:0;pointer-events:none;transform:translateY(12px);
+  transition:opacity .35s ease,transform .35s cubic-bezier(.4,0,.2,1);
 }
-.page.active{opacity:1;pointer-events:auto;transform:translateX(0)}
+.page.active{opacity:1;pointer-events:auto;transform:translateY(0)}
 
 /* ─── Template Grid ─── */
 .page-tpl{padding:16px 32px;overflow-y:auto}
@@ -108,31 +125,36 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
   content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--accent-glow),transparent);
   opacity:0;transition:opacity .3s;
 }
-.tpl-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:var(--shadow)}
-.tpl-card:hover::before{opacity:.5}
-.tpl-card.active{border-color:var(--accent);background:var(--accent-glow);box-shadow:0 0 0 1px var(--accent),var(--shadow)}
+.tpl-card:hover{border-color:var(--accent);transform:translateY(-4px) scale(1.02);box-shadow:0 12px 40px rgba(124,109,240,.18),0 4px 12px rgba(0,0,0,.3)}
+.tpl-card:hover::before{opacity:.6}
+.tpl-card.active{border-color:var(--accent);background:linear-gradient(135deg,var(--accent-glow),var(--surface));box-shadow:0 0 0 2px var(--accent),0 12px 36px rgba(124,109,240,.25);transform:translateY(-2px)}
 .tpl-card.active::before{opacity:1}
-.tpl-icon{font-size:28px;margin-bottom:10px;display:block;position:relative}
+.tpl-icon{font-size:32px;margin-bottom:10px;display:block;position:relative;filter:drop-shadow(0 2px 4px rgba(0,0,0,.15));transition:transform .3s ease}
+.tpl-card:hover .tpl-icon{transform:scale(1.1) rotate(-3deg)}
 .tpl-card-name{font-size:14px;font-weight:700;margin-bottom:4px;position:relative}
 .tpl-card-desc{font-size:11px;color:var(--text2);line-height:1.4;position:relative}
 
 /* ─── Template Thumbnails ─── */
-.tpl-thumb{margin-bottom:10px;position:relative}
-.tpl-thumb-fallback{width:92px;height:55px;border-radius:6px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0}
+.tpl-thumb{margin-bottom:10px;position:relative;border-radius:8px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+.tpl-thumb-fallback{width:100%;height:64px;border-radius:6px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0}
+/* Stagger animation for grid cards - only on first load */
+.tpl-grid-initial .tpl-card:nth-child(1){animation-delay:.02s}
+.tpl-grid-initial .tpl-card:nth-child(2){animation-delay:.04s}
+.tpl-grid-initial .tpl-card:nth-child(3){animation-delay:.06s}
+.tpl-grid-initial .tpl-card:nth-child(4){animation-delay:.08s}
+.tpl-grid-initial .tpl-card:nth-child(5){animation-delay:.10s}
+.tpl-grid-initial .tpl-card:nth-child(6){animation-delay:.12s}
+.tpl-grid-initial .tpl-card{animation:card-pop .35s ease backwards}
+@keyframes card-pop{from{opacity:0;transform:translateY(16px) scale(.96)}to{opacity:1;transform:none}}
 
 /* ─── Config Page ─── */
 .page-config{padding:28px 32px;overflow-y:auto}
-.config-header{display:flex;align-items:center;gap:16px;margin-bottom:24px}
+.config-header{display:flex;align-items:center;gap:16px;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--border);position:relative}
+.config-header::after{content:'';position:absolute;bottom:-1px;left:0;width:60px;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:1px}
 .config-header .tpl-icon{font-size:32px}
 .config-header h2{font-size:18px;font-weight:700}
 .config-header p{font-size:12px;color:var(--text2);margin-top:2px}
 .config-section{margin-bottom:24px}
-.config-section-title{
-  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;
-  color:var(--text3);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);
-  display:flex;align-items:center;gap:6px;
-}
-.config-section-title span{font-size:13px}
 .config-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
 
 /* ─── Fields ─── */
@@ -140,9 +162,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
 .field label{font-size:12px;color:var(--text2);font-weight:500}
 .field input[type=text],.field input[type=number],.field select,.field textarea{
   padding:9px 12px;background:var(--surface2);border:1px solid var(--border);
-  border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;transition:var(--transition);font-family:inherit;
+  border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;transition:all .2s ease;font-family:inherit;
 }
-.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);transform:translateY(-1px)}
+.field input:hover,.field select:hover,.field textarea:hover{border-color:var(--border2)}
 .field input[type=color]{height:40px;padding:4px;cursor:pointer;border-radius:var(--radius-sm)}
 .field input[type=range]{padding:0;background:transparent;border:none;height:36px}
 .field .hint{font-size:10px;color:var(--text3)}
@@ -165,10 +188,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
 .el-item{
   display:flex;align-items:center;gap:10px;padding:10px 14px;
   background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);
-  cursor:pointer;transition:var(--transition);
+  cursor:pointer;transition:border-color .2s ease,background .2s ease;
 }
-.el-item:hover{border-color:var(--border2)}
-.el-item.active{border-color:var(--accent);background:var(--accent-glow)}
+.el-item:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(124,109,240,.1)}
+.el-item.active{border-color:var(--accent);background:var(--accent-glow);box-shadow:0 0 0 1px var(--accent)}
 .el-badge{
   font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;
   background:var(--accent);color:#fff;text-transform:uppercase;letter-spacing:.3px;flex-shrink:0;
@@ -202,8 +225,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
   width:22px;height:22px;border-radius:4px;cursor:pointer;border:2px solid transparent;
   transition:var(--transition);flex-shrink:0;
 }
-.color-swatch:hover{transform:scale(1.2);border-color:var(--accent)}
-.color-swatch:active{transform:scale(0.95)}
+.color-swatch:hover{transform:scale(1.25);border-color:var(--accent);box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.color-swatch:active{transform:scale(.95)}
+
+/* ─── Gradient Preview Bar ─── */
+.gradient-preview-bar{
+  width:100%;height:28px;border-radius:8px;margin-top:8px;
+  border:1px solid var(--border);position:relative;overflow:hidden;
+  transition:all .2s ease;cursor:pointer;
+}
+.gradient-preview-bar:hover{
+  border-color:var(--accent);transform:scaleY(1.15);
+  box-shadow:0 2px 12px rgba(124,109,240,.2);
+}
+.gradient-preview-bar::after{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(255,255,255,.04) 4px,rgba(255,255,255,.04) 5px);
+}
 
 /* ─── Element Detail ─── */
 .el-detail{
@@ -211,6 +249,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
   border-radius:var(--radius);animation:fadeIn .2s ease;
 }
 @keyframes fadeIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@keyframes el-slide-in{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
 
 /* ─── Element Editor Sections ─── */
 .el-editor-section{
@@ -232,7 +271,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
   background:var(--surface);border:1.5px dashed var(--border);border-radius:var(--radius-sm);
   cursor:pointer;transition:var(--transition);margin-bottom:12px;
 }
-.media-picker:hover{border-color:var(--accent);background:var(--accent-glow)}
+.media-picker:hover{border-color:var(--accent);background:var(--accent-glow);transform:translateY(-1px);box-shadow:0 4px 12px rgba(124,109,240,.1)}
 .media-picker.has-file{border-style:solid;border-color:var(--green)}
 .media-picker-icon{font-size:24px;flex-shrink:0}
 .media-picker-info{flex:1;min-width:0}
@@ -249,12 +288,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
 
 /* ─── Preview Page ─── */
 .page-preview{padding:24px 32px;overflow-y:auto}
-.preview-layout{display:grid;grid-template-columns:1fr 1fr;gap:24px;height:100%}
+.preview-layout{display:grid;grid-template-columns:1.6fr 1fr;gap:24px;height:100%}
 .preview-phone-wrap{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px}
 .preview-phone{
   width:420px;height:252px;border-radius:20px;overflow:hidden;position:relative;
   background:#111;border:2px solid var(--border);
   box-shadow:0 20px 60px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.05);
+  transform:perspective(800px) rotateY(-2deg) rotateX(1deg);
+  transition:transform .5s cubic-bezier(.4,0,.2,1),box-shadow .5s ease;
+}
+.preview-phone:hover{
+  transform:perspective(800px) rotateY(0) rotateX(0);
+  box-shadow:0 24px 70px rgba(0,0,0,.5),0 0 0 1px var(--accent),inset 0 0 0 1px rgba(255,255,255,.08);
 }
 .preview-screen{width:100%;height:100%;position:relative;overflow:hidden}
 .preview-camera{
@@ -272,7 +317,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
   height:100%;color:var(--text3);gap:8px;
 }
 .preview-placeholder span{font-size:40px}
-.preview-placeholder p{font-size:13px}
+.preview-placeholder p{font-size:13px;opacity:.7}
 .preview-device-label{font-size:11px;color:var(--text3);text-align:center}
 .preview-side{display:flex;flex-direction:column;gap:16px}
 .preview-side h3{font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px}
@@ -325,13 +370,48 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
   tab-size:2;-moz-tab-size:2;
 }
 /* Syntax highlight colors */
-.code-highlight .tag{color:#e06c75}
-.code-highlight .attr-name{color:#d19a66}
-.code-highlight .attr-val{color:#98c379}
-.code-highlight .comment{color:#5c6370;font-style:italic}
-.code-highlight .bracket{color:#abb2bf}
-.code-highlight .entity{color:#56b6c2}
+
 .preview-actions{display:flex;gap:10px;flex-wrap:wrap}
+
+/* ─── Device Switch Animation ─── */
+.preview-phone.device-switching{
+  animation:device-swap .4s cubic-bezier(.4,0,.2,1);
+}
+@keyframes device-swap{
+  0%{transform:perspective(800px) scale(.92);opacity:.6}
+  50%{transform:perspective(800px) scale(1.03)}
+  100%{transform:perspective(800px) scale(1);opacity:1}
+}
+
+/* ─── Export Success Animation ─── */
+.btn-export-success{
+  animation:export-pop .5s cubic-bezier(.34,1.56,.64,1);
+  background:var(--green)!important;
+  box-shadow:0 0 0 4px rgba(0,200,160,.2),0 6px 20px rgba(0,200,160,.3)!important;
+}
+/* Export loading spinner on button */
+.btn-export-loading{
+  pointer-events:none;opacity:.75;
+  position:relative;
+}
+.btn-export-loading::after{
+  content:'';display:inline-block;width:14px;height:14px;
+  border:2px solid rgba(255,255,255,.3);border-top-color:#fff;
+  border-radius:50%;animation:toast-spin .6s linear infinite;
+  margin-left:6px;vertical-align:middle;
+}
+@keyframes export-pop{
+  0%{transform:scale(1)}
+  30%{transform:scale(.92)}
+  60%{transform:scale(1.08)}
+  100%{transform:scale(1)}
+}
+/* Ripple on export */
+.export-ripple{
+  position:absolute;border-radius:50%;background:rgba(0,200,160,.3);
+  transform:scale(0);animation:ripple-out .6s ease-out forwards;pointer-events:none;
+}
+@keyframes ripple-out{to{transform:scale(4);opacity:0}}
 
 /* ─── Buttons ─── */
 .btn{
@@ -339,12 +419,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
   cursor:pointer;transition:var(--transition);display:flex;align-items:center;gap:7px;font-family:inherit;
 }
 .btn:active{transform:scale(.97)}
-.btn-primary{background:var(--accent);color:#fff}
-.btn-primary:hover{background:var(--accent2);box-shadow:0 4px 16px rgba(108,92,231,.3)}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#8b7cf7);color:#fff}
+.btn-primary:hover{background:linear-gradient(135deg,var(--accent2),#9d8fff);box-shadow:0 6px 20px rgba(124,109,240,.35);transform:translateY(-1px)}
 .btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
-.btn-secondary:hover{border-color:var(--accent);color:var(--accent2)}
-.btn-export{background:var(--green);color:#fff}
-.btn-export:hover{background:var(--green2);box-shadow:0 4px 16px rgba(0,184,148,.3)}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent2);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
+.btn-export{background:linear-gradient(135deg,var(--green),#00d9a7);color:#fff}
+.btn-export:hover{box-shadow:0 6px 20px rgba(0,200,160,.35);transform:translateY(-1px)}
 .btn-back{background:transparent;color:var(--text2);border:1px solid var(--border)}
 .btn-back:hover{border-color:var(--text2);color:var(--text)}
 .btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
@@ -355,6 +435,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-
   display:flex;align-items:center;justify-content:space-between;
   padding:12px 24px;padding-bottom:calc(12px + var(--safe-bottom, env(safe-area-inset-bottom, 0px)));
   background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
 }
 .bottombar-left,.bottombar-right{display:flex;gap:10px}
 .device-row{display:flex;align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap}
@@ -396,7 +477,7 @@ select:focus:not(:focus-visible){
   display:flex;align-items:center;gap:8px;
   padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;
   margin-bottom:6px;white-space:nowrap;
-  animation:toast-in .3s ease;
+  animation:toast-spring .4s cubic-bezier(.34,1.56,.64,1);
   box-shadow:0 4px 12px rgba(0,0,0,.3);
 }
 .toast-item.toast-success{background:var(--green);color:#fff}
@@ -405,6 +486,7 @@ select:focus:not(:focus-visible){
 .toast-item.toast-warning{background:var(--orange);color:#1a1a2e}
 .toast-item.fade-out{opacity:0;transform:translateY(-10px);transition:opacity .3s,transform .3s}
 @keyframes toast-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes toast-spring{0%{opacity:0;transform:translateY(20px) scale(.9)}60%{transform:translateY(-4px) scale(1.02)}100%{opacity:1;transform:translateY(0) scale(1)}}
 
 /* ─── Theme Toggle ─── */
 .theme-toggle{
@@ -413,7 +495,8 @@ select:focus:not(:focus-visible){
   display:flex;align-items:center;justify-content:center;transition:var(--transition);
   flex-shrink:0;
 }
-.theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent);transform:rotate(15deg) scale(1.1);box-shadow:0 0 12px rgba(124,109,240,.2)}
+.theme-toggle:active{transform:scale(.95)}
 a.theme-toggle{text-decoration:none}
 .github-link{display:flex;align-items:center;justify-content:center}
 .github-link svg{transition:var(--transition)}
@@ -429,7 +512,8 @@ a.theme-toggle{text-decoration:none}
 .modal-overlay{
   position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;
   display:flex;align-items:center;justify-content:center;
-  backdrop-filter:blur(4px);animation:fadeIn .2s ease;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  animation:fadeIn .2s ease;
 }
 .modal{
   background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
@@ -449,19 +533,25 @@ a.theme-toggle{text-decoration:none}
 .shortcut-list{display:flex;flex-direction:column;gap:8px}
 .shortcut-item{
   display:flex;align-items:center;justify-content:space-between;
-  padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;
+  padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;
+  transition:all .15s ease;
 }
+.shortcut-item:hover{padding-left:4px}
 .shortcut-item:last-child{border-bottom:none}
 .shortcut-item span{color:var(--text2)}
 kbd{
-  display:inline-block;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700;
-  background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;
+  background:linear-gradient(180deg,var(--surface3),var(--surface2));border:1px solid var(--border);color:var(--text);
   font-family:'SF Mono',Monaco,monospace;line-height:1.4;
+  box-shadow:0 2px 0 var(--border),0 3px 6px rgba(0,0,0,.15);
+  min-width:22px;text-align:center;
 }
 .shortcut-tip{
-  margin-top:12px;padding:10px 12px;background:var(--accent-glow);border-radius:8px;
-  font-size:12px;color:var(--accent2);border:1px solid rgba(108,92,231,.2);
+  margin-top:12px;padding:12px 14px;background:var(--accent-glow);border-radius:10px;
+  font-size:12px;color:var(--accent2);border:1px solid rgba(124,109,240,.2);
+  line-height:1.5;
 }
+.shortcut-tip::before{content:'💡 ';font-size:14px}
 
 /* ─── Config + Live Preview Split ─── */
 .page-config-live{
@@ -487,6 +577,11 @@ kbd{
   width:380px!important;height:228px!important;
   border-radius:16px!important;
   box-shadow:0 12px 40px rgba(0,0,0,.5),inset 0 0 0 1px rgba(255,255,255,.05)!important;
+  transform:perspective(800px) rotateY(-1.5deg) rotateX(1deg);
+  transition:transform .5s cubic-bezier(.4,0,.2,1),box-shadow .5s ease!important;
+}
+.config-preview-phone:hover{
+  transform:perspective(800px) rotateY(0) rotateX(0)!important;
 }
 .config-live-device-row{
   display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;
@@ -573,22 +668,29 @@ kbd{
 /* ─── Template Search ─── */
 .tpl-search { padding: 0 32px 10px; }
 .tpl-search { position: relative; }
-.tpl-search input {
-  width: 100%; padding: 10px 16px 10px 38px;
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); color: var(--text);
-  font-size: 14px; outline: none; transition: var(--transition);
-}
-.tpl-search::before {
-  content: '';
-  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
-  width: 14px; height: 14px;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") center/contain no-repeat;
-  pointer-events: none;
-}
-.tpl-search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.tpl-search input { transition: var(--transition); }
+.tpl-search input:hover { border-color: var(--border2); }
 
-/* ─── Preview Grid Overlay ─── */
+/* ─── Preview Element Interaction ─── */
+.preview-content [data-el-idx]:hover{
+  outline:1.5px dashed var(--accent)!important;
+  outline-offset:2px;
+  filter:brightness(1.08);
+  transition:outline .15s ease,filter .15s ease;
+}
+.preview-content [data-el-idx]{transition:outline .15s ease,filter .15s ease,box-shadow .2s ease}
+/* Active dragging cursor */
+.preview-content.dragging [data-el-idx]{cursor:grabbing!important}
+/* Duplicate flash effect */
+.preview-content [data-el-idx].dup-flash{
+  animation:dup-glow .4s ease-out;
+}
+@keyframes dup-glow{
+  0%{box-shadow:0 0 0 0 rgba(124,109,240,.5);filter:brightness(1.3)}
+  100%{box-shadow:0 0 0 8px rgba(124,109,240,0);filter:brightness(1)}
+}
+/* Search highlight in template cards */
+.search-hl{background:rgba(124,109,240,.3);border-radius:2px;padding:0 1px;color:inherit}
 .preview-grid-overlay {
   position: absolute; inset: 0;
   pointer-events: none; z-index: 5;
@@ -623,10 +725,16 @@ kbd{
 .color-dot:hover{border-color:var(--accent);transform:scale(1.3)}
 
 /* ─── Context Menu ─── */
-.context-menu{position:fixed;z-index:10000;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 0;min-width:160px;box-shadow:var(--shadow)}
-.ctx-item{padding:8px 16px;font-size:13px;cursor:pointer;transition:var(--transition);display:flex;align-items:center;gap:8px}
-.ctx-item:hover{background:var(--accent-glow);color:var(--accent)}
-.ctx-divider{height:1px;background:var(--border);margin:4px 0}
+.context-menu{
+  position:fixed;z-index:10000;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:6px 0;min-width:160px;box-shadow:0 8px 30px rgba(0,0,0,.4);
+  transform-origin:top left;animation:ctx-open .18s cubic-bezier(.34,1.56,.64,1);
+  backdrop-filter:blur(12px);
+}
+@keyframes ctx-open{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+.ctx-item{padding:8px 16px;font-size:13px;cursor:pointer;transition:all .15s ease;display:flex;align-items:center;gap:8px;border-radius:4px;margin:0 4px}
+.ctx-item:hover{background:var(--accent-glow);color:var(--accent);transform:translateX(2px)}
+.ctx-divider{height:1px;background:var(--border);margin:4px 8px}
 
 /* ─── Element drag sort ─── */
 
@@ -690,9 +798,19 @@ kbd{
 .toast-undo:hover{opacity:1;background:rgba(255,255,255,0.15)}
 
 /* ─── Config Section Collapse ─── */
+.config-section{
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:12px 14px;margin-bottom:12px;
+  transition:all .3s ease;
+}
+.config-section:hover{border-color:var(--border2)}
+.config-section-title{
+  cursor:pointer;user-select:none;
+  transition:color .2s ease;
+}
 .config-section-title:hover{color:var(--accent)}
 .config-section-title::after{
-  content:'▾';float:right;font-size:10px;transition:transform .2s;
+  content:'▾';float:right;font-size:10px;transition:transform .3s cubic-bezier(.4,0,.2,1);
 }
 .config-section-title.collapsed::after{transform:rotate(-90deg)}
 .config-section .config-grid,
@@ -704,17 +822,31 @@ kbd{
 .config-section .font-preview-item,
 .config-section .field,
 .config-section .field-color {
-  transition: max-height .25s ease, opacity .2s ease;
+  overflow:hidden;
+  transition:max-height .3s cubic-bezier(.4,0,.2,1),opacity .25s ease,transform .25s ease;
+  max-height:600px;opacity:1;transform:translateY(0);
 }
 .config-section.collapsed > :not(.config-section-title) {
-  display: none;
+  max-height:0!important;opacity:0;transform:translateY(-8px);
+  pointer-events:none;
 }
 
 /* ─── Bottom Bar Undo/Redo ─── */
 .bottombar-center {
   display: flex;
-  gap: 4px;
+  gap: 8px;
   align-items: center;
+}
+
+/* ─── Step Progress Bar ─── */
+.step-progress-bar{
+  width:80px;height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;
+}
+.step-progress-fill{
+  height:100%;border-radius:2px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  transition:width .5s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 0 6px rgba(124,109,240,.4);
 }
 .bottombar-undo-btn {
   width: 36px;
@@ -773,12 +905,16 @@ kbd{
 /* ─── Element List Drag Reorder ─── */
 .el-item.drag-over-top {
   border-top: 2px solid var(--accent);
+  box-shadow:0 -4px 12px rgba(124,109,240,.15);
 }
 .el-item.drag-over-bottom {
   border-bottom: 2px solid var(--accent);
+  box-shadow:0 4px 12px rgba(124,109,240,.15);
 }
 .el-item.dragging-el {
-  opacity: 0.4;
+  opacity: 0.35;
+  transform:scale(.96);
+  transition:all .2s ease;
 }
 
 /* ─── Config Section Collapse ─── */
@@ -825,20 +961,6 @@ kbd{
 }
 .cfg-zoom-btn:hover{border-color:var(--accent);background:var(--accent-glow)}
 .cfg-zoom-label{font-size:11px;color:var(--text2);min-width:36px;text-align:center}
-
-/* ─── Theme compare mode ─── */
-.theme-compare{
-  display:flex;gap:8px;margin-top:8px;
-}
-.theme-compare-pane{
-  flex:1;border-radius:var(--radius);overflow:hidden;
-  border:1px solid var(--border);position:relative;
-}
-.theme-compare-label{
-  position:absolute;top:4px;left:4px;font-size:9px;
-  padding:1px 6px;border-radius:3px;z-index:5;
-  background:rgba(0,0,0,0.5);color:#fff;
-}
 
 /* ═══ 响应式 ═══ */
 @media (max-width: 900px) {
@@ -936,7 +1058,104 @@ kbd{
   outline: none;
 }
 
-/* ─── Alignment Guides ─── */
+/* ─── Empty State ─── */
+.empty-state{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:40px 20px;text-align:center;color:var(--text3);gap:12px;
+}
+.empty-state-icon{font-size:48px}
+.empty-state-text{font-size:14px;line-height:1.5;max-width:240px}
+
+/* ─── Mock Data Toggle ─── */
+.mock-toggle{
+  display:flex;align-items:center;gap:6px;padding:6px 12px;
+  border-radius:8px;border:1px solid var(--border);background:var(--surface2);
+  font-size:12px;color:var(--text2);cursor:pointer;transition:var(--transition);
+  font-family:inherit;white-space:nowrap;
+}
+.mock-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.mock-toggle.active{background:var(--accent-glow);border-color:var(--accent);color:var(--accent2)}
+.mock-toggle-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);transition:all .2s ease}
+.mock-toggle.active .mock-toggle-dot{background:var(--green);box-shadow:0 0 6px var(--green)}
+
+/* ─── Expression Debugger ─── */
+.expr-debug-modal{max-width:520px}
+.expr-debug-field{display:flex;flex-direction:column;gap:6px}
+.expr-debug-field label{font-size:12px;color:var(--text2);font-weight:600}
+.expr-var-chips{display:flex;flex-wrap:wrap;gap:4px}
+.expr-var-chip{
+  padding:3px 8px;border-radius:6px;font-size:11px;font-family:monospace;
+  background:var(--surface2);border:1px solid var(--border);color:var(--text2);
+  cursor:pointer;transition:var(--transition);
+}
+.expr-var-chip:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-glow)}
+
+/* ─── Performance Dashboard ─── */
+.perf-score-ring{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  margin:0 auto 20px;width:100px;height:100px;border-radius:50%;
+  border:3px solid var(--border);position:relative;
+}
+.perf-score-value{font-size:32px;font-weight:800}
+.perf-score-label{font-size:11px;color:var(--text2);margin-top:2px}
+.perf-excellent .perf-score-value{color:var(--green)}
+.perf-good .perf-score-value{color:#74b9ff}
+.perf-fair .perf-score-value{color:var(--orange)}
+.perf-poor .perf-score-value{color:var(--red)}
+.perf-excellent{border-color:var(--green)}
+.perf-good{border-color:#74b9ff}
+.perf-fair{border-color:var(--orange)}
+.perf-poor{border-color:var(--red)}
+.perf-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.perf-stat{
+  text-align:center;padding:10px 4px;border-radius:8px;
+  background:var(--surface2);border:1px solid var(--border);
+}
+.perf-stat-value{font-size:18px;font-weight:700;color:var(--accent2)}
+.perf-stat-label{font-size:10px;color:var(--text3);margin-top:2px}
+.perf-warnings{display:flex;flex-direction:column;gap:6px}
+.perf-warn-item{
+  padding:8px 12px;border-radius:8px;font-size:12px;
+  background:rgba(253,203,110,.08);border:1px solid rgba(253,203,110,.2);
+  color:var(--orange);
+}
+
+/* ─── Template Compare Overlay ─── */
+.template-compare-overlay{
+  position:absolute;inset:0;z-index:50;background:var(--bg);
+  display:flex;flex-direction:column;animation:fadeIn .25s ease;
+}
+.template-compare-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 20px;border-bottom:1px solid var(--border);flex-shrink:0;
+  font-size:13px;font-weight:600;
+}
+.template-compare-label-left{color:var(--accent);font-weight:700}
+.template-compare-label-right{color:var(--green);font-weight:700}
+.template-compare-body{
+  display:grid;grid-template-columns:1fr 1fr;gap:16px;
+  padding:20px;flex:1;overflow-y:auto;
+}
+.template-compare-pane{
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--border);border-radius:var(--radius);padding:16px;
+  background:var(--surface);
+}
+.compare-tpl-list{display:flex;flex-direction:column;gap:6px}
+.compare-tpl-item{
+  display:flex;align-items:center;gap:12px;padding:10px 14px;
+  border-radius:8px;border:1px solid var(--border);cursor:pointer;
+  transition:var(--transition);
+}
+.compare-tpl-item:hover{border-color:var(--accent);background:var(--accent-glow)}
+
+/* ─── Dev Tools Toolbar ─── */
+.dev-tools-bar{
+  display:flex;gap:6px;flex-wrap:wrap;align-items:center;
+  padding:8px 0;
+}
+.dev-tools-bar .btn{font-size:11px;padding:5px 10px;border-radius:6px}
+
 .align-guide {
   position: absolute;
   z-index: 100;
@@ -946,21 +1165,21 @@ kbd{
 .align-guide-h {
   left: 0;
   right: 0;
-  height: 1px;
+  height: 1.5px;
   background: var(--accent);
-  opacity: 0.7;
-  box-shadow: 0 0 4px var(--accent);
+  opacity: 0.85;
+  box-shadow: 0 0 6px var(--accent), 0 0 12px rgba(124,109,240,.3);
 }
 .align-guide-v {
   top: 0;
   bottom: 0;
-  width: 1px;
+  width: 1.5px;
   background: var(--accent);
-  opacity: 0.7;
-  box-shadow: 0 0 4px var(--accent);
+  opacity: 0.85;
+  box-shadow: 0 0 6px var(--accent), 0 0 12px rgba(124,109,240,.3);
 }
 @keyframes guide-appear {
-  from { opacity: 0; }
+  from { opacity: 0; transform: scaleY(.8); }
   to { opacity: 0.7; }
 }
 
@@ -983,61 +1202,6 @@ kbd{
   text-align: center;
   color: var(--text3);
   margin-bottom: 4px;
-}
-
-/* ─── Layer Panel ─── */
-.layer-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-top: 8px;
-}
-.layer-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  border-radius: 6px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: var(--transition);
-  user-select: none;
-}
-.layer-item:hover {
-  background: var(--surface3);
-}
-.layer-item.active {
-  background: var(--accent-glow);
-  border: 1px solid var(--accent);
-}
-.layer-icon {
-  width: 20px;
-  text-align: center;
-  font-size: 11px;
-  flex-shrink: 0;
-}
-.layer-name {
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--text2);
-}
-.layer-item.active .layer-name {
-  color: var(--text);
-}
-.layer-visibility {
-  cursor: pointer;
-  opacity: 0.5;
-  font-size: 12px;
-  padding: 2px;
-}
-.layer-visibility:hover {
-  opacity: 1;
-}
-.layer-item.hidden-el {
-  opacity: 0.4;
 }
 
 /* ─── Command Palette ─── */
@@ -1072,6 +1236,7 @@ kbd{
 /* ─── Syntax Highlighting ─── */
 .code-highlight .tag {
   color: #61afef;
+  font-weight:600;
 }
 .code-highlight .attr-name {
   color: #e5c07b;
@@ -1084,6 +1249,9 @@ kbd{
   font-style: italic;
 }
 .code-highlight .bracket {
+  color: #c678dd;
+}
+.code-highlight .punctuation {
   color: #abb2bf;
 }
 
@@ -1318,37 +1486,7 @@ kbd{
 /* 简洁模式: 手机端精简按钮，展开按钮 + 更多区域 */
 
 /* 简洁模式切换按钮 */
-.mode-toggle-btn {
-  font-size: 11px;
-  padding: 3px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--surface2);
-  color: var(--text2);
-  cursor: pointer;
-  transition: var(--transition);
-  white-space: nowrap;
-  font-family: inherit;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-  height: 34px;
-}
-.mode-toggle-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-.mode-toggle-btn.active {
-  background: var(--accent-glow);
-  border-color: var(--accent);
-  color: var(--accent2);
-}
-/* 展开/收起更多操作按钮 */
-
-/* 桌面端隐藏简洁模式按钮 */
-@media (min-width: 769px) {
-  .mode-toggle-btn { display: none; }
+.mode-toggle-btn { display: none; }
 }
 /* 手机端: 简洁模式下预览操作行 */
 @media (max-width: 768px) {
@@ -1447,7 +1585,6 @@ kbd{
           <button onclick="JCM.openDesignTools();JCM.toggleMoreMenu()">🎨 设计工具</button>
           <button onclick="JCM.showSnapshots();JCM.toggleMoreMenu()">📸 版本快照</button>
           <button onclick="JCM.toggleHistory();JCM.toggleMoreMenu()">📜 操作历史</button>
-          <button onclick="JCM.toggleLayerPanel();JCM.toggleMoreMenu()">🗂️ 图层管理</button>
           <button onclick="JCM.toggleHelp();JCM.toggleMoreMenu()">⌨️ 快捷键</button>
           <button onclick="JCM.toggleChangelog();JCM.toggleMoreMenu()">📝 更新日志</button>
           <button onclick="JCM.switchLang();JCM.toggleMoreMenu()">🌐 切换语言</button>
@@ -1460,15 +1597,15 @@ kbd{
   <!-- Step Tabs -->
   <nav class="stepper" aria-label="制作步骤">
     <div class="steps" id="stepIndicator" role="tablist">
-      <div class="step-tab active" data-step="0" onclick="JCM.goStep(0)" role="tab" aria-selected="true" aria-controls="page0" tabindex="0">
+      <div class="step-tab active" data-step="0" onclick="JCM.goStep(0)" role="tab" aria-selected="true" aria-controls="page0" tabindex="0" title="选择模板">
         <span class="step-num" aria-hidden="true">1</span>
         <span class="step-label" data-i18n="step.template">选择模板</span>
       </div>
-      <div class="step-tab" data-step="1" onclick="JCM.goStep(1)" role="tab" aria-selected="false" aria-controls="page1" tabindex="0">
+      <div class="step-tab" data-step="1" onclick="JCM.goStep(1)" role="tab" aria-selected="false" aria-controls="page1" tabindex="0" title="配置参数">
         <span class="step-num" aria-hidden="true">2</span>
         <span class="step-label" data-i18n="step.config">配置参数</span>
       </div>
-      <div class="step-tab" data-step="2" onclick="JCM.goStep(2)" role="tab" aria-selected="false" aria-controls="page2" tabindex="0">
+      <div class="step-tab" data-step="2" onclick="JCM.goStep(2)" role="tab" aria-selected="false" aria-controls="page2" tabindex="0" title="预览导出">
         <span class="step-num" aria-hidden="true">3</span>
         <span class="step-label" data-i18n="step.preview">预览导出</span>
       </div>
@@ -1482,6 +1619,7 @@ kbd{
     <section class="page page-tpl active" id="page0" role="tabpanel" aria-label="选择模板">
       <div class="page-title" data-i18n="tpl.title">选择卡片模板</div>
       <div class="page-subtitle" data-i18n="tpl.subtitle">从预设模板开始，或选择自定义从零创建</div>
+      <div class="tpl-search"><input type="text" id="tplSearchInput" placeholder="🔍 搜索模板..." aria-label="搜索模板"></div>
       <div class="tpl-categories" id="tplCategories"></div>
       <div class="tpl-grid" id="tplGrid" role="list" aria-label="模板列表"></div>
     </section>
@@ -1551,6 +1689,8 @@ kbd{
           <input type="checkbox" id="showGrid" onchange="JCM.toggleGrid()"> <span data-i18n="preview.grid">网格</span>
           <label class="check-label"><input type="checkbox" id="showThemeCompare" onchange="JCM.toggleThemeCompare()"> <span data-i18n="preview.themeCompare">双主题</span></label>
         </label>
+        <button class="mock-toggle active" id="mockToggle" title="模拟数据: ON"><span class="mock-toggle-dot"></span> 🎭 模拟</button>
+        <button class="mock-toggle" id="compareTplBtn" onclick="JCM.toggleTemplateCompare()" title="模板对比"><span>🔄</span> 对比</button>
         <div class="zoom-controls">
           <button onclick="JCM.zoomOut()" title="缩小">−</button>
           <span class="zoom-label" id="zoomLabel">100%</span>
@@ -1594,6 +1734,11 @@ kbd{
             <button class="btn btn-export" onclick="JCM.handleExport()"><span class="btn-icon">📦</span> 导出 ZIP</button>
             <button class="btn btn-secondary" onclick="JCM.copyXML()"><span class="btn-icon">📋</span> 复制 XML</button>
           </div>
+          <!-- 开发工具 -->
+          <div class="dev-tools-bar">
+            <button class="btn btn-secondary" onclick="JCM.openExprDebugger()"><span class="btn-icon">🧪</span> 表达式调试</button>
+            <button class="btn btn-secondary" onclick="JCM.openPerfDashboard()"><span class="btn-icon">📊</span> 性能仪表盘</button>
+          </div>
           <!-- 高级工具：默认折叠 -->
           <details class="advanced-tools">
             <summary class="advanced-tools-toggle">⋯ 更多工具</summary>
@@ -1615,7 +1760,6 @@ kbd{
               </div>
               <div class="batch-export-bar" style="margin-top:6px">
                 <span style="font-size:11px;color:var(--text2)">开发工具</span>
-                <button class="btn btn-secondary" onclick="JCM.openDesignTools()"><span class="btn-icon">🎨</span> 设计工具</button>
                 <button class="btn btn-secondary" onclick="JCM.openSnippets()"><span class="btn-icon">🧩</span> 代码片段</button>
                 <button class="btn btn-secondary" onclick="JCM.openBatchOps()"><span class="btn-icon">✏️</span> 批量操作</button>
                 <button class="btn btn-secondary" onclick="JCM.openSchemeImport()"><span class="btn-icon">🎨</span> 配色方案</button>
@@ -1642,7 +1786,7 @@ kbd{
     <div class="bottombar-center">
       <button class="bottombar-undo-btn" id="btnUndo" onclick="JCM.undo()" title="撤销 (Ctrl+Z)" disabled>↩️</button>
       <button class="bottombar-undo-btn" id="btnRedo" onclick="JCM.redo()" title="重做 (Ctrl+Y)" disabled>↪️</button>
-
+      <div class="step-progress-bar"><div class="step-progress-fill" id="stepProgressFill"></div></div>
     </div>
     <div class="bottombar-right">
       <button class="btn btn-primary" id="btnNext" onclick="JCM.nextStep()" aria-label="进入下一步">
@@ -1650,15 +1794,6 @@ kbd{
       </button>
     </div>
   </footer>
-<!-- Layer Panel -->
-<div class="layer-panel" id="layerPanel">
-  <div class="layer-panel-header">
-    <span>📚 <span data-i18n="layer.title">图层管理</span></span>
-    <button class="layer-panel-close" onclick="JCM.toggleLayerPanel()" aria-label="关闭图层面板">✕</button>
-  </div>
-  <div id="layerPanelList"></div>
-</div>
-
 </div>
 
 <!-- Keyboard Shortcut Help Modal -->
@@ -3449,6 +3584,14 @@ PreviewRenderer.prototype.calcCountdown = function (str) {
 
 // ─── Expression Evaluator (for template elements with textExp) ────
 PreviewRenderer.prototype.evalExpression = function (expr) {
+  // If mock mode is disabled, return raw expression
+  try {
+    if (typeof window.JCM !== 'undefined' && window.JCM.toggleMockMode) {
+      // Check via a global flag
+      if (window.__mockMode === false) return '{' + expr + '}';
+    }
+  } catch (e) {}
+
   var now = new Date();
   // formatDate('FORMAT', #variable)
   var fm = expr.match(/formatDate\s*\(\s*'([^']+)'\s*,\s*([^)]+)\)/);
@@ -3530,10 +3673,10 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
     var py = el.y * self.scale;
     var inCam = el.x < self.device.width * self.device.cameraZoneRatio;
     var bdr = '';
-    if (i === selIdx && inCam) bdr = 'outline:2px solid #e17055;outline-offset:2px;';
-    else if (i === selIdx) bdr = 'outline:1.5px dashed #6c5ce7;outline-offset:2px;';
+    if (i === selIdx && inCam) bdr = 'outline:2px solid #ef7a62;outline-offset:2px;box-shadow:0 0 0 4px rgba(239,122,98,.25),0 0 16px rgba(239,122,98,.15);';
+    else if (i === selIdx) bdr = 'outline:2px solid #7c6df0;outline-offset:2px;box-shadow:0 0 0 4px rgba(124,109,240,.25),0 0 16px rgba(124,109,240,.15);';
     else if (inCam) bdr = 'outline:1.5px dashed rgba(225,112,85,0.6);outline-offset:2px;';
-    var dc = 'cursor:move;' + bdr;
+    var dc = 'cursor:grab;' + bdr;
     var op = (el.opacity !== undefined && el.opacity !== 100) ? 'opacity:' + (el.opacity / 100) + ';' : '';
     var rot = (el.rotation && el.rotation !== 0) ? 'transform:rotate(' + el.rotation + 'deg);transform-origin:center;' : '';
     var sh = '';
@@ -3541,11 +3684,14 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
     else if (el.shadow === 'dark') sh = 'text-shadow:0 2px 6px rgba(0,0,0,0.8);';
     else if (el.shadow === 'glow') sh = 'text-shadow:0 0 8px ' + el.color + ',0 0 16px ' + el.color + ';';
 
-    // Resize handle
+    // Resize handle - bigger, more visible, more types
     var rh = '';
-    if (i === selIdx && (el.type === 'rectangle' || el.type === 'image' || el.type === 'video' || el.type === 'progress')) {
+    if (i === selIdx && (el.type === 'rectangle' || el.type === 'image' || el.type === 'video' || el.type === 'progress' || el.type === 'text' || el.type === 'lottie')) {
       var ew = (el.w || 100) * self.scale, eh = (el.h || 100) * self.scale;
-      rh = '<div data-resize-idx="' + i + '" style="position:absolute;left:' + (px + ew - 6) + 'px;top:' + (py + eh - 6) + 'px;width:10px;height:10px;background:#6c5ce7;border:1px solid #fff;border-radius:2px;cursor:nwse-resize;z-index:20"></div>';
+      if (el.type === 'text' && !el.w) { ew = 30; eh = (el.size || 20) * self.scale; }
+      rh = '<div data-resize-idx="' + i + '" style="position:absolute;left:' + (px + ew - 5) + 'px;top:' + (py + eh - 5) + 'px;width:12px;height:12px;background:#7c6df0;border:2px solid #fff;border-radius:3px;cursor:nwse-resize;z-index:20;box-shadow:0 1px 4px rgba(0,0,0,.3);transition:transform .15s ease" onmouseenter="this.style.transform=\'scale(1.3)\'" onmouseleave="this.style.transform=\'scale(1)\'"></div>';
+      // Top-left corner handle for move hint
+      rh += '<div style="position:absolute;left:' + (px - 3) + 'px;top:' + (py - 3) + 'px;width:6px;height:6px;background:#7c6df0;border:1.5px solid #fff;border-radius:50%;z-index:20;box-shadow:0 1px 3px rgba(0,0,0,.2)"></div>';
     }
 
     // Size label
@@ -3553,7 +3699,7 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
     if (i === selIdx) {
       var elW = el.w || (el.r ? el.r * 2 : 0) || 0;
       var elH = el.h || (el.r ? el.r * 2 : 0) || 0;
-      sizeLabel = '<div class="size-label" style="position:absolute;left:' + px + 'px;top:' + (py + elH * self.scale + 4) + 'px;font-size:10px;color:var(--accent);background:rgba(108,92,231,0.15);padding:1px 6px;border-radius:3px;white-space:nowrap;z-index:20">x:' + el.x + ' y:' + el.y + ' · ' + elW + '×' + elH + '</div>';
+      sizeLabel = '<div class="size-label" style="position:absolute;left:' + px + 'px;top:' + (py + elH * self.scale + 6) + 'px;font-size:11px;font-weight:600;color:#eaeaf4;background:rgba(124,109,240,.85);padding:2px 8px;border-radius:4px;white-space:nowrap;z-index:20;backdrop-filter:blur(4px);box-shadow:0 2px 6px rgba(0,0,0,.3)">x:' + el.x + ' y:' + el.y + ' · ' + elW + '×' + elH + '</div>';
     }
 
     switch (el.type) {
@@ -4129,6 +4275,7 @@ function onPreviewMouseMove(e) {
 function onPreviewMouseUp() {
   dragging = null;
   clearGuideLines();
+  document.querySelectorAll('.preview-content').forEach(function(c){ c.classList.remove('dragging'); });
   document.removeEventListener('mousemove', onPreviewMouseMove);
   document.removeEventListener('mouseup', onPreviewMouseUp);
   document.removeEventListener('touchmove', onPreviewMouseMove);
@@ -4212,6 +4359,12 @@ function handlePointerDown(e, callbacks) {
     S.setSelIdx(idx);
     S.setDirty(true);
     callbacks.renderConfig();
+    // Flash effect on duplicated element
+    setTimeout(function(){
+      document.querySelectorAll('[data-el-idx="' + idx + '"]').forEach(function(el){
+        el.classList.add('dup-flash'); setTimeout(function(){ el.classList.remove('dup-flash'); }, 500);
+      });
+    }, 50);
   }
 
   dragging = {
@@ -4229,6 +4382,13 @@ function handlePointerDown(e, callbacks) {
   S.setSelIdx(idx);
   S.setDirty(true);
   callbacks.renderConfig();
+
+  // Add dragging cursor class
+  var activeScreen = getActiveScreen();
+  if (activeScreen) {
+    var pc = activeScreen.querySelector('.preview-content');
+    if (pc) pc.classList.add('dragging');
+  }
 
   document.addEventListener('mousemove', onPreviewMouseMove);
   document.addEventListener('mouseup', onPreviewMouseUp);
@@ -5924,6 +6084,10 @@ function goStep(n, callbacks) {
   });
   moveStepSlider(n);
 
+  // Update step progress bar
+  var fill = document.getElementById('stepProgressFill');
+  if (fill) fill.style.width = ((n + 1) / 3 * 100) + '%';
+
   document.getElementById('btnBack').style.display = n > 0 ? '' : 'none';
   var btnNext = document.getElementById('btnNext');
   if (n === 2) { btnNext.style.display = 'none'; }
@@ -5932,7 +6096,12 @@ function goStep(n, callbacks) {
     btnNext.innerHTML = n === 0 ? '下一步 <span class="btn-icon">→</span>' : '预览 & 导出 <span class="btn-icon">→</span>';
   }
 
-  if (n === 1) { callbacks.renderConfig(); syncDeviceSelect('toCfg'); callbacks.renderLivePreview(); }
+  if (n === 1) { 
+    // Hide preview panel on mobile
+    var clr = document.querySelector('.config-live-right');
+    if (clr) clr.style.display = window.innerWidth <= 900 ? 'none' : '';
+    callbacks.renderConfig(); syncDeviceSelect('toCfg'); callbacks.renderLivePreview(); 
+  }
   if (n === 2) { syncDeviceSelect('toPreview'); callbacks.renderPreview(); }
 
   if (n !== 2) cleanupVideos('previewContent');
@@ -6322,18 +6491,33 @@ function renderTplCategories() {
   }).join('');
 }
 
+function hlText(text, query) {
+  if (!query) return esc(text);
+  var escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\</body>');
+  return esc(text).replace(new RegExp('(' + escaped + ')', 'gi'), '<span class="search-hl">$1</span>');
+}
+
 function filterTemplates(query) {
   clearTimeout(filterTemplates._timer);
   filterTemplates._timer = setTimeout(function () {
     var cards = document.querySelectorAll('.tpl-card');
-    query = (query || '').toLowerCase();
+    var q = (query || '').toLowerCase().trim();
     cards.forEach(function (card) {
       var tplId = card.dataset.tpl;
-      var name = (card.querySelector('.tpl-card-name') || {}).textContent || '';
-      var desc = (card.querySelector('.tpl-card-desc') || {}).textContent || '';
+      var nameEl = card.querySelector('.tpl-card-name');
+      var descEl = card.querySelector('.tpl-card-desc');
+      var name = (nameEl || {}).textContent || '';
+      var desc = (descEl || {}).textContent || '';
       var catMatch = _activeCategory === 'all' || TPL_CATEGORY_MAP[tplId] === _activeCategory;
-      var searchMatch = !query || name.toLowerCase().indexOf(query) >= 0 || desc.toLowerCase().indexOf(query) >= 0 || tplId.indexOf(query) >= 0;
+      var searchMatch = !q || name.toLowerCase().indexOf(q) >= 0 || desc.toLowerCase().indexOf(q) >= 0 || tplId.indexOf(q) >= 0;
       card.style.display = (catMatch && searchMatch) ? '' : 'none';
+      // Highlight matching text
+      if (q && searchMatch && nameEl) nameEl.innerHTML = hlText(name, q);
+      if (q && searchMatch && descEl) descEl.innerHTML = hlText(desc, q);
+      if (!q) {
+        if (nameEl) nameEl.textContent = name;
+        if (descEl) descEl.textContent = desc;
+      }
     });
   }, 150);
 }
@@ -6450,8 +6634,6 @@ function renderConfig(getTemplateMAML) {
     if (selEl.color !== undefined) quickOpsInner += renderColorPresets('color', S.selIdx);
     html += sec('quickOps', '快速操作', quickOpsInner);
 
-    // Design tools (default collapsed)
-    html += sec('designTools', '设计工具', renderDesignToolsInline(S.selIdx), true);
   }
   html += '</div>';
 
@@ -9433,6 +9615,425 @@ function closeSchemeImportModal() {
   if (_modal) { _modal.remove(); _modal = null; }
 }
 
+// ─── js/ui/dev-tools.js ───
+// ─── Dev Tools: 模拟数据 + 表达式调试 + 性能仪表盘 + 模板对比 ───
+
+// ─── 1. 模拟数据开关 ──────────────────────────────────────────────
+var _mockMode = true;
+
+function isMockMode() { return _mockMode; }
+
+function toggleMockMode() {
+  _mockMode = !_mockMode;
+  window.__mockMode = _mockMode;
+  var btn = document.getElementById('mockToggle');
+  if (btn) {
+    btn.classList.toggle('active', _mockMode);
+    btn.title = _mockMode ? '模拟数据: ON' : '模拟数据: OFF';
+  }
+  toast(_mockMode ? '🎭 模拟数据已开启' : '📡 显示原始表达式', 'info');
+  return _mockMode;
+}
+
+// ─── 2. 表达式调试器 ──────────────────────────────────────────────
+var _exprModal = null;
+
+function openExprDebugger() {
+  if (_exprModal) { _exprModal.style.display = ''; return; }
+  _exprModal = document.createElement('div');
+  _exprModal.className = 'modal-overlay';
+  _exprModal.innerHTML = '<div class="modal expr-debug-modal" onclick="event.stopPropagation()">' +
+    '<div class="modal-header"><h3>🧪 表达式调试器</h3><button class="modal-close" onclick="JCM.closeExprDebugger()">✕</button></div>' +
+    '<div class="modal-body">' +
+    '<div class="expr-debug-field"><label>表达式</label><textarea id="exprInput" rows="2" placeholder="例如: formatDate(\'HH:mm\', #time_sys)" style="width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:monospace;font-size:13px;outline:none;resize:vertical"></textarea></div>' +
+    '<div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-primary" onclick="JCM.evalExpr()"><span class="btn-icon">▶</span> 求值</button><button class="btn btn-secondary" onclick="JCM.insertExprPreset()"><span class="btn-icon">📋</span> 示例</button></div>' +
+    '<div class="expr-debug-result" id="exprResult" style="margin-top:16px;padding:16px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);min-height:60px">' +
+    '<div style="font-size:11px;color:var(--text3);margin-bottom:8px">结果</div>' +
+    '<div id="exprResultValue" style="font-family:monospace;font-size:16px;color:var(--accent2)">输入表达式后点击求值</div>' +
+    '</div>' +
+    '<div class="expr-debug-vars" style="margin-top:16px">' +
+    '<div style="font-size:11px;color:var(--text3);margin-bottom:8px">可用变量（点击插入）</div>' +
+    '<div class="expr-var-chips" id="exprVarChips"></div>' +
+    '</div>' +
+    '</div></div>';
+  document.body.appendChild(_exprModal);
+  _exprModal.addEventListener('click', function (e) { if (e.target === _exprModal) _exprModal.style.display = 'none'; });
+  // Populate variable chips with descriptions
+  var chips = _exprModal.querySelector('#exprVarChips');
+  var vars = [
+    ['#time_sys', '系统时间'],
+    ['#step_count', '步数(6542)'],
+    ['#battery_level', '电量(78)'],
+    ['#battery_state', '放电中'],
+    ['#weather_temp', '温度(23°)'],
+    ['#weather_desc', '天气(晴)'],
+    ['#weather_city', '城市(北京)'],
+    ['#heart_rate', '心率(72)'],
+    ['#blood_oxygen', '血氧(98)'],
+    ['#sleep_hours', '睡眠(7.5)'],
+    ['#view_width', '屏幕宽'],
+    ['#view_height', '屏幕高'],
+    ['#marginL', '摄像头区宽度'],
+    ['#year', '年'],
+    ['#month', '月'],
+    ['#date', '日'],
+    ['#utcNow', '时间戳'],
+    ['#step_distance', '距离(4.2km)'],
+    ['#step_calorie', '卡路里(256)'],
+    ['#goalN', '目标(10000)'],
+    ['#pct', '进度(65%)'],
+  ];
+  chips.innerHTML = vars.map(function (v) {
+    return '<span class="expr-var-chip" onclick="JCM.insertVar(\'' + v[0] + '\')" title="' + v[1] + '">' + v[0] + '</span>';
+  }).join('');
+  setTimeout(function () { var inp = _exprModal.querySelector('#exprInput'); if (inp) inp.focus(); }, 100);
+}
+
+function closeExprDebugger() {
+  if (_exprModal) _exprModal.style.display = 'none';
+}
+
+function insertVar(v) {
+  var inp = document.getElementById('exprInput');
+  if (inp) { inp.value += v; inp.focus(); }
+}
+
+function evalExpr() {
+  var inp = document.getElementById('exprInput');
+  var resultEl = document.getElementById('exprResultValue');
+  if (!inp || !resultEl) return;
+  var expr = inp.value.trim();
+  if (!expr) { resultEl.textContent = '请输入表达式'; resultEl.style.color = 'var(--red)'; return; }
+
+  var device = getSelectedDevice();
+
+  // Build eval context with all mock variables
+  var now = new Date();
+  var mockVars = {
+    '#time_sys': now,
+    '#step_count': 6542,
+    '#battery_level': 78,
+    '#battery_state': '放电中',
+    '#weather_temp': '23°',
+    '#weather_desc': '晴',
+    '#weather_city': '北京',
+    '#heart_rate': 72,
+    '#blood_oxygen': 98,
+    '#sleep_hours': 7.5,
+    '#view_width': device.width,
+    '#view_height': device.height,
+    '#marginL': Math.round(device.width * device.cameraZoneRatio),
+    '#year': now.getFullYear(),
+    '#month': now.getMonth() + 1,
+    '#date': now.getDate(),
+    '#utcNow': now.getTime(),
+    '#utcNow2': now.getTime(),
+    '#dayIdx': 0,
+    '#step_distance': 4.2,
+    '#step_calorie': 256,
+    '#goalN': 10000,
+    '#pct': 65,
+  };
+
+  // Try formatDate first
+  var fm = expr.match(/formatDate\s*\(\s*'([^']+)'\s*,\s*#time_sys\s*\)/);
+  if (fm) {
+    var renderer = new PreviewRenderer(device, false);
+    var result = renderer.fmtDate(now, fm[1]);
+    resultEl.textContent = result;
+    resultEl.style.color = 'var(--green)';
+    return;
+  }
+
+  // Replace all variables and evaluate
+  var cleaned = expr;
+  // Replace string variables with quoted strings first
+  var stringVars = ['#battery_state', '#weather_temp', '#weather_desc', '#weather_city'];
+  stringVars.forEach(function (v) {
+    if (cleaned.indexOf(v) >= 0) {
+      cleaned = cleaned.split(v).join(JSON.stringify(mockVars[v]));
+    }
+  });
+  // Replace numeric variables
+  Object.keys(mockVars).forEach(function (v) {
+    if (stringVars.indexOf(v) < 0 && cleaned.indexOf(v) >= 0) {
+      cleaned = cleaned.split(v).join(mockVars[v]);
+    }
+  });
+
+  try {
+    var scope = 'var ifelse = function(c,a,b){return c?a:b;};';
+    var result = Function('"use strict";' + scope + 'return (' + cleaned + ')')();
+    if (result != null) {
+      resultEl.textContent = String(result);
+      resultEl.style.color = 'var(--green)';
+    } else {
+      resultEl.textContent = '⚠️ 结果为 null';
+      resultEl.style.color = 'var(--orange)';
+    }
+  } catch (e) {
+    resultEl.textContent = '❌ 语法错误: ' + e.message;
+    resultEl.style.color = 'var(--red)';
+  }
+}
+
+var _exprPresets = [
+  "formatDate('HH:mm', #time_sys)",
+  "formatDate('yyyy/MM/dd EEEE', #time_sys)",
+  "#step_count + ' 步'",
+  "#battery_level + '%'",
+  "#weather_temp + ' ' + #weather_city",
+  "ifelse(#battery_level > 50, '充足', '低电量')",
+  "#view_width + '×' + #view_height",
+  "Math.round(#step_count / #goalN * 100) + '%'",
+  "#weather_desc + ' ' + #weather_temp",
+  "#heart_rate + ' bpm'",
+];
+var _exprPresetIdx = 0;
+
+function insertExprPreset() {
+  var inp = document.getElementById('exprInput');
+  if (!inp) return;
+  inp.value = _exprPresets[_exprPresetIdx % _exprPresets.length];
+  _exprPresetIdx++;
+  evalExpr();
+}
+
+// ─── 3. 性能仪表盘 ────────────────────────────────────────────────
+function getPerfStats() {
+  var els = S.elements || [];
+  var xml = '';
+  try { xml = document.getElementById('codeContent').value || ''; } catch (e) {}
+
+  // Also count template-level elements from current template
+  var tplElementCount = 0;
+  if (S.tpl && S.tpl.elements) {
+    try {
+      var cfg = {};
+      S.tpl.config.forEach(function (g) { g.fields.forEach(function (f) { cfg[f.key] = f.default; }); });
+      tplElementCount = (S.tpl.elements(cfg) || []).length;
+    } catch (e) {}
+  }
+
+  var textCount = 0, rectCount = 0, imgCount = 0, vidCount = 0, otherCount = 0;
+  var totalChars = 0, totalExpressions = 0;
+  var hasVideo = false, hasLottie = false;
+
+  els.forEach(function (el) {
+    switch (el.type) {
+      case 'text': textCount++; totalChars += (el.text || '').length; break;
+      case 'rectangle': rectCount++; break;
+      case 'image': imgCount++; break;
+      case 'video': vidCount++; hasVideo = true; break;
+      case 'lottie': hasLottie = true; otherCount++; break;
+      default: otherCount++;
+    }
+    if (el.expression) totalExpressions++;
+  });
+
+  var totalAll = els.length + tplElementCount;
+  var score = 100;
+  var warnings = [];
+  if (totalAll > 15) { score -= 15; warnings.push('总元素过多 (' + totalAll + '>15)，可能影响渲染性能'); }
+  else if (totalAll > 10) { score -= 5; }
+  if (hasVideo) { score -= 10; warnings.push('包含视频元素，耗电量较高'); }
+  if (hasLottie) { score -= 5; warnings.push('Lottie 动画可能有兼容性问题'); }
+  if (xml.length > 8000) { score -= 10; warnings.push('XML 过长 (>8KB)'); }
+  else if (xml.length === 0) { warnings.push('XML 尚未生成，请先点击「生成预览」'); }
+  if (totalExpressions > 10) { score -= 10; warnings.push('表达式过多 (>10)，计算开销大'); }
+  if (imgCount > 3) { score -= 5; warnings.push('图片元素较多 (>3)，内存占用高'); }
+  if (els.length === 0 && tplElementCount === 0) {
+    warnings.push('当前无元素，无法评估性能');
+    score = 0;
+  }
+
+  score = Math.max(0, Math.min(100, score));
+  var level = score >= 90 ? 'excellent' : score >= 70 ? 'good' : score >= 50 ? 'fair' : 'poor';
+  var levelLabel = score >= 90 ? '优秀' : score >= 70 ? '良好' : score >= 50 ? '一般' : '需优化';
+
+  return {
+    total: els.length, tplElements: tplElementCount, totalAll: totalAll,
+    text: textCount, rect: rectCount, img: imgCount, vid: vidCount, other: otherCount,
+    totalChars: totalChars, totalExpressions: totalExpressions, xmlSize: xml.length,
+    hasVideo: hasVideo, hasLottie: hasLottie,
+    score: score, level: level, levelLabel: levelLabel, warnings: warnings,
+  };
+}
+
+function openPerfDashboard() {
+  var stats = getPerfStats();
+  var modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.innerHTML = '<div class="modal" style="max-width:480px" onclick="event.stopPropagation()">' +
+    '<div class="modal-header"><h3>📊 性能仪表盘</h3><button class="modal-close" onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div>' +
+    '<div class="modal-body">' +
+    '<div class="perf-score-ring"><div class="perf-score-value perf-' + stats.level + '">' + stats.score + '</div><div class="perf-score-label">' + stats.levelLabel + '</div></div>' +
+    '<div class="perf-grid">' +
+    '<div class="perf-stat"><div class="perf-stat-value">' + stats.totalAll + '</div><div class="perf-stat-label">总元素</div></div>' +
+    '<div class="perf-stat"><div class="perf-stat-value">' + stats.text + '</div><div class="perf-stat-label">文字</div></div>' +
+    '<div class="perf-stat"><div class="perf-stat-value">' + stats.img + '</div><div class="perf-stat-label">图片</div></div>' +
+    '<div class="perf-stat"><div class="perf-stat-value">' + stats.vid + '</div><div class="perf-stat-label">视频</div></div>' +
+    '<div class="perf-stat"><div class="perf-stat-value">' + stats.totalExpressions + '</div><div class="perf-stat-label">表达式</div></div>' +
+    '<div class="perf-stat"><div class="perf-stat-value">' + (stats.xmlSize > 0 ? (stats.xmlSize / 1024).toFixed(1) + 'KB' : 'N/A') + '</div><div class="perf-stat-label">XML</div></div>' +
+    '<div class="perf-stat"><div class="perf-stat-value">' + stats.totalChars + '</div><div class="perf-stat-label">字符数</div></div>' +
+    '<div class="perf-stat"><div class="perf-stat-value">' + stats.tplElements + '</div><div class="perf-stat-label">模板元素</div></div>' +
+    '</div>' +
+    (stats.warnings.length > 0 ? '<div class="perf-warnings">' + stats.warnings.map(function (w) { return '<div class="perf-warn-item">⚠️ ' + w + '</div>'; }).join('') + '</div>' : '<div style="text-align:center;padding:16px;color:var(--green);font-size:14px">✅ 无性能问题</div>') +
+    '</div></div>';
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function (e) { if (e.target === modal) modal.remove(); });
+}
+
+// ─── 4. 模板对比模式 ──────────────────────────────────────────────
+var _compareMode = false;
+var _compareTplId = null;
+
+function isCompareMode() { return _compareMode; }
+
+function toggleTemplateCompare() {
+  if (_compareMode) {
+    // Close compare
+    _compareMode = false;
+    _compareTplId = null;
+    var overlay = document.getElementById('templateCompareOverlay');
+    if (overlay) overlay.remove();
+    toast('模板对比已关闭', 'info');
+    return;
+  }
+  if (!S.tpl) return toast('请先选择一个模板', 'warning');
+  _compareMode = true;
+  toast('请选择第二个模板进行对比', 'info');
+  openCompareSelector();
+}
+
+function openCompareSelector() {
+  var modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.id = 'compareSelectorModal';
+  modal.innerHTML = '<div class="modal" style="max-width:500px;max-height:70vh" onclick="event.stopPropagation()">' +
+    '<div class="modal-header"><h3>🔄 选择对比模板</h3><button class="modal-close" onclick="JCM.cancelCompare()">✕</button></div>' +
+    '<div class="modal-body" style="overflow-y:auto;max-height:50vh">' +
+    '<div class="compare-tpl-list" id="compareTplList"></div>' +
+    '</div></div>';
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function (e) { if (e.target === modal) cancelCompare(); });
+  // Populate template list from DOM
+  var list = modal.querySelector('#compareTplList');
+  try {
+    var tplList = getTemplateList();
+    list.innerHTML = tplList.map(function (t) {
+      return '<div class="compare-tpl-item" data-compare-tpl="' + t.id + '">' +
+        '<span style="font-size:20px">' + t.icon + '</span>' +
+        '<div><div style="font-weight:600;font-size:13px">' + t.name + '</div><div style="font-size:11px;color:var(--text3)">' + t.desc + '</div></div>' +
+        '</div>';
+    }).join('');
+    list.addEventListener('click', function (e) {
+      var item = e.target.closest('[data-compare-tpl]');
+      if (!item) return;
+      selectCompareTemplate(item.dataset.compareTpl);
+    });
+  } catch (e) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">加载模板列表失败: ' + e.message + '</div>';
+  }
+}
+
+function getTemplateList() {
+  return TEMPLATES.map(function (t) {
+    return { id: t.id, name: t.name, desc: t.desc, icon: t.icon };
+  });
+}
+
+function selectCompareTemplate(tplId) {
+  _compareTplId = tplId;
+  var modal = document.getElementById('compareSelectorModal');
+  if (modal) modal.remove();
+  renderCompareView();
+}
+
+function cancelCompare() {
+  _compareMode = false;
+  _compareTplId = null;
+  var modal = document.getElementById('compareSelectorModal');
+  if (modal) modal.remove();
+  var overlay = document.getElementById('templateCompareOverlay');
+  if (overlay) overlay.remove();
+}
+
+function renderCompareView() {
+  if (!_compareMode || !_compareTplId || !S.tpl) return;
+  var device = getSelectedDevice();
+  var showCam = false;
+  try { showCam = document.getElementById('showCamera').checked; } catch (e) {}
+
+  // Render current template (left)
+  var leftHtml = renderTemplatePreview(device, showCam, S.tpl, S.cfg);
+  leftHtml += new PreviewRenderer(device, showCam).renderElements(S.elements, S.uploadedFiles, -1);
+
+  // Render compare template (right) with default config
+  var rightTpl = TEMPLATES.find(function (t) { return t.id === _compareTplId; });
+  var rightHtml = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);font-size:13px">模板未找到</div>';
+  var rightName = _compareTplId;
+  if (rightTpl) {
+    rightName = rightTpl.name;
+    try {
+      var rightCfg = {};
+      rightTpl.config.forEach(function (g) { g.fields.forEach(function (f) { rightCfg[f.key] = f.default; }); });
+      rightHtml = renderTemplatePreview(device, showCam, rightTpl, rightCfg);
+      if (rightTpl.elements) {
+        rightHtml += new PreviewRenderer(device, showCam).renderElements(rightTpl.elements(rightCfg), {}, -1);
+      }
+    } catch (e) {
+      rightHtml = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);font-size:12px;padding:20px;text-align:center">渲染失败: ' + e.message + '</div>';
+    }
+  }
+
+  // Remove existing overlay
+  var existing = document.getElementById('templateCompareOverlay');
+  if (existing) existing.remove();
+
+  var overlay = document.createElement('div');
+  overlay.id = 'templateCompareOverlay';
+  overlay.className = 'template-compare-overlay';
+  overlay.innerHTML = '<div class="template-compare-header">' +
+    '<span>🔄 模板对比</span>' +
+    '<div><span class="template-compare-label-left">' + (S.tpl.name || '当前') + '</span>' +
+    '<span style="margin:0 8px;color:var(--text3)">VS</span>' +
+    '<span class="template-compare-label-right">' + rightName + '</span></div>' +
+    '<button class="btn btn-secondary" style="font-size:12px;padding:4px 12px" onclick="JCM.cancelCompare()">关闭对比</button>' +
+    '</div>' +
+    '<div class="template-compare-body">' +
+    '<div class="template-compare-pane"><div class="preview-phone" style="transform:none;width:100%;max-width:420px;height:auto;aspect-ratio:976/596"><div class="preview-screen"><div class="preview-content">' + leftHtml + '</div></div></div></div>' +
+    '<div class="template-compare-pane"><div class="preview-phone" style="transform:none;width:100%;max-width:420px;height:auto;aspect-ratio:976/596"><div class="preview-screen"><div class="preview-content">' + rightHtml + '</div></div></div></div>' +
+    '</div>';
+  var previewPage = document.querySelector('#page2');
+  if (previewPage) previewPage.prepend(overlay);
+  toast('🔄 对比模式已开启', 'success');
+}
+
+function getSelectedDevice() {
+  try { return getDevice(document.getElementById('deviceSelect').value); } catch (e) {}
+  try { return getDevice(document.getElementById('cfgDeviceSelect').value); } catch (e) {}
+  return getDevice('p2');
+}
+
+// ─── Init ─────────────────────────────────────────────────────────
+function initDevTools() {
+  window.__mockMode = _mockMode;
+
+  var mockBtn = document.getElementById('mockToggle');
+  if (mockBtn) {
+    mockBtn.classList.toggle('active', _mockMode);
+    mockBtn.addEventListener('click', function () {
+      toggleMockMode();
+      // Re-render only if on the right step
+      if (typeof window.JCM !== 'undefined') {
+        try { window.JCM.renderPreview(); } catch (e) {}
+        try { window.JCM.renderLivePreview(); } catch (e) {}
+      }
+    });
+  }
+}
+
 // ─── js/ui/index.js ───
 // ─── UI Index: 页面导航 + 配置渲染 + 事件 ─────────────────────────
 // 拆分后的入口文件，导入子模块并暴露 JCM 全局接口
@@ -9573,6 +10174,10 @@ function renderPreview() {
   document.getElementById('deviceLabel').textContent = device.label;
   document.getElementById('previewCamera').style.width = showCam ? (device.cameraZoneRatio * 100) + '%' : '0';
 
+  // Device switch animation
+  var phoneEl = document.querySelector('#page2 .preview-phone');
+  if (phoneEl) { phoneEl.classList.remove('device-switching'); void phoneEl.offsetWidth; phoneEl.classList.add('device-switching'); }
+
   var html = renderTemplatePreview(device, showCam, S.tpl, S.cfg);
   html += new PreviewRenderer(device, showCam).renderElements(S.elements, S.uploadedFiles, S.selIdx);
   if (S.cfg.bgImage) {
@@ -9609,6 +10214,10 @@ function renderLivePreview() {
   if (labelEl) labelEl.textContent = device.label;
   var camEl = document.getElementById('cfgPreviewCamera');
   if (camEl) camEl.style.width = showCam ? (device.cameraZoneRatio * 100) + '%' : '0';
+
+  // Device switch animation
+  var phoneEl = document.querySelector('#page1 .config-preview-phone');
+  if (phoneEl) { phoneEl.classList.remove('device-switching'); void phoneEl.offsetWidth; phoneEl.classList.add('device-switching'); }
 
   var html = renderTemplatePreview(device, showCam, S.tpl, S.cfg);
   html += new PreviewRenderer(device, showCam).renderElements(S.elements, S.uploadedFiles, S.selIdx);
@@ -9651,10 +10260,18 @@ function handleExport() {
   if (!validation.valid) return toast('XML 校验失败: ' + validation.errors[0], 'error');
 
   autoSnapshot('导出 ZIP');
+  var exportBtn = document.querySelector('.btn-export');
+  if (exportBtn) exportBtn.classList.add('btn-export-loading');
   var p = toastProgress('正在打包 ZIP...');
   exportZip(maml, S.cfg.cardName || 'card', S.elements, S.uploadedFiles, S.tpl.id === 'custom', S.cfg.bgImage || '')
-    .then(function () { p.close('✅ ZIP 已导出', 'success'); })
-    .catch(function (e) { p.close('导出失败: ' + e.message, 'error'); });
+    .then(function () {
+      p.close('✅ ZIP 已导出', 'success');
+      if (exportBtn) { exportBtn.classList.remove('btn-export-loading'); exportBtn.classList.remove('btn-export-success'); void exportBtn.offsetWidth; exportBtn.classList.add('btn-export-success'); setTimeout(function(){ exportBtn.classList.remove('btn-export-success'); }, 800); }
+    })
+    .catch(function (e) {
+      p.close('导出失败: ' + e.message, 'error');
+      if (exportBtn) exportBtn.classList.remove('btn-export-loading');
+    });
 }
 
 function handleExportPNG() {
@@ -9952,6 +10569,12 @@ function setupEvents() {
     setActiveCategory(btn.dataset.cat);
     document.querySelectorAll('.tpl-cat').forEach(function (b) { b.classList.toggle('active', b === btn); });
     filterTemplates('');
+  });
+
+  // Template search input
+  var searchInput = document.getElementById('tplSearchInput');
+  if (searchInput) searchInput.addEventListener('input', function () {
+    filterTemplates(this.value);
   });
 
   // Config content events (delegated)
@@ -10401,7 +11024,15 @@ function setupEvents() {
       e.preventDefault(); captureState();
       var clone = JSON.parse(JSON.stringify(S.elements[S.selIdx])); clone.x += 10; clone.y += 10;
       S.elements.push(clone); S.setSelIdx(S.elements.length - 1); S.setDirty(true);
-      renderConfig(getTemplateMAML); toast('✅ 已复制元素', 'success');
+      renderConfig(getTemplateMAML);
+      renderPreview(); renderLivePreview();
+      // Flash effect on duplicated element
+      setTimeout(function(){
+        document.querySelectorAll('[data-el-idx="' + (S.elements.length - 1) + '"]').forEach(function(el){
+          el.classList.add('dup-flash'); setTimeout(function(){ el.classList.remove('dup-flash'); }, 500);
+        });
+      }, 50);
+      toast('✅ 已复制元素', 'success');
     }
     if (e.ctrlKey && e.key === 'c' && S.selIdx >= 0) { e.preventDefault(); S.setClipboard(JSON.parse(JSON.stringify(S.elements[S.selIdx]))); toast('📋 已复制', 'success'); }
     if (e.ctrlKey && e.key === 'v' && S.clipboard) {
@@ -10535,6 +11166,9 @@ function initUI() {
     renderPreview: renderPreview,
     renderLivePreview: renderLivePreview,
   });
+
+  // Init dev tools
+  initDevTools();
 
   checkShareURL(stepCallbacks);
   requestAnimationFrame(function () { moveStepSlider(0); });
@@ -10894,6 +11528,20 @@ Object.assign(window.JCM, {
   clearToken: function () { localStorage.removeItem('jcm-gh-token'); toast('🔑 Token 已清除', 'success'); },
   hasToken: function () { return !!_getGH(); },
   elements: S.elements,
+  // Dev tools
+  toggleMockMode: function () {
+    toggleMockMode();
+    try { renderPreview(); } catch (e) {}
+    try { renderLivePreview(); } catch (e) {}
+  },
+  openExprDebugger: openExprDebugger,
+  closeExprDebugger: closeExprDebugger,
+  insertVar: insertVar,
+  evalExpr: evalExpr,
+  insertExprPreset: insertExprPreset,
+  openPerfDashboard: openPerfDashboard,
+  toggleTemplateCompare: toggleTemplateCompare,
+  cancelCompare: cancelCompare,
 });
 
 // ─── js/main.js ───
@@ -10935,10 +11583,10 @@ document.addEventListener('DOMContentLoaded', function () {
   updateOnlineStatus();
 });
 
-// PWA Service Worker
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(function () {});
-}
+// PWA Service Worker disabled - was causing module cache issues
+// if ('serviceWorker' in navigator) {
+//   navigator.serviceWorker.register('sw.js').catch(function () {});
+// }
 </script>
 </body>
 </html>
