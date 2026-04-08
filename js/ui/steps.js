@@ -34,6 +34,10 @@ export function goStep(n, callbacks) {
   });
   moveStepSlider(n);
 
+  // Update step progress bar
+  var fill = document.getElementById('stepProgressFill');
+  if (fill) fill.style.width = ((n + 1) / 3 * 100) + '%';
+
   document.getElementById('btnBack').style.display = n > 0 ? '' : 'none';
   var btnNext = document.getElementById('btnNext');
   if (n === 2) { btnNext.style.display = 'none'; }

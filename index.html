@@ -50,15 +50,15 @@
   <!-- Step Tabs -->
   <nav class="stepper" aria-label="制作步骤">
     <div class="steps" id="stepIndicator" role="tablist">
-      <div class="step-tab active" data-step="0" onclick="JCM.goStep(0)" role="tab" aria-selected="true" aria-controls="page0" tabindex="0">
+      <div class="step-tab active" data-step="0" onclick="JCM.goStep(0)" role="tab" aria-selected="true" aria-controls="page0" tabindex="0" title="选择模板">
         <span class="step-num" aria-hidden="true">1</span>
         <span class="step-label" data-i18n="step.template">选择模板</span>
       </div>
-      <div class="step-tab" data-step="1" onclick="JCM.goStep(1)" role="tab" aria-selected="false" aria-controls="page1" tabindex="0">
+      <div class="step-tab" data-step="1" onclick="JCM.goStep(1)" role="tab" aria-selected="false" aria-controls="page1" tabindex="0" title="配置参数">
         <span class="step-num" aria-hidden="true">2</span>
         <span class="step-label" data-i18n="step.config">配置参数</span>
       </div>
-      <div class="step-tab" data-step="2" onclick="JCM.goStep(2)" role="tab" aria-selected="false" aria-controls="page2" tabindex="0">
+      <div class="step-tab" data-step="2" onclick="JCM.goStep(2)" role="tab" aria-selected="false" aria-controls="page2" tabindex="0" title="预览导出">
         <span class="step-num" aria-hidden="true">3</span>
         <span class="step-label" data-i18n="step.preview">预览导出</span>
       </div>
@@ -72,6 +72,7 @@
     <section class="page page-tpl active" id="page0" role="tabpanel" aria-label="选择模板">
       <div class="page-title" data-i18n="tpl.title">选择卡片模板</div>
       <div class="page-subtitle" data-i18n="tpl.subtitle">从预设模板开始，或选择自定义从零创建</div>
+      <div class="tpl-search"><input type="text" id="tplSearchInput" placeholder="🔍 搜索模板..." aria-label="搜索模板"></div>
       <div class="tpl-categories" id="tplCategories"></div>
       <div class="tpl-grid" id="tplGrid" role="list" aria-label="模板列表"></div>
     </section>
@@ -231,7 +232,7 @@
     <div class="bottombar-center">
       <button class="bottombar-undo-btn" id="btnUndo" onclick="JCM.undo()" title="撤销 (Ctrl+Z)" disabled>↩️</button>
       <button class="bottombar-undo-btn" id="btnRedo" onclick="JCM.redo()" title="重做 (Ctrl+Y)" disabled>↪️</button>
-
+      <div class="step-progress-bar"><div class="step-progress-fill" id="stepProgressFill"></div></div>
     </div>
     <div class="bottombar-right">
       <button class="btn btn-primary" id="btnNext" onclick="JCM.nextStep()" aria-label="进入下一步">

@@ -263,14 +263,18 @@ function handleExport() {
   if (!validation.valid) return toast('XML 校验失败: ' + validation.errors[0], 'error');
 
   autoSnapshot('导出 ZIP');
-  var p = toastProgress('正在打包 ZIP...');
   var exportBtn = document.querySelector('.btn-export');
+  if (exportBtn) exportBtn.classList.add('btn-export-loading');
+  var p = toastProgress('正在打包 ZIP...');
   exportZip(maml, S.cfg.cardName || 'card', S.elements, S.uploadedFiles, S.tpl.id === 'custom', S.cfg.bgImage || '')
     .then(function () {
       p.close('✅ ZIP 已导出', 'success');
-      if (exportBtn) { exportBtn.classList.remove('btn-export-success'); void exportBtn.offsetWidth; exportBtn.classList.add('btn-export-success'); setTimeout(function(){ exportBtn.classList.remove('btn-export-success'); }, 800); }
+      if (exportBtn) { exportBtn.classList.remove('btn-export-loading'); exportBtn.classList.remove('btn-export-success'); void exportBtn.offsetWidth; exportBtn.classList.add('btn-export-success'); setTimeout(function(){ exportBtn.classList.remove('btn-export-success'); }, 800); }
     })
-    .catch(function (e) { p.close('导出失败: ' + e.message, 'error'); });
+    .catch(function (e) {
+      p.close('导出失败: ' + e.message, 'error');
+      if (exportBtn) exportBtn.classList.remove('btn-export-loading');
+    });
 }
 
 function handleExportPNG() {
@@ -568,6 +572,12 @@ function setupEvents() {
     setActiveCategory(btn.dataset.cat);
     document.querySelectorAll('.tpl-cat').forEach(function (b) { b.classList.toggle('active', b === btn); });
     filterTemplates('');
+  });
+
+  // Template search input
+  var searchInput = document.getElementById('tplSearchInput');
+  if (searchInput) searchInput.addEventListener('input', function () {
+    filterTemplates(this.value);
   });
 
   // Config content events (delegated)
@@ -1017,7 +1027,15 @@ function setupEvents() {
       e.preventDefault(); captureState();
       var clone = JSON.parse(JSON.stringify(S.elements[S.selIdx])); clone.x += 10; clone.y += 10;
       S.elements.push(clone); S.setSelIdx(S.elements.length - 1); S.setDirty(true);
-      renderConfig(getTemplateMAML); toast('✅ 已复制元素', 'success');
+      renderConfig(getTemplateMAML);
+      renderPreview(); renderLivePreview();
+      // Flash effect on duplicated element
+      setTimeout(function(){
+        document.querySelectorAll('[data-el-idx="' + (S.elements.length - 1) + '"]').forEach(function(el){
+          el.classList.add('dup-flash'); setTimeout(function(){ el.classList.remove('dup-flash'); }, 500);
+        });
+      }, 50);
+      toast('✅ 已复制元素', 'success');
     }
     if (e.ctrlKey && e.key === 'c' && S.selIdx >= 0) { e.preventDefault(); S.setClipboard(JSON.parse(JSON.stringify(S.elements[S.selIdx]))); toast('📋 已复制', 'success'); }
     if (e.ctrlKey && e.key === 'v' && S.clipboard) {

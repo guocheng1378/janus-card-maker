@@ -239,6 +239,12 @@ function handlePointerDown(e, callbacks) {
     S.setSelIdx(idx);
     S.setDirty(true);
     callbacks.renderConfig();
+    // Flash effect on duplicated element
+    setTimeout(function(){
+      document.querySelectorAll('[data-el-idx="' + idx + '"]').forEach(function(el){
+        el.classList.add('dup-flash'); setTimeout(function(){ el.classList.remove('dup-flash'); }, 500);
+      });
+    }, 50);
   }
 
   dragging = {

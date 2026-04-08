@@ -93,18 +93,33 @@ export function renderTplCategories() {
   }).join('');
 }
 
+function hlText(text, query) {
+  if (!query) return esc(text);
+  var escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return esc(text).replace(new RegExp('(' + escaped + ')', 'gi'), '<span class="search-hl">$1</span>');
+}
+
 export function filterTemplates(query) {
   clearTimeout(filterTemplates._timer);
   filterTemplates._timer = setTimeout(function () {
     var cards = document.querySelectorAll('.tpl-card');
-    query = (query || '').toLowerCase();
+    var q = (query || '').toLowerCase().trim();
     cards.forEach(function (card) {
       var tplId = card.dataset.tpl;
-      var name = (card.querySelector('.tpl-card-name') || {}).textContent || '';
-      var desc = (card.querySelector('.tpl-card-desc') || {}).textContent || '';
+      var nameEl = card.querySelector('.tpl-card-name');
+      var descEl = card.querySelector('.tpl-card-desc');
+      var name = (nameEl || {}).textContent || '';
+      var desc = (descEl || {}).textContent || '';
       var catMatch = _activeCategory === 'all' || TPL_CATEGORY_MAP[tplId] === _activeCategory;
-      var searchMatch = !query || name.toLowerCase().indexOf(query) >= 0 || desc.toLowerCase().indexOf(query) >= 0 || tplId.indexOf(query) >= 0;
+      var searchMatch = !q || name.toLowerCase().indexOf(q) >= 0 || desc.toLowerCase().indexOf(q) >= 0 || tplId.indexOf(q) >= 0;
       card.style.display = (catMatch && searchMatch) ? '' : 'none';
+      // Highlight matching text
+      if (q && searchMatch && nameEl) nameEl.innerHTML = hlText(name, q);
+      if (q && searchMatch && descEl) descEl.innerHTML = hlText(desc, q);
+      if (!q) {
+        if (nameEl) nameEl.textContent = name;
+        if (descEl) descEl.textContent = desc;
+      }
     });
   }, 150);
 }
