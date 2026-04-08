@@ -41,7 +41,7 @@ function renderChildren(children, files, indent) {
   return lines.filter(Boolean).join('\n');
 }
 
-function renderEl(el, files, indent) {
+export function renderEl(el, files, indent) {
   var p = indent || '    ';
 
   // ── 框架标签：从 Group 的 children 中透传 ──

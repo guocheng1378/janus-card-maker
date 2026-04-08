@@ -2040,8 +2040,39 @@ function alphaAttr(el) {
     : '';
 }
 
-function renderEl(el, files) {
-  var p = '    ';
+// ── MAML 框架标签白名单（原样透传） ──
+var FRAMEWORK_TAGS = {
+  'Var': true, 'Variable': true, 'Permanence': true,
+  'VariableBinders': true, 'MiPaletteBinder': true,
+  'FolmeState': true, 'FolmeConfig': true,
+  'Function': true, 'FunctionCommand': true,
+  'IfCommand': true, 'Consequent': true, 'Alternate': true,
+  'MultiCommand': true,
+  'VariableCommand': true, 'PermanenceCommand': true,
+  'BinderCommand': true, 'MusicCommand': true,
+  'LottieCommand': true, 'FrameRateCommand': true,
+  'ExternalCommand': true, 'ExternalCommands': true,
+  'Trigger': true, 'Triggers': true,
+  'Layer': true,
+};
+
+// 递归渲染子元素（支持 Group/Layer/MusicControl 嵌套）
+function renderChildren(children, files, indent) {
+  var lines = [];
+  children.forEach(function (child) {
+    lines.push(renderEl(child, files, indent));
+  });
+  return lines.filter(Boolean).join('\n');
+}
+
+function renderEl(el, files, indent) {
+  var p = indent || '    ';
+
+  // ── 框架标签：从 Group 的 children 中透传 ──
+  if (el._rawXml) {
+    return p + el._rawXml;
+  }
+
   switch (el.type) {
     case 'text': {
       var t = el.expression ? 'textExp="' + el.expression + '"' : 'text="' + escXml(el.text || '') + '"';
@@ -2101,8 +2132,85 @@ function renderEl(el, files) {
       return p + '<Rectangle x="' + el.x + '" y="' + el.y + '" w="' + pw + '" h="' + ph + '" fillColor="' + (el.bgColor || '#333333') + '" cornerRadius="' + pr + '" />\n' +
         p + '<Rectangle x="' + el.x + '" y="' + el.y + '" w="' + barW + '" h="' + ph + '" fillColor="' + el.color + '" cornerRadius="' + pr + '" />';
     }
-    case 'lottie':
-      return p + '<!-- Lottie 动画: MAML 引擎不支持此格式，请替换为 Image/Video -->';
+    case 'lottie': {
+      // MAML 原生支持 <Lottie> 标签
+      var lottieSrc = el.src || el.fileName || '';
+      var lottieName = el.name || '';
+      var lottieAlign = el.align || 'center';
+      var lottieLoop = el.loop !== undefined ? el.loop : 0;
+      var lottieAuto = el.autoplay !== false ? 'true' : 'false';
+      var lottieW = ' w="' + (el.w || 120) + '"';
+      var lottieH = ' h="' + (el.h || 120) + '"';
+      var lottieX = el.x !== undefined ? ' x="' + el.x + '"' : '';
+      var lottieY = el.y !== undefined ? ' y="' + el.y + '"' : '';
+      var lottieNameAttr = lottieName ? ' name="' + escXml(lottieName) + '"' : '';
+      return p + '<Lottie src="' + escXml(lottieSrc) + '"' + lottieX + lottieY + lottieW + lottieH + ' align="' + lottieAlign + '" autoplay="' + lottieAuto + '" loop="' + lottieLoop + '"' + lottieNameAttr + ' />';
+    }
+
+    // ── Group：容器元素，支持递归子元素 ──
+    case 'group': {
+      var attrs = '';
+      if (el.name) attrs += ' name="' + escXml(el.name) + '"';
+      if (el.x !== undefined) attrs += ' x="' + el.x + '"';
+      if (el.y !== undefined) attrs += ' y="' + el.y + '"';
+      if (el.w !== undefined) attrs += ' w="' + el.w + '"';
+      if (el.h !== undefined) attrs += ' h="' + el.h + '"';
+      if (el.alpha !== undefined) attrs += ' alpha="' + el.alpha + '"';
+      if (el.visibility) attrs += ' visibility="' + el.visibility + '"';
+      if (el.folmeMode) attrs += ' folmeMode="true"';
+      if (el.align) attrs += ' align="' + el.align + '"';
+      if (el.alignV) attrs += ' alignV="' + el.alignV + '"';
+      if (el.contentDescription) attrs += ' contentDescriptionExp="' + escXml(el.contentDescription) + '"';
+      if (el.interceptTouch) attrs += ' interceptTouch="true"';
+      if (el.touchable) attrs += ' touchable="true"';
+      if (!attrs) attrs = '';
+
+      var children = (el.children && el.children.length > 0)
+        ? '\n' + renderChildren(el.children, files, p + '  ') + '\n' + p
+        : '';
+      return p + '<Group' + attrs + '>' + children + '</Group>';
+    }
+
+    // ── Layer：超级材质层 ──
+    case 'layer': {
+      var layerAttrs = '';
+      if (el.name) layerAttrs += ' name="' + escXml(el.name) + '"';
+      if (el.alpha !== undefined) layerAttrs += ' alpha="' + el.alpha + '"';
+      if (el.visibility) layerAttrs += ' visibility="' + el.visibility + '"';
+      if (el.layerType) layerAttrs += ' layerType="' + el.layerType + '"';
+      if (el.blurRadius !== undefined) layerAttrs += ' blurRadius="' + el.blurRadius + '"';
+      if (el.blurColors) layerAttrs += ' blurColors="' + escXml(el.blurColors) + '"';
+      if (el.colorModes !== undefined) layerAttrs += ' colorModes="' + el.colorModes + '"';
+      if (el.frameRate !== undefined) layerAttrs += ' frameRate="' + el.frameRate + '"';
+      if (el.updatePosition === false) layerAttrs += ' updatePosition="false"';
+      if (el.updateSize === false) layerAttrs += ' updateSize="false"';
+      if (el.updateTranslation === false) layerAttrs += ' updateTranslation="false"';
+
+      var layerChildren = (el.children && el.children.length > 0)
+        ? '\n' + renderChildren(el.children, files, p + '  ') + '\n' + p
+        : '';
+      return p + '<Layer' + layerAttrs + '>' + layerChildren + '</Layer>';
+    }
+
+    // ── MusicControl：音乐控件 ──
+    case 'musiccontrol': {
+      var mcAttrs = '';
+      if (el.name) mcAttrs += ' name="' + escXml(el.name) + '"';
+      mcAttrs += ' w="' + (el.w || '(#view_width - #viewMarginLeft)') + '"';
+      mcAttrs += ' h="' + (el.h || '#view_height') + '"';
+      if (el.x !== undefined) mcAttrs += ' x="' + el.x + '"';
+      if (el.y !== undefined) mcAttrs += ' y="' + el.y + '"';
+      if (el.autoShow === false) mcAttrs += ' autoShow="false"';
+      if (el.autoRefresh !== false) mcAttrs += ' autoRefresh="true"';
+      if (el.enableLyric) mcAttrs += ' enableLyric="true"';
+      if (el.updateLyricInterval) mcAttrs += ' updateLyricInterval="' + el.updateLyricInterval + '"';
+
+      var mcChildren = (el.children && el.children.length > 0)
+        ? '\n' + renderChildren(el.children, files, p + '  ') + '\n' + p
+        : '';
+      return p + '<MusicControl' + mcAttrs + '>' + mcChildren + '</MusicControl>';
+    }
+
     default:
       return '';
   }
@@ -2180,7 +2288,7 @@ function validateMAMLRegex(xml) {
 // ─── js/templates/clock.js ───
 
 var clock = {
-  id: 'clock', icon: '⏰', name: '时钟卡片', desc: '显示当前时间和日期',
+  id: 'clock', icon: '⏰', name: '时钟卡片', desc: '深色极简时钟，带动画过渡',
   updater: 'DateTime.Minute',
   config: [
     { group: '基本', fields: [
@@ -2190,27 +2298,38 @@ var clock = {
     ]},
     { group: '样式', fields: [
       { key: 'timeColor', label: '时间颜色', type: 'color', default: '#ffffff' },
-      { key: 'dateColor', label: '日期颜色', type: 'color', default: '#888888' },
-      { key: 'timeSize', label: '时间字号', type: 'range', min: 24, max: 96, default: 64 },
+      { key: 'dateColor', label: '日期颜色', type: 'color', default: '#666666' },
+      { key: 'accentColor', label: '强调色', type: 'color', default: '#6c5ce7' },
+      { key: 'timeSize', label: '时间字号', type: 'range', min: 36, max: 96, default: 64 },
     ]},
     { group: '格式', fields: [
+      { key: 'timeFormat', label: '时间格式', type: 'select', options: [
+        { v: 'HH:mm', l: '24小时制' },
+        { v: 'hh:mm a', l: '12小时制' },
+      ], default: 'HH:mm' },
       { key: 'dateFormat', label: '日期格式', type: 'select', options: [
         { v: 'yyyy/MM/dd EEEE', l: '2026/04/04 星期五' },
         { v: 'MM-dd EEEE', l: '04-04 星期五' },
         { v: 'MM/dd', l: '04/04' },
       ], default: 'yyyy/MM/dd EEEE' },
-      { key: 'timeFormat', label: '时间格式', type: 'select', options: [
-        { v: 'HH:mm', l: '24小时制' },
-        { v: 'hh:mm a', l: '12小时制' },
-      ], default: 'HH:mm' },
+      { key: 'showSeconds', label: '显示秒数', type: 'select', default: 'false', options: [
+        { v: 'true', l: '是' }, { v: 'false', l: '否' },
+      ]},
     ]},
   ],
   elements(c) {
-    var dateY = 80 + Number(c.timeSize) * 0.9;
-    return [
-      { type: 'text', expression: "formatDate('" + c.timeFormat + "', #time_sys)", text: '12:34', x: 10, y: 80, size: Number(c.timeSize), color: c.timeColor, bold: true, locked: false },
-      { type: 'text', expression: "formatDate('" + c.dateFormat + "', #time_sys)", text: '2026/04/04 星期五', x: 10, y: Math.round(dateY), size: 20, color: c.dateColor, locked: false },
+    var ts = Number(c.timeSize);
+    var dateY = 80 + ts * 0.9;
+    var secY = 80 + ts * 0.15;
+    var els = [
+      { type: 'text', expression: "formatDate('" + c.timeFormat + "', #time_sys)", text: '12:34', x: 10, y: 80, size: ts, color: c.timeColor, bold: true, fontFamily: 'mipro-demibold', locked: false },
+      { type: 'text', expression: "formatDate('" + c.dateFormat + "', #time_sys)", text: '2026/04/04 星期五', x: 10, y: Math.round(dateY), size: 18, color: c.dateColor, locked: false },
+      { type: 'rectangle', x: 10, y: Math.round(dateY) + 28, w: 32, h: 2, color: c.accentColor, radius: 1, locked: false },
     ];
+    if (c.showSeconds === 'true') {
+      els.push({ type: 'text', expression: "formatDate('ss', #time_sys)", text: '00', x: 10, y: Math.round(secY), size: Math.round(ts * 0.4), color: c.accentColor, locked: false, opacity: 60 });
+    }
+    return els;
   },
   gen(c) {
     return [
@@ -2239,10 +2358,11 @@ var quote = {
     ]},
   ],
   elements(c) {
-    var safeW = 976 * (1 - 0.3) - 20; // approx safe width
+    var safeW = 976 * (1 - 0.3) - 20;
     return [
-      { type: 'text', text: c.text, x: 10, y: 40, size: Number(c.textSize), color: c.textColor, multiLine: true, w: safeW, lineHeight: 1.4, locked: false },
-      { type: 'text', text: c.author, x: 10, y: 596 - 80, size: 16, color: c.authorColor, w: safeW, locked: false },
+      { type: 'rectangle', x: 10, y: 30, w: 3, h: 40, color: c.authorColor, radius: 1.5, locked: false },
+      { type: 'text', text: c.text, x: 22, y: 40, size: Number(c.textSize), color: c.textColor, multiLine: true, w: safeW - 12, lineHeight: 1.4, locked: false },
+      { type: 'text', text: c.author, x: 22, y: 596 - 80, size: 16, color: c.authorColor, w: safeW, locked: false },
     ];
   },
   gen(c) {
@@ -2274,7 +2394,7 @@ var battery = {
     var safeW = Math.round(976 * (1 - 0.3)) - 40;
     return [
       { type: 'text', text: '电量', x: 10, y: 50, size: 18, color: c.textColor, locked: false, opacity: 60 },
-      { type: 'text', expression: "(#battery_level + '%')", text: c.demoLevel + '%', x: 10, y: 80, size: 56, color: c.textColor, bold: true, locked: false },
+      { type: 'text', expression: "concat(#battery_level, '%')", text: c.demoLevel + '%', x: 10, y: 80, size: 56, color: c.textColor, bold: true, fontFamily: 'mipro-demibold', locked: false },
       { type: 'text', expression: "ifelse((#battery_level >= 80), '电量充足', ifelse((#battery_level >= 20), '电量偏低', '电量极低'))", text: '电量充足', x: 10, y: 200, size: 16, color: c.textColor, locked: false, opacity: 50 },
     ];
   },
@@ -2285,8 +2405,10 @@ var battery = {
       '  <Var name="safeW" type="number" expression="(#view_width - #marginL - 40)" />',
       '  <Var name="barW" type="number" expression="(#safeW * #battery_level / 100)" />',
       '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
-      '  <Rectangle x="#marginL" y="160" w="#safeW" h="12" fillColor="#333333" cornerRadius="6" />',
-      '  <Rectangle x="#marginL" y="160" w="#barW" h="12" fillColor="' + c.barColor + '" cornerRadius="6" />',
+      '  <Group name="battery_bar" x="#marginL" y="160" w="#safeW">',
+      '    <Rectangle x="0" y="0" w="#safeW" h="12" fillColor="#333333" cornerRadius="6" />',
+      '    <Rectangle x="0" y="0" w="#barW" h="12" fillColor="' + c.barColor + '" cornerRadius="6" />',
+      '  </Group>',
     ].join('\n');
   },
 };
@@ -2330,9 +2452,9 @@ var countdown = {
       '  <Var name="daysLeft" type="number" expression="(365 + ifelse((#year % 4 == 0), 1, 0) - #doy)" />',
       '  <Var name="diff" type="number" expression="ifelse((#tdoy >= #doy), (#tdoy - #doy), (#daysLeft + #tdoy))" />',
       '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
-      '  <Group x="#marginL" y="0">',
+      '  <Group name="countdown_display" x="#marginL" y="0">',
       '    <Text text="' + escXml(c.eventName) + '" x="0" y="50" size="18" color="' + c.textColor + '" alpha="153" />',
-      '    <Text textExp="#diff" x="0" y="80" size="72" color="' + c.accentColor + '" />',
+      '    <Text x="0" y="80" size="72" color="' + c.accentColor + '" textExp="#diff" bold="true" fontFamily="mipro-demibold" />',
       '    <Text text="天" x="0" y="160" size="20" color="' + c.textColor + '" alpha="128" />',
       '  </Group>',
     ].join('\n');
@@ -2376,7 +2498,7 @@ var gradient = {
 // ─── js/templates/steps.js ───
 
 var steps = {
-  id: 'steps', icon: '🏃', name: '步数卡片', desc: '显示今日步数和运动数据',
+  id: 'steps', icon: '🏃', name: '步数卡片', desc: '今日步数和运动数据',
   updater: 'Step',
   config: [
     { group: '基本', fields: [
@@ -2392,19 +2514,17 @@ var steps = {
     ]},
   ],
   elements(c) {
-    var safeW = Math.round(976 * (1 - 0.3)) - 40;
     return [
       { type: 'text', text: '今日步数', x: 10, y: 30, size: 14, color: c.textColor, locked: false, opacity: 50 },
-      { type: 'text', expression: '#step_count', text: '6542', x: 10, y: 50, size: 52, color: c.textColor, bold: true, locked: false },
+      { type: 'text', expression: '#step_count', text: '6542', x: 10, y: 50, size: 52, color: c.textColor, bold: true, fontFamily: 'mipro-demibold', locked: false },
       { type: 'text', text: '步', x: 10, y: 112, size: 16, color: c.textColor, locked: false, opacity: 50 },
-      { type: 'text', expression: "('目标 ' + #goalN + ' · ' + #pct + '%')", text: '目标 10000 · 65%', x: 10, y: 160, size: 12, color: c.textColor, locked: false, opacity: 40 },
-      { type: 'text', expression: "('距离 ' + #step_distance + ' km')", text: '距离 4.2 km', x: 10, y: 190, size: 14, color: c.accentColor, locked: false, opacity: 70 },
-      { type: 'text', expression: "('消耗 ' + #step_calorie + ' kcal')", text: '消耗 256 kcal', x: 130, y: 190, size: 14, color: c.accentColor, locked: false, opacity: 70 },
+      { type: 'text', expression: "concat('目标 ', #goalN, ' · ', #pct, '%')", text: '目标 10000 · 65%', x: 10, y: 160, size: 12, color: c.textColor, locked: false, opacity: 40 },
+      { type: 'text', expression: "concat('距离 ', #step_distance, ' km')", text: '距离 4.2 km', x: 10, y: 190, size: 14, color: c.accentColor, locked: false, opacity: 70 },
+      { type: 'text', expression: "concat('消耗 ', #step_calorie, ' kcal')", text: '消耗 256 kcal', x: 130, y: 190, size: 14, color: c.accentColor, locked: false, opacity: 70 },
     ];
   },
   gen(c) {
     var goalN = parseInt(c.goal) || 10000;
-    var safeW = Math.round(976 * (1 - 0.3)) - 40;
     return [
       generateAutoDetectMAML(),
       '  <Var name="safeW" type="number" expression="(#view_width - #marginL - 40)" />',
@@ -2412,8 +2532,10 @@ var steps = {
       '  <Var name="pct" type="number" expression="ifelse((#step_count > #goalN), 100, (#step_count * 100 / #goalN))" />',
       '  <Var name="barW" type="number" expression="(#safeW * #pct / 100)" />',
       '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
-      '  <Rectangle x="#marginL" y="140" w="#safeW" h="8" fillColor="#222222" cornerRadius="4" />',
-      '  <Rectangle x="#marginL" y="140" w="#barW" h="8" fillColor="' + c.barColor + '" cornerRadius="4" />',
+      '  <Group name="step_progress" x="#marginL" y="140" w="#safeW">',
+      '    <Rectangle x="0" y="0" w="#safeW" h="8" fillColor="#222222" cornerRadius="4" />',
+      '    <Rectangle x="0" y="0" w="#barW" h="8" fillColor="' + c.barColor + '" cornerRadius="4" />',
+      '  </Group>',
     ].join('\n');
   },
 };
@@ -2445,7 +2567,7 @@ var calendar = {
     var els = [
       { type: 'text', expression: "formatDate('MM/dd', #time_sys)", text: '04/08', x: 10, y: 20, size: 14, color: c.textColor, locked: false, opacity: 50 },
       { type: 'text', expression: "formatDate('EEEE', #time_sys)", text: '星期二', x: 10, y: 40, size: 18, color: c.accentColor, locked: false },
-      { type: 'text', expression: "formatDate('dd', #time_sys)", text: '08', x: 10, y: 55, size: Number(c.daySize), color: c.dayColor, bold: true, locked: false },
+      { type: 'text', expression: "formatDate('dd', #time_sys)", text: '08', x: 10, y: 55, size: Number(c.daySize), color: c.dayColor, bold: true, fontFamily: 'mipro-demibold', locked: false },
     ];
     [c.event1, c.event2, c.event3].filter(Boolean).forEach(function (e, i) {
       els.push({ type: 'text', text: e, x: 10, y: 150 + i * 28, size: 14, color: c.textColor, locked: false });
@@ -2496,11 +2618,11 @@ var dualclock = {
     var dateY2 = timeY2 + ts * 0.8;
     return [
       { type: 'text', text: c.city1, x: 10, y: cityY1, size: 13, color: c.dateColor, locked: false },
-      { type: 'text', expression: "formatDate('HH:mm', #utcNow)", text: '08:00', x: 10, y: timeY1, size: ts, color: c.timeColor1, bold: true, locked: false },
+      { type: 'text', expression: "formatDate('HH:mm', #utcNow)", text: '08:00', x: 10, y: timeY1, size: ts, color: c.timeColor1, bold: true, fontFamily: 'mipro-demibold', locked: false },
       { type: 'text', expression: "formatDate('MM/dd EEEE', #utcNow)", text: '04/08 星期二', x: 10, y: Math.round(dateY1), size: 13, color: c.dateColor, locked: false, opacity: 60 },
       { type: 'rectangle', x: 10, y: divY, w: 300, h: 1, color: c.dividerColor, locked: false },
       { type: 'text', text: c.city2, x: 10, y: cityY2, size: 13, color: c.dateColor, locked: false },
-      { type: 'text', expression: "formatDate('HH:mm', #utcNow2)", text: '19:00', x: 10, y: timeY2, size: ts, color: c.timeColor2, bold: true, locked: false },
+      { type: 'text', expression: "formatDate('HH:mm', #utcNow2)", text: '19:00', x: 10, y: timeY2, size: ts, color: c.timeColor2, bold: true, fontFamily: 'mipro-demibold', locked: false },
       { type: 'text', expression: "formatDate('MM/dd EEEE', #utcNow2)", text: '04/07 星期一', x: 10, y: Math.round(dateY2), size: 13, color: c.dateColor, locked: false, opacity: 60 },
     ];
   },
@@ -2546,7 +2668,6 @@ var dailyquote = {
   elements(c) {
     var quotes = [c.quote1, c.quote2, c.quote3, c.quote4, c.quote5, c.quote6, c.quote7].filter(Boolean);
     if (quotes.length === 0) quotes = ['每日一句'];
-    // Build ifelse expression for text rotation
     var textExpr = "'" + escXml(quotes[quotes.length - 1]).replace(/\n/g, '\\n') + "'";
     for (var i = quotes.length - 2; i >= 0; i--) {
       textExpr = "ifelse((#dayIdx == " + i + "), '" + escXml(quotes[i]).replace(/\n/g, '\\n') + "', " + textExpr + ")";
@@ -2554,7 +2675,7 @@ var dailyquote = {
     var safeW = Math.round(976 * (1 - 0.3)) - 20;
     return [
       { type: 'rectangle', x: 10, y: 42, w: 24, h: 3, color: c.accentColor, radius: 1.5, locked: false },
-      { type: 'text', expression: textExpr, text: quotes[0], x: 10, y: 50, size: Number(c.textSize), color: c.textColor, multiLine: true, w: safeW, lineHeight: 1.5, locked: false },
+      { type: 'text', expression: textExpr, text: quotes[0], x: 10, y: 56, size: Number(c.textSize), color: c.textColor, multiLine: true, w: safeW, lineHeight: 1.5, fontFamily: 'mipro-demibold', locked: false },
       { type: 'text', expression: "formatDate('MM/dd EEEE', #time_sys)", text: '04/08 星期二', x: 10, y: 596 - 50, size: 12, color: c.dayColor, locked: false, opacity: 50 },
     ];
   },
@@ -2586,7 +2707,6 @@ var ring = {
         { v: 'battery', l: '电量' },
       ], default: 'step' },
       { key: 'goal', label: '目标值 (步数模式)', type: 'text', default: '10000' },
-      { key: 'demoValue', label: '预览值', type: 'range', min: 0, max: 100, default: 65 },
     ]},
     { group: '样式', fields: [
       { key: 'ringColor', label: '进度环颜色', type: 'color', default: '#6c5ce7' },
@@ -2600,10 +2720,10 @@ var ring = {
     var isBattery = c.source === 'battery';
     var unit = isBattery ? '%' : '步';
     var label = isBattery ? '电量' : '步数';
-    var demoText = isBattery ? String(c.demoValue) : '6542';
-    var expr = isBattery ? '#battery_level' : '#step_count';
+    var demoText = isBattery ? '78' : '6542';
+    var expr = isBattery ? "concat(#battery_level, '%')" : "#step_count";
     return [
-      { type: 'text', expression: expr, text: demoText, x: 380, y: 70, size: 48, color: c.textColor, bold: true, textAlign: 'center', w: 100, locked: false },
+      { type: 'text', expression: expr, text: demoText, x: 380, y: 80, size: 48, color: c.textColor, bold: true, textAlign: 'center', w: 100, fontFamily: 'mipro-demibold', locked: false },
       { type: 'text', text: unit, x: 420, y: 130, size: 16, color: c.labelColor, locked: false, opacity: 60 },
       { type: 'text', text: label, x: 400, y: 220, size: 14, color: c.labelColor, textAlign: 'center', w: 60, locked: false, opacity: 50 },
     ];
@@ -2619,8 +2739,10 @@ var ring = {
       '  <Var name="ringR" type="number" expression="80" />',
       '  <Var name="ringW" type="number" expression="' + c.ringSize + '" />',
       '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
-      '  <Circle x="#cx" y="120" r="#ringR" fillColor="' + c.trackColor + '" />',
-      '  <Circle x="#cx" y="120" r="(#ringR - #ringW)" fillColor="' + c.bgColor + '" />',
+      '  <Group name="ring_track" x="#cx" y="120" align="center" alignV="center">',
+      '    <Circle x="0" y="0" r="#ringR" fillColor="' + c.trackColor + '" />',
+      '    <Circle x="0" y="0" r="(#ringR - #ringW)" fillColor="' + c.bgColor + '" />',
+      '  </Group>',
     ].join('\n');
   },
 };
@@ -2628,7 +2750,7 @@ var ring = {
 // ─── js/templates/dashboard.js ───
 
 var dashboard = {
-  id: 'dashboard', icon: '📊', name: '仪表盘', desc: '一屏聚合时间、步数、电量、天气',
+  id: 'dashboard', icon: '📊', name: '仪表盘', desc: '时间/步数/电量/天气一屏聚合',
   updater: 'DateTime.Minute',
   config: [
     { group: '基本', fields: [
@@ -2646,18 +2768,17 @@ var dashboard = {
   elements(c) {
     var colW = Math.round((976 * (1 - 0.3) - 20) / 2);
     return [
-      { type: 'text', expression: "formatDate('HH:mm', #time_sys)", text: '09:41', x: 10, y: 20, size: 40, color: c.timeColor, bold: true, locked: false },
+      { type: 'text', expression: "formatDate('HH:mm', #time_sys)", text: '09:41', x: 10, y: 20, size: 40, color: c.timeColor, bold: true, fontFamily: 'mipro-demibold', locked: false },
       { type: 'text', expression: "formatDate('MM/dd EEEE', #time_sys)", text: '04/08 星期二', x: 10, y: 68, size: 12, color: c.dimColor, locked: false },
       { type: 'rectangle', x: 10, y: 92, w: 400, h: 1, color: '#1a1f2e', locked: false },
       { type: 'text', text: '步数', x: 10, y: 110, size: 11, color: c.dimColor, locked: false },
       { type: 'text', expression: '#step_count', text: '6542', x: 10, y: 128, size: 24, color: c.textColor, bold: true, locked: false },
       { type: 'text', text: '步', x: 10, y: 158, size: 11, color: c.dimColor, locked: false, opacity: 60 },
       { type: 'text', text: '电量', x: colW, y: 110, size: 11, color: c.dimColor, locked: false },
-      { type: 'text', expression: "(#battery_level + '%')", text: '78%', x: colW, y: 128, size: 24, color: c.textColor, bold: true, locked: false },
+      { type: 'text', expression: "concat(#battery_level, '%')", text: '78%', x: colW, y: 128, size: 24, color: c.textColor, bold: true, locked: false },
       { type: 'rectangle', x: 10, y: 178, w: 400, h: 1, color: '#1a1f2e', locked: false },
       { type: 'text', expression: '#weather_desc', text: '晴', x: 10, y: 196, size: 14, color: c.accentColor, locked: false },
-      { type: 'text', expression: "(#weather_temp + '°')", text: '23°', x: colW, y: 196, size: 18, color: c.textColor, locked: false },
-      { type: 'text', expression: "('湿度 ' + 45 + '%')", text: '湿度 45%', x: 10, y: 218, size: 11, color: c.dimColor, locked: false, opacity: 50 },
+      { type: 'text', expression: "concat(#weather_temp, '°')", text: '23°', x: colW, y: 196, size: 18, color: c.textColor, locked: false },
     ];
   },
   gen(c) {
@@ -2715,7 +2836,7 @@ var custom = {
 // ─── js/templates/weather_real.js ───
 
 var weather_real = {
-  id: 'weather_real', icon: '🌤️', name: '天气卡片（真实）', desc: '绑定系统天气数据，实时显示',
+  id: 'weather_real', icon: '🌤️', name: '天气卡片', desc: '绑定系统天气数据，实时显示',
   updater: 'DateTime.Hour,DateTime.Minute',
   config: [
     { group: '基本', fields: [
@@ -2728,6 +2849,7 @@ var weather_real = {
       { key: 'tempColor', label: '温度颜色', type: 'color', default: '#ffffff' },
       { key: 'tempSize', label: '温度字号', type: 'range', min: 36, max: 80, default: 56 },
       { key: 'descColor', label: '描述颜色', type: 'color', default: '#aaaaaa' },
+      { key: 'accentColor', label: '强调色', type: 'color', default: '#4fc3f7' },
     ]},
   ],
   rawXml(c) {
@@ -2747,14 +2869,19 @@ var weather_real = {
     '      <Variable name="weather_templow" type="string[]" column="tmplows" />\n' +
     '    </ContentProviderBinder>\n' +
     '  </VariableBinders>\n' +
-    '  <!-- 自动检测设备 -->\n' +
     '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />\n' +
+    '\n' +
+    '  <!-- 背景 -->\n' +
     '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />\n' +
-    '  <DateTime x="#marginL" y="40" color="' + c.timeColor + '" size="72" format="HH:mm" fontFamily="mipro-demibold" align="left" />\n' +
-    '  <DateTime x="#marginL" y="120" color="' + c.descColor + '" size="22" format="MM月dd日 E" fontFamily="mipro-normal" align="left" />\n' +
-    '  <Text x="#marginL" y="200" color="' + c.tempColor + '" size="' + ts + '" textExp="@weather_temperature + \'°\'" bold="true" fontFamily="mipro-demibold" />\n' +
-    '  <Text x="#marginL" y="' + (200 + ts + 10) + '" color="' + c.descColor + '" size="20" textExp="@weather_location + \' · \' + @weather_description" fontFamily="mipro-normal" />\n' +
-    '  <Text x="#marginL" y="' + (200 + ts + 50) + '" color="' + c.descColor + '" size="16" textExp="\'最高 \' + @weather_temphigh[0] + \'°  最低 \' + @weather_templow[0] + \'°\'" fontFamily="mipro-normal" />\n' +
+    '\n' +
+    '  <!-- 天气内容组 -->\n' +
+    '  <Group name="weather_content" x="#marginL" y="0" w="(#view_width - #marginL - 40)">\n' +
+    '    <DateTime name="weather_time" x="0" y="40" color="' + c.timeColor + '" size="72" format="HH:mm" fontFamily="mipro-demibold" align="left" />\n' +
+    '    <DateTime name="weather_date" x="0" y="120" color="' + c.descColor + '" size="22" format="MM月dd日 E" fontFamily="mipro-normal" align="left" />\n' +
+    '    <Text x="0" y="200" color="' + c.tempColor + '" size="' + ts + '" textExp="concat(@weather_temperature, \'°\')" bold="true" fontFamily="mipro-demibold" />\n' +
+    '    <Text x="0" y="' + (200 + ts + 10) + '" color="' + c.descColor + '" size="20" textExp="concat(@weather_location, \' · \', @weather_description)" fontFamily="mipro-normal" />\n' +
+    '    <Text x="0" y="' + (200 + ts + 50) + '" color="' + c.descColor + '" size="16" textExp="concat(\'最高 \', @weather_temphigh[0], \'°  最低 \', @weather_templow[0], \'°\')" fontFamily="mipro-normal" />\n' +
+    '  </Group>\n' +
     '</Widget>';
   },
 };
@@ -2762,40 +2889,70 @@ var weather_real = {
 // ─── js/templates/music_real.js ───
 
 var music_real = {
-  id: 'music_real', icon: '🎵', name: '音乐卡片（真实）', desc: '绑定系统音乐播放器，显示歌曲信息',
+  id: 'music_real', icon: '🎵', name: '音乐卡片', desc: 'MusicControl 控件，显示歌曲信息和播放控制',
   updater: 'DateTime.Minute',
   config: [
     { group: '基本', fields: [
       { key: 'cardName', label: '卡片名称', type: 'text', default: '音乐卡片' },
-      { key: 'bgColor', label: '背景颜色', type: 'color', default: '#1a1a2e' },
+      { key: 'bgColor', label: '背景颜色', type: 'color', default: '#0a0a1a' },
       { key: 'bgImage', label: '背景图 URL 或上传', type: 'text', default: '' },
     ]},
     { group: '样式', fields: [
       { key: 'titleColor', label: '歌名颜色', type: 'color', default: '#ffffff' },
       { key: 'artistColor', label: '歌手颜色', type: 'color', default: '#888888' },
       { key: 'accentColor', label: '强调色', type: 'color', default: '#6c5ce7' },
+      { key: 'showArtwork', label: '显示封面', type: 'select', default: 'true', options: [
+        { v: 'true', l: '是' }, { v: 'false', l: '否' },
+      ]},
+      { key: 'artworkSize', label: '封面大小', type: 'range', min: 40, max: 120, default: 64 },
     ]},
   ],
   rawXml(c) {
-    return '<Widget screenWidth="976" frameRate="0" scaleByDensity="false" useVariableUpdater="DateTime.Minute" name="' + escXml(c.cardName || '音乐卡片') + '">\n' +
-    '  <MusicControl name="music_control" autoShow="false" autoRefresh="true" x="0" y="0" />\n' +
-    '  <Var name="isPlay" type="number" expression="eqs(#music_control.music_state,\'1\')" />\n' +
-    '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />\n' +
-    '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />\n' +
-    '  <Group x="#marginL" y="30" w="(#view_width - #marginL - 40)">\n' +
-    '    <Text x="0" y="0" size="28" color="' + c.titleColor + '" textExp="@music_control.title" bold="true" fontFamily="mipro-demibold" w="(#view_width - #marginL - 40)" ellipsis="true" />\n' +
-    '    <Text x="0" y="45" size="18" color="' + c.artistColor + '" textExp="@music_control.artist" fontFamily="mipro-normal" w="(#view_width - #marginL - 40)" ellipsis="true" />\n' +
-    '    <Rectangle x="0" y="80" w="(#view_width - #marginL - 40)" h="3" fillColor="#333333" cornerRadius="1.5" />\n' +
-    '    <Text x="0" y="100" size="14" color="' + c.accentColor + '" textExp="ifelse(#isPlay, \'正在播放\', \'已暂停\')" fontFamily="mipro-normal" />\n' +
-    '  </Group>\n' +
-    '</Widget>';
+    var artSize = c.artworkSize || 64;
+    var showArt = c.showArtwork !== 'false';
+    var lines = [];
+    lines.push('<Widget screenWidth="976" frameRate="0" scaleByDensity="false" useVariableUpdater="DateTime.Minute" name="' + escXml(c.cardName || '音乐卡片') + '">');
+    lines.push('  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />');
+    lines.push('  <Var name="isPlay" type="number" expression="eqs(#music_control.music_state,\'1\')" />');
+    lines.push('');
+    lines.push('  <!-- 背景 -->');
+    lines.push('  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />');
+    lines.push('');
+    lines.push('  <!-- MusicControl -->');
+    lines.push('  <MusicControl name="music_control" autoShow="false" autoRefresh="true" x="0" y="0" />');
+    lines.push('');
+    lines.push('  <!-- 音乐内容组 -->');
+    lines.push('  <Group name="music_content" x="#marginL" y="0" w="(#view_width - #marginL - 40)">');
+    if (showArt) {
+      lines.push('    <!-- 专辑封面 -->');
+      lines.push('    <Group name="artwork_group" x="0" y="30" w="' + artSize + '" h="' + artSize + '">');
+      lines.push('      <Image x="0" y="0" w="' + artSize + '" h="' + artSize + '" cornerRadius="12" src="music_control.artwork" srcType="BitmapVar" />');
+      lines.push('    </Group>');
+    }
+    var infoX = showArt ? (artSize + 16) : 0;
+    var infoW = showArt ? '(#view_width - #marginL - 40 - ' + (artSize + 16) + ')' : '(#view_width - #marginL - 40)';
+    lines.push('    <!-- 歌曲信息 -->');
+    lines.push('    <Group name="song_info" x="' + infoX + '" y="30" w="' + infoW + '">');
+    lines.push('      <Text x="0" y="0" size="20" color="' + c.titleColor + '" textExp="@music_control.title" bold="true" fontFamily="mipro-demibold" w="' + infoW + '" ellipsis="true" />');
+    lines.push('      <Text x="0" y="28" size="14" color="' + c.artistColor + '" textExp="@music_control.artist" fontFamily="mipro-normal" w="' + infoW + '" ellipsis="true" />');
+    lines.push('    </Group>');
+    lines.push('');
+    lines.push('    <!-- 播放状态 -->');
+    lines.push('    <Group name="play_status" x="0" y="' + (showArt ? (artSize + 44) : 80) + '">');
+    lines.push('      <Rectangle x="0" y="0" w="(#view_width - #marginL - 40)" h="3" fillColor="#222222" cornerRadius="1.5" />');
+    lines.push('      <Rectangle x="0" y="0" w="5" h="5" fillColor="' + c.accentColor + '" cornerRadius="2.5" />');
+    lines.push('      <Text x="12" y="-3" size="12" color="' + c.accentColor + '" textExp="ifelse(#isPlay, \'正在播放\', \'已暂停\')" fontFamily="mipro-normal" />');
+    lines.push('    </Group>');
+    lines.push('  </Group>');
+    lines.push('</Widget>');
+    return lines.join('\n');
   },
 };
 
 // ─── js/templates/lyrics.js ───
 
 var lyrics = {
-  id: 'lyrics', icon: '🎤', name: '歌词卡片', desc: '绑定系统音乐，显示歌词（原文/翻译/罗马音）',
+  id: 'lyrics', icon: '🎤', name: '歌词卡片', desc: 'MusicControl + 歌词显示（原文/翻译/罗马音）',
   updater: 'DateTime.Minute',
   config: [
     { group: '基本', fields: [
@@ -2809,7 +2966,7 @@ var lyrics = {
         { v: 'translation', l: '🌐 翻译' },
         { v: 'romanization', l: '🔤 罗马音' },
         { v: 'dual', l: '📝+🌐 原文+翻译' },
-        { v: 'triple', l: '📝+🌐+🔤 三行显示' },
+        { v: 'triple', l: '📝+🌐+🔤 三行' },
       ]},
       { key: 'lyricProvider', label: '歌词来源', type: 'select', default: 'lyricon', options: [
         { v: 'lyricon', l: 'Lyricon' },
@@ -2835,24 +2992,24 @@ var lyrics = {
   rawXml(c) {
     var align = c.lyricAlign || 'left';
     var textAlign = align === 'center' ? 'center' : align;
-    var anchorX = align === 'center' ? '#view_width / 2' : '#marginL';
-    var textW = align === 'center' ? '#view_width' : '(#view_width - #marginL - 40)';
+    var textW = '(#view_width - #marginL - 40)';
     var mode = c.lyricMode || 'original';
     var provider = c.lyricProvider || 'lyricon';
     var lyricSize = c.lyricSize || 22;
     var songSize = c.songSize || 26;
     var subSize = Math.max(14, lyricSize - 4);
 
-    // Build lyric source based on provider
     var lyricSource = provider === 'superlyric' ? 'superlyric_lyric' : 'lyricon_lyric';
     var lyricTransSource = provider === 'superlyric' ? 'superlyric_lyric_trans' : 'lyricon_lyric_trans';
     var lyricRomSource = provider === 'superlyric' ? 'superlyric_lyric_rom' : 'lyricon_lyric_rom';
 
     var lines = [];
     lines.push('<Widget screenWidth="976" frameRate="0" scaleByDensity="false" useVariableUpdater="DateTime.Minute" name="' + escXml(c.cardName || '歌词卡片') + '">');
-    lines.push('  <MusicControl name="music_control" autoShow="false" autoRefresh="true" x="0" y="0" />');
-    lines.push('  <Var name="isPlay" type="number" expression="eqs(#music_control.music_state,\'1\')" />');
     lines.push('  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />');
+    lines.push('  <Var name="isPlay" type="number" expression="eqs(#music_control.music_state,\'1\')" />');
+    lines.push('');
+    lines.push('  <!-- MusicControl -->');
+    lines.push('  <MusicControl name="music_control" autoShow="false" autoRefresh="true" x="0" y="0" enableLyric="true" updateLyricInterval="100" />');
     lines.push('');
     lines.push('  <!-- 歌词绑定 -->');
     lines.push('  <VariableBinders>');
@@ -2875,66 +3032,53 @@ var lyrics = {
     }
     lines.push('  </VariableBinders>');
     lines.push('');
-
-    // Background
+    lines.push('  <!-- 背景 -->');
     lines.push('  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />');
-
-    // Accent bar
-    lines.push('  <Rectangle x="#marginL" y="0" w="3" h="#view_height" fillColor="' + c.accentColor + '" alpha="0.3" />');
-
-    // Song info - use MusicControl data as primary, fallback to lyric provider
-    var titleExp = '@music_control.title';
-    var artistExp = '@music_control.artist';
-    if (provider !== 'lyricon') {
-      titleExp = 'ifelse(eq(#music_control.title,\'\'), @' + provider + '_title, #music_control.title)';
-      artistExp = 'ifelse(eq(#music_control.artist,\'\'), @' + provider + '_artist, #music_control.artist)';
-    }
-
     lines.push('');
-    lines.push('  <!-- 歌曲信息 -->');
-    lines.push('  <Group x="(#marginL + 16)" y="20" w="' + textW + '">');
-    lines.push('    <Text x="0" y="0" size="' + songSize + '" color="' + c.songColor + '" textExp="' + titleExp + '" bold="true" fontFamily="mipro-demibold" w="' + textW + '" ellipsis="true" textAlign="' + textAlign + '" />');
-    lines.push('    <Text x="0" y="' + (songSize + 8) + '" size="14" color="' + c.artistColor + '" textExp="' + artistExp + '" fontFamily="mipro-normal" w="' + textW + '" ellipsis="true" textAlign="' + textAlign + '" />');
-    lines.push('    <Rectangle x="0" y="' + (songSize + 32) + '" w="' + textW + '" h="1" fillColor="' + c.accentColor + '" alpha="0.2" />');
-    lines.push('  </Group>');
+    lines.push('  <!-- 歌词内容组 -->');
+    lines.push('  <Group name="lyrics_content" x="#marginL" y="0" w="' + textW + '">');
+    lines.push('    <!-- 强调色竖条 -->');
+    lines.push('    <Rectangle name="accent_bar" x="-16" y="0" w="3" h="#view_height" fillColor="' + c.accentColor + '" alpha="0.3" />');
     lines.push('');
-
-    // Lyrics display area
+    lines.push('    <!-- 歌曲信息 -->');
+    lines.push('    <Group name="song_info" x="0" y="20" w="' + textW + '">');
+    lines.push('      <Text x="0" y="0" size="' + songSize + '" color="' + c.songColor + '" textExp="@music_control.title" bold="true" fontFamily="mipro-demibold" w="' + textW + '" ellipsis="true" textAlign="' + textAlign + '" />');
+    lines.push('      <Text x="0" y="' + (songSize + 8) + '" size="14" color="' + c.artistColor + '" textExp="@music_control.artist" fontFamily="mipro-normal" w="' + textW + '" ellipsis="true" textAlign="' + textAlign + '" />');
+    lines.push('      <Rectangle x="0" y="' + (songSize + 32) + '" w="' + textW + '" h="1" fillColor="' + c.accentColor + '" alpha="0.2" />');
+    lines.push('    </Group>');
+    lines.push('');
+    lines.push('    <!-- 歌词显示 -->');
     var lyricY = songSize + 52;
-    lines.push('  <!-- 歌词显示区域 -->');
-    lines.push('  <Group x="(#marginL + 16)" y="' + lyricY + '" w="' + textW + '">');
+    lines.push('    <Group name="lyric_display" x="0" y="' + lyricY + '" w="' + textW + '">');
 
     switch (mode) {
       case 'original':
-        lines.push('    <Text x="0" y="0" size="' + lyricSize + '" color="' + c.lyricColor + '" textExp="ifelse(eq(@' + lyricSource + ',\'\'), \'♪ 暂无歌词\', @' + lyricSource + ')" fontFamily="mipro-normal" w="' + textW + '" multiLine="true" lineHeight="1.6" textAlign="' + textAlign + '" />');
+        lines.push('      <Text x="0" y="0" size="' + lyricSize + '" color="' + c.lyricColor + '" textExp="ifelse(eq(@' + lyricSource + ',\'\'), \'♪ 暂无歌词\', @' + lyricSource + ')" fontFamily="mipro-normal" w="' + textW + '" multiLine="true" lineHeight="1.6" textAlign="' + textAlign + '" />');
         break;
       case 'translation':
-        lines.push('    <Text x="0" y="0" size="' + lyricSize + '" color="' + c.lyricColor + '" textExp="ifelse(eq(@' + lyricTransSource + ',\'\'), \'♪ 暂无翻译\', @' + lyricTransSource + ')" fontFamily="mipro-normal" w="' + textW + '" multiLine="true" lineHeight="1.6" textAlign="' + textAlign + '" />');
+        lines.push('      <Text x="0" y="0" size="' + lyricSize + '" color="' + c.lyricColor + '" textExp="ifelse(eq(@' + lyricTransSource + ',\'\'), \'♪ 暂无翻译\', @' + lyricTransSource + ')" fontFamily="mipro-normal" w="' + textW + '" multiLine="true" lineHeight="1.6" textAlign="' + textAlign + '" />');
         break;
       case 'romanization':
-        lines.push('    <Text x="0" y="0" size="' + lyricSize + '" color="' + c.lyricColor + '" textExp="ifelse(eq(@' + lyricRomSource + ',\'\'), \'♪ 暂无罗马音\', @' + lyricRomSource + ')" fontFamily="mipro-normal" w="' + textW + '" multiLine="true" lineHeight="1.6" textAlign="' + textAlign + '" />');
+        lines.push('      <Text x="0" y="0" size="' + lyricSize + '" color="' + c.lyricColor + '" textExp="ifelse(eq(@' + lyricRomSource + ',\'\'), \'♪ 暂无罗马音\', @' + lyricRomSource + ')" fontFamily="mipro-normal" w="' + textW + '" multiLine="true" lineHeight="1.6" textAlign="' + textAlign + '" />');
         break;
       case 'dual':
-        lines.push('    <Text x="0" y="0" size="' + lyricSize + '" color="' + c.lyricColor + '" textExp="ifelse(eq(@' + lyricSource + ',\'\'), \'♪ 暂无歌词\', @' + lyricSource + ')" fontFamily="mipro-normal" w="' + textW + '" multiLine="true" lineHeight="1.4" textAlign="' + textAlign + '" />');
-        lines.push('    <Text x="0" y="' + (lyricSize * 1.6 + 8) + '" size="' + subSize + '" color="' + c.lyricSubColor + '" textExp="ifelse(eq(@' + lyricTransSource + ',\'\'), \'\', @' + lyricTransSource + ')" fontFamily="mipro-normal" w="' + textW + '" multiLine="true" lineHeight="1.4" textAlign="' + textAlign + '" />');
+        lines.push('      <Text x="0" y="0" size="' + lyricSize + '" color="' + c.lyricColor + '" textExp="ifelse(eq(@' + lyricSource + ',\'\'), \'♪ 暂无歌词\', @' + lyricSource + ')" fontFamily="mipro-normal" w="' + textW + '" multiLine="true" lineHeight="1.4" textAlign="' + textAlign + '" />');
+        lines.push('      <Text x="0" y="' + (lyricSize * 1.6 + 8) + '" size="' + subSize + '" color="' + c.lyricSubColor + '" textExp="ifelse(eq(@' + lyricTransSource + ',\'\'), \'\', @' + lyricTransSource + ')" fontFamily="mipro-normal" w="' + textW + '" multiLine="true" lineHeight="1.4" textAlign="' + textAlign + '" />');
         break;
       case 'triple':
-        lines.push('    <Text x="0" y="0" size="' + lyricSize + '" color="' + c.lyricColor + '" textExp="ifelse(eq(@' + lyricSource + ',\'\'), \'♪ 暂无歌词\', @' + lyricSource + ')" fontFamily="mipro-normal" w="' + textW + '" multiLine="true" lineHeight="1.3" textAlign="' + textAlign + '" />');
-        lines.push('    <Text x="0" y="' + (lyricSize * 1.5 + 6) + '" size="' + subSize + '" color="' + c.lyricSubColor + '" textExp="ifelse(eq(@' + lyricTransSource + ',\'\'), \'\', @' + lyricTransSource + ')" fontFamily="mipro-normal" w="' + textW + '" multiLine="true" lineHeight="1.3" textAlign="' + textAlign + '" />');
-        lines.push('    <Text x="0" y="' + (lyricSize * 1.5 + subSize * 1.5 + 12) + '" size="' + (subSize - 2) + '" color="' + c.lyricDimColor + '" textExp="ifelse(eq(@' + lyricRomSource + ',\'\'), \'\', @' + lyricRomSource + ')" fontFamily="mipro-normal" w="' + textW + '" multiLine="true" lineHeight="1.3" textAlign="' + textAlign + '" />');
+        lines.push('      <Text x="0" y="0" size="' + lyricSize + '" color="' + c.lyricColor + '" textExp="ifelse(eq(@' + lyricSource + ',\'\'), \'♪ 暂无歌词\', @' + lyricSource + ')" fontFamily="mipro-normal" w="' + textW + '" multiLine="true" lineHeight="1.3" textAlign="' + textAlign + '" />');
+        lines.push('      <Text x="0" y="' + (lyricSize * 1.5 + 6) + '" size="' + subSize + '" color="' + c.lyricSubColor + '" textExp="ifelse(eq(@' + lyricTransSource + ',\'\'), \'\', @' + lyricTransSource + ')" fontFamily="mipro-normal" w="' + textW + '" multiLine="true" lineHeight="1.3" textAlign="' + textAlign + '" />');
+        lines.push('      <Text x="0" y="' + (lyricSize * 1.5 + subSize * 1.5 + 12) + '" size="' + (subSize - 2) + '" color="' + c.lyricDimColor + '" textExp="ifelse(eq(@' + lyricRomSource + ',\'\'), \'\', @' + lyricRomSource + ')" fontFamily="mipro-normal" w="' + textW + '" multiLine="true" lineHeight="1.3" textAlign="' + textAlign + '" />');
         break;
     }
-
-    lines.push('  </Group>');
+    lines.push('    </Group>');
     lines.push('');
-
-    // Play state indicator at bottom
-    lines.push('  <!-- 播放状态 -->');
-    lines.push('  <Group x="(#marginL + 16)" y="(#view_height - 40)">');
-    lines.push('    <Rectangle x="0" y="0" w="6" h="6" fillColor="' + c.accentColor + '" cornerRadius="3" alpha="ifelse(#isPlay, 1, 0.3)" />');
-    lines.push('    <Text x="14" y="-2" size="12" color="' + c.artistColor + '" textExp="ifelse(#isPlay, \'正在播放\', \'已暂停\')" fontFamily="mipro-normal" />');
+    lines.push('    <!-- 播放状态 -->');
+    lines.push('    <Group name="play_indicator" x="0" y="(#view_height - 40)">');
+    lines.push('      <Rectangle x="0" y="2" w="6" h="6" fillColor="' + c.accentColor + '" cornerRadius="3" alpha="ifelse(#isPlay, 1, 0.3)" />');
+    lines.push('      <Text x="14" y="0" size="12" color="' + c.artistColor + '" textExp="ifelse(#isPlay, \'正在播放\', \'已暂停\')" fontFamily="mipro-normal" />');
+    lines.push('    </Group>');
     lines.push('  </Group>');
-
     lines.push('</Widget>');
     return lines.join('\n');
   },
@@ -2955,8 +3099,7 @@ var video_wallpaper = {
         { v: 'bounce', l: '↔️ 来回播放' },
       ]},
       { key: 'autoPlay', label: '自动播放', type: 'select', default: 'true', options: [
-        { v: 'true', l: '是' },
-        { v: 'false', l: '否' },
+        { v: 'true', l: '是' }, { v: 'false', l: '否' },
       ]},
       { key: 'volume', label: '音量', type: 'range', min: 0, max: 100, default: 0 },
       { key: 'fitMode', label: '填充模式', type: 'select', default: 'cover', options: [
@@ -2965,42 +3108,35 @@ var video_wallpaper = {
         { v: 'fill', l: '↔️ 拉伸填充' },
       ]},
       { key: 'removeDurationLimit', label: '解除时长限制', type: 'select', default: 'true', options: [
-        { v: 'true', l: '是（允许任意时长视频）' },
-        { v: 'false', l: '否（保持系统默认限制）' },
+        { v: 'true', l: '是' }, { v: 'false', l: '否' },
       ]},
       { key: 'removeFpsLimit', label: '解除帧率限制', type: 'select', default: 'true', options: [
-        { v: 'true', l: '是（使用原始帧率）' },
-        { v: 'false', l: '否（保持系统默认帧率）' },
+        { v: 'true', l: '是' }, { v: 'false', l: '否' },
       ]},
       { key: 'removeMuteLimit', label: '解除静音限制', type: 'select', default: 'true', options: [
-        { v: 'true', l: '是（允许带音频播放）' },
-        { v: 'false', l: '否（强制静音）' },
+        { v: 'true', l: '是' }, { v: 'false', l: '否' },
       ]},
     ]},
     { group: '遮罩层', fields: [
       { key: 'overlayEnable', label: '显示遮罩', type: 'select', default: 'false', options: [
-        { v: 'false', l: '关闭' },
-        { v: 'true', l: '开启' },
+        { v: 'false', l: '关闭' }, { v: 'true', l: '开启' },
       ]},
       { key: 'overlayColor', label: '遮罩颜色', type: 'color', default: '#000000' },
       { key: 'overlayOpacity', label: '遮罩透明度', type: 'range', min: 0, max: 100, default: 30 },
     ]},
     { group: '文字叠加', fields: [
       { key: 'showOverlayText', label: '显示叠加文字', type: 'select', default: 'false', options: [
-        { v: 'false', l: '关闭' },
-        { v: 'true', l: '开启' },
+        { v: 'false', l: '关闭' }, { v: 'true', l: '开启' },
       ]},
-      { key: 'overlayText', label: '叠加文字内容', type: 'text', default: '' },
+      { key: 'overlayText', label: '叠加文字', type: 'text', default: '' },
       { key: 'overlayTextSize', label: '文字大小', type: 'range', min: 12, max: 48, default: 24 },
       { key: 'overlayTextColor', label: '文字颜色', type: 'color', default: '#ffffff' },
-      { key: 'overlayTextX', label: '文字 X', type: 'range', min: 0, max: 976, default: 40 },
-      { key: 'overlayTextY', label: '文字 Y', type: 'range', min: 0, max: 596, default: 500 },
     ]},
   ],
   elements(c) {
     var els = [];
     if (c.showOverlayText === 'true' && c.overlayText) {
-      els.push({ type: 'text', text: c.overlayText, x: Number(c.overlayTextX) || 40, y: Number(c.overlayTextY) || 500, size: Number(c.overlayTextSize) || 24, color: c.overlayTextColor || '#ffffff', bold: true, locked: false });
+      els.push({ type: 'text', text: c.overlayText, x: 40, y: 500, size: Number(c.overlayTextSize) || 24, color: c.overlayTextColor || '#ffffff', bold: true, locked: false });
     }
     return els;
   },
@@ -3016,54 +3152,28 @@ var video_wallpaper = {
     var lines = [];
     lines.push(generateAutoDetectMAML());
     lines.push('');
-    lines.push('  <!-- 增强视频壁纸卡片 -->');
+    lines.push('  <!-- 增强视频壁纸 -->');
 
-    // Video element
     var videoAttrs = [];
     videoAttrs.push('src="videos/user_video.mp4"');
-    videoAttrs.push('x="0"');
-    videoAttrs.push('y="0"');
-    videoAttrs.push('w="#view_width"');
-    videoAttrs.push('h="#view_height"');
+    videoAttrs.push('x="0" y="0" w="#view_width" h="#view_height"');
     videoAttrs.push('autoPlay="' + autoPlay + '"');
-
-    if (loop === 'loop') {
-      videoAttrs.push('loop="true"');
-    } else if (loop === 'bounce') {
-      videoAttrs.push('loop="true"');
-      videoAttrs.push('reverse="true"');
-    }
-    // once: no loop attribute
-
+    if (loop === 'loop') videoAttrs.push('loop="true"');
+    else if (loop === 'bounce') { videoAttrs.push('loop="true"'); videoAttrs.push('reverse="true"'); }
     if (volume > 0 || removeMute) {
       videoAttrs.push('volume="' + (volume / 100).toFixed(2) + '"');
       videoAttrs.push('audioEnabled="true"');
     }
-
-    if (fitMode === 'cover') {
-      videoAttrs.push('fitMode="cover"');
-    } else if (fitMode === 'contain') {
-      videoAttrs.push('fitMode="contain"');
-    } else {
-      videoAttrs.push('fitMode="fill"');
-    }
-
-    if (removeDuration) {
-      videoAttrs.push('maxDuration="-1"');
-    }
-    if (removeFps) {
-      videoAttrs.push('forceNativeFps="true"');
-    }
+    videoAttrs.push('fitMode="' + fitMode + '"');
+    if (removeDuration) videoAttrs.push('maxDuration="-1"');
+    if (removeFps) videoAttrs.push('forceNativeFps="true"');
 
     lines.push('  <Video ' + videoAttrs.join(' ') + ' />');
 
-    // Overlay layer
     if (c.overlayEnable === 'true') {
       var alpha = ((c.overlayOpacity || 30) / 100).toFixed(2);
       lines.push('  <Rectangle w="#view_width" h="#view_height" fillColor="' + (c.overlayColor || '#000000') + '" alpha="' + alpha + '" />');
     }
-
-    // Text overlay is in elements(), not here
 
     return lines.join('\n');
   },
@@ -3072,7 +3182,7 @@ var video_wallpaper = {
 // ─── js/templates/health.js ───
 
 var health = {
-  id: 'health', icon: '❤️', name: '健康数据卡片', desc: '绑定系统健康数据：心率/血氧/步数/睡眠',
+  id: 'health', icon: '❤️', name: '健康数据卡片', desc: '心率/血氧/步数/睡眠一屏聚合',
   updater: 'DateTime.Minute',
   config: [
     { group: '基本', fields: [
@@ -3081,18 +3191,10 @@ var health = {
       { key: 'bgImage', label: '背景图 URL 或上传', type: 'text', default: '' },
     ]},
     { group: '显示项', fields: [
-      { key: 'showHeartRate', label: '显示心率', type: 'select', default: 'true', options: [
-        { v: 'true', l: '是' }, { v: 'false', l: '否' },
-      ]},
-      { key: 'showBloodOxygen', label: '显示血氧', type: 'select', default: 'true', options: [
-        { v: 'true', l: '是' }, { v: 'false', l: '否' },
-      ]},
-      { key: 'showSteps', label: '显示步数', type: 'select', default: 'true', options: [
-        { v: 'true', l: '是' }, { v: 'false', l: '否' },
-      ]},
-      { key: 'showSleep', label: '显示睡眠', type: 'select', default: 'true', options: [
-        { v: 'true', l: '是' }, { v: 'false', l: '否' },
-      ]},
+      { key: 'showHeartRate', label: '显示心率', type: 'select', default: 'true', options: [{ v: 'true', l: '是' }, { v: 'false', l: '否' }]},
+      { key: 'showBloodOxygen', label: '显示血氧', type: 'select', default: 'true', options: [{ v: 'true', l: '是' }, { v: 'false', l: '否' }]},
+      { key: 'showSteps', label: '显示步数', type: 'select', default: 'true', options: [{ v: 'true', l: '是' }, { v: 'false', l: '否' }]},
+      { key: 'showSleep', label: '显示睡眠', type: 'select', default: 'true', options: [{ v: 'true', l: '是' }, { v: 'false', l: '否' }]},
     ]},
     { group: '样式', fields: [
       { key: 'titleColor', label: '标题颜色', type: 'color', default: '#ffffff' },
@@ -3119,57 +3221,62 @@ var health = {
     lines.push('    </ContentProviderBinder>');
     lines.push('  </VariableBinders>');
     lines.push('');
+    lines.push('  <!-- 背景 -->');
     lines.push('  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />');
-    lines.push('  <Group x="#marginL" y="20" w="(#view_width - #marginL - 40)">');
-
-    var showHR = c.showHeartRate !== 'false';
-    var showBO = c.showBloodOxygen !== 'false';
-    var showST = c.showSteps !== 'false';
-    var showSL = c.showSleep !== 'false';
-
+    lines.push('');
+    lines.push('  <!-- 健康内容组 -->');
+    lines.push('  <Group name="health_content" x="#marginL" y="20" w="(#view_width - #marginL - 40)">');
     lines.push('    <Text text="健康数据" x="0" y="0" size="18" color="' + c.titleColor + '" bold="true" fontFamily="mipro-demibold" />');
     lines.push('    <Rectangle x="0" y="28" w="40" h="2" fillColor="' + c.accentColor + '" cornerRadius="1" />');
 
     var colW = '((#view_width - #marginL - 40) / 2)';
     var y = 48;
+    var showHR = c.showHeartRate !== 'false';
+    var showBO = c.showBloodOxygen !== 'false';
+    var showST = c.showSteps !== 'false';
+    var showSL = c.showSleep !== 'false';
 
     if (showHR) {
       lines.push('    <!-- 心率 -->');
-      lines.push('    <Text text="❤️ 心率" x="0" y="' + y + '" size="12" color="' + c.labelColor + '" />');
-      lines.push('    <Text textExp="(#health_heart_rate > 0 ? #health_heart_rate : \'--\')" x="0" y="' + (y + 20) + '" size="28" color="' + c.accentColor + '" bold="true" fontFamily="mipro-demibold" />');
-      lines.push('    <Text text="BPM" x="0" y="' + (y + 52) + '" size="10" color="' + c.labelColor + '" alpha="153" />');
+      lines.push('    <Group name="heart_rate" x="0" y="' + y + '" w="' + colW + '">');
+      lines.push('      <Text text="❤️ 心率" x="0" y="0" size="12" color="' + c.labelColor + '" />');
+      lines.push('      <Text x="0" y="20" size="28" color="' + c.accentColor + '" textExp="ifelse((#health_heart_rate > 0), #health_heart_rate, \'--\')" bold="true" fontFamily="mipro-demibold" />');
+      lines.push('      <Text text="BPM" x="0" y="52" size="10" color="' + c.labelColor + '" alpha="153" />');
+      lines.push('    </Group>');
       y += 75;
     }
-
     if (showBO) {
       lines.push('    <!-- 血氧 -->');
-      lines.push('    <Text text="🩸 血氧" x="' + colW + '" y="' + (showHR ? 48 : y) + '" size="12" color="' + c.labelColor + '" />');
-      lines.push('    <Text textExp="(#health_blood_oxygen > 0 ? concat(#health_blood_oxygen, \'%\') : \'--\')" x="' + colW + '" y="' + ((showHR ? 48 : y) + 20) + '" size="28" color="' + c.valueColor + '" bold="true" fontFamily="mipro-demibold" />');
-      lines.push('    <Text text="SpO₂" x="' + colW + '" y="' + ((showHR ? 48 : y) + 52) + '" size="10" color="' + c.labelColor + '" alpha="153" />');
+      lines.push('    <Group name="blood_oxygen" x="' + colW + '" y="' + (showHR ? 48 : y) + '" w="' + colW + '">');
+      lines.push('      <Text text="🩸 血氧" x="0" y="0" size="12" color="' + c.labelColor + '" />');
+      lines.push('      <Text x="0" y="20" size="28" color="' + c.valueColor + '" textExp="ifelse((#health_blood_oxygen > 0), concat(#health_blood_oxygen, \'%\'), \'--\')" bold="true" fontFamily="mipro-demibold" />');
+      lines.push('      <Text text="SpO₂" x="0" y="52" size="10" color="' + c.labelColor + '" alpha="153" />');
+      lines.push('    </Group>');
       if (showHR) y += 75;
     }
-
     if (showST) {
       lines.push('    <!-- 步数 -->');
       lines.push('    <Rectangle x="0" y="' + y + '" w="(#view_width - #marginL - 40)" h="1" fillColor="#1a2040" />');
       y += 10;
-      lines.push('    <Text text="🏃 步数" x="0" y="' + y + '" size="12" color="' + c.labelColor + '" />');
-      lines.push('    <Text textExp="#step_count" x="0" y="' + (y + 20) + '" size="24" color="' + c.valueColor + '" bold="true" fontFamily="mipro-demibold" />');
-      lines.push('    <Rectangle x="0" y="' + (y + 50) + '" w="(#view_width - #marginL - 40)" h="4" fillColor="#1a2040" cornerRadius="2" />');
-      lines.push('    <Rectangle x="0" y="' + (y + 50) + '" w="clamp((#view_width - #marginL - 40) * #step_count / 10000, 0, (#view_width - #marginL - 40))" h="4" fillColor="' + c.barColor + '" cornerRadius="2" />');
-      lines.push('    <Text text="目标 10,000 步" x="0" y="' + (y + 62) + '" size="10" color="' + c.labelColor + '" alpha="128" />');
+      lines.push('    <Group name="steps" x="0" y="' + y + '">');
+      lines.push('      <Text text="🏃 步数" x="0" y="0" size="12" color="' + c.labelColor + '" />');
+      lines.push('      <Text x="0" y="20" size="24" color="' + c.valueColor + '" textExp="#step_count" bold="true" fontFamily="mipro-demibold" />');
+      lines.push('      <Rectangle x="0" y="50" w="(#view_width - #marginL - 40)" h="4" fillColor="#1a2040" cornerRadius="2" />');
+      lines.push('      <Rectangle x="0" y="50" w="clamp((#view_width - #marginL - 40) * #step_count / 10000, 0, (#view_width - #marginL - 40))" h="4" fillColor="' + c.barColor + '" cornerRadius="2" />');
+      lines.push('      <Text text="目标 10,000 步" x="0" y="62" size="10" color="' + c.labelColor + '" alpha="128" />');
+      lines.push('    </Group>');
       y += 82;
     }
-
     if (showSL) {
       lines.push('    <!-- 睡眠 -->');
       lines.push('    <Rectangle x="0" y="' + y + '" w="(#view_width - #marginL - 40)" h="1" fillColor="#1a2040" />');
       y += 10;
-      lines.push('    <Text text="😴 睡眠" x="0" y="' + y + '" size="12" color="' + c.labelColor + '" />');
-      lines.push('    <Text textExp="(#health_sleep_hours > 0 ? concat(floor(#health_sleep_hours), \'h\', floor((#health_sleep_hours - floor(#health_sleep_hours)) * 60), \'m\') : \'--\')" x="0" y="' + (y + 20) + '" size="24" color="' + c.valueColor + '" bold="true" fontFamily="mipro-demibold" />');
-      lines.push('    <Text textExp="#health_sleep_quality" x="0" y="' + (y + 50) + '" size="12" color="' + c.barColor + '" />');
+      lines.push('    <Group name="sleep" x="0" y="' + y + '">');
+      lines.push('      <Text text="😴 睡眠" x="0" y="0" size="12" color="' + c.labelColor + '" />');
+      lines.push('      <Text x="0" y="20" size="24" color="' + c.valueColor + '" textExp="ifelse((#health_sleep_hours > 0), concat(floor(#health_sleep_hours), \'h\', floor((#health_sleep_hours - floor(#health_sleep_hours)) * 60), \'m\'), \'--\')" bold="true" fontFamily="mipro-demibold" />');
+      lines.push('      <Text x="0" y="50" size="12" color="' + c.barColor + '" textExp="#health_sleep_quality" />');
+      lines.push('    </Group>');
     }
-
     lines.push('  </Group>');
     lines.push('</Widget>');
     return lines.join('\n');
@@ -3179,7 +3286,7 @@ var health = {
 // ─── js/templates/schedule.js ───
 
 var schedule = {
-  id: 'schedule', icon: '📅', name: '日程卡片', desc: '绑定系统日历，显示今日/近期日程',
+  id: 'schedule', icon: '📅', name: '日程卡片', desc: '绑定系统日历，显示今日日程',
   updater: 'DateTime.Hour,DateTime.Minute',
   config: [
     { group: '基本', fields: [
@@ -3189,9 +3296,7 @@ var schedule = {
     ]},
     { group: '显示设置', fields: [
       { key: 'maxEvents', label: '最大显示数', type: 'range', min: 1, max: 5, default: 3 },
-      { key: 'showTime', label: '显示时间', type: 'select', default: 'true', options: [
-        { v: 'true', l: '是' }, { v: 'false', l: '否' },
-      ]},
+      { key: 'showTime', label: '显示时间', type: 'select', default: 'true', options: [{ v: 'true', l: '是' }, { v: 'false', l: '否' }]},
     ]},
     { group: '样式', fields: [
       { key: 'dateColor', label: '日期颜色', type: 'color', default: '#ffffff' },
@@ -3216,27 +3321,28 @@ var schedule = {
     lines.push('    </ContentProviderBinder>');
     lines.push('  </VariableBinders>');
     lines.push('');
+    lines.push('  <!-- 背景 -->');
     lines.push('  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />');
-    lines.push('  <Group x="#marginL" y="20" w="(#view_width - #marginL - 40)">');
-
-    // Date header
-    lines.push('    <Text textExp="formatDate(\'MM月dd日\', #time_sys)" x="0" y="0" size="14" color="' + c.eventTimeColor + '" />');
-    lines.push('    <Text textExp="formatDate(\'EEEE\', #time_sys)" x="0" y="20" size="26" color="' + c.dateColor + '" bold="true" fontFamily="mipro-demibold" />');
+    lines.push('');
+    lines.push('  <!-- 日程内容组 -->');
+    lines.push('  <Group name="schedule_content" x="#marginL" y="20" w="(#view_width - #marginL - 40)">');
+    lines.push('    <Text x="0" y="0" size="14" color="' + c.eventTimeColor + '" textExp="formatDate(\'MM月dd日\', #time_sys)" />');
+    lines.push('    <Text x="0" y="20" size="26" color="' + c.dateColor + '" textExp="formatDate(\'EEEE\', #time_sys)" bold="true" fontFamily="mipro-demibold" />');
     lines.push('    <Rectangle x="0" y="54" w="30" h="2" fillColor="' + c.accentColor + '" cornerRadius="1" />');
 
-    // Events
     for (var i = 0; i < maxEvents; i++) {
       var yBase = 72 + i * 60;
-      lines.push('    <!-- Event ' + i + ' -->');
-      lines.push('    <Rectangle x="0" y="' + yBase + '" w="4" h="4" fillColor="' + c.dotColor + '" cornerRadius="2" />');
+      lines.push('    <!-- 事件 ' + (i + 1) + ' -->');
+      lines.push('    <Group name="event_' + i + '" x="0" y="' + yBase + '">');
+      lines.push('      <Rectangle x="0" y="2" w="4" h="4" fillColor="' + c.dotColor + '" cornerRadius="2" />');
       if (showTime) {
-        lines.push('    <Text textExp="formatDate(\'HH:mm\', #event_start_' + i + ')" x="14" y="' + (yBase - 2) + '" size="12" color="' + c.eventTimeColor + '" />');
-        lines.push('    <Text textExp="@event_title_' + i + '" x="70" y="' + (yBase - 2) + '" size="14" color="' + c.eventTitleColor + '" w="(#view_width - #marginL - 110)" ellipsis="true" />');
+        lines.push('      <Text x="14" y="0" size="12" color="' + c.eventTimeColor + '" textExp="formatDate(\'HH:mm\', #event_start_' + i + ')" />');
+        lines.push('      <Text x="70" y="0" size="14" color="' + c.eventTitleColor + '" textExp="@event_title_' + i + '" w="(#view_width - #marginL - 110)" ellipsis="true" />');
       } else {
-        lines.push('    <Text textExp="@event_title_' + i + '" x="14" y="' + (yBase - 2) + '" size="14" color="' + c.eventTitleColor + '" w="(#view_width - #marginL - 54)" ellipsis="true" />');
+        lines.push('      <Text x="14" y="0" size="14" color="' + c.eventTitleColor + '" textExp="@event_title_' + i + '" w="(#view_width - #marginL - 54)" ellipsis="true" />');
       }
+      lines.push('    </Group>');
     }
-
     lines.push('  </Group>');
     lines.push('</Widget>');
     return lines.join('\n');
@@ -3256,12 +3362,8 @@ var notification = {
     ]},
     { group: '显示设置', fields: [
       { key: 'maxNotifs', label: '最大通知数', type: 'range', min: 1, max: 5, default: 3 },
-      { key: 'showApp', label: '显示应用名', type: 'select', default: 'true', options: [
-        { v: 'true', l: '是' }, { v: 'false', l: '否' },
-      ]},
-      { key: 'showTime', label: '显示时间', type: 'select', default: 'true', options: [
-        { v: 'true', l: '是' }, { v: 'false', l: '否' },
-      ]},
+      { key: 'showApp', label: '显示应用名', type: 'select', default: 'true', options: [{ v: 'true', l: '是' }, { v: 'false', l: '否' }]},
+      { key: 'showTime', label: '显示时间', type: 'select', default: 'true', options: [{ v: 'true', l: '是' }, { v: 'false', l: '否' }]},
     ]},
     { group: '样式', fields: [
       { key: 'titleColor', label: '标题颜色', type: 'color', default: '#ffffff' },
@@ -3288,25 +3390,29 @@ var notification = {
     lines.push('    </ContentProviderBinder>');
     lines.push('  </VariableBinders>');
     lines.push('');
+    lines.push('  <!-- 背景 -->');
     lines.push('  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />');
-    lines.push('  <Group x="#marginL" y="16" w="(#view_width - #marginL - 40)">');
+    lines.push('');
+    lines.push('  <!-- 通知内容组 -->');
+    lines.push('  <Group name="notif_content" x="#marginL" y="16" w="(#view_width - #marginL - 40)">');
     lines.push('    <Text text="通知" x="0" y="0" size="18" color="' + c.titleColor + '" bold="true" fontFamily="mipro-demibold" />');
     lines.push('    <Rectangle x="0" y="26" w="24" h="2" fillColor="' + c.accentColor + '" cornerRadius="1" />');
 
     for (var i = 0; i < maxN; i++) {
       var yBase = 40 + i * 68;
-      lines.push('    <!-- Notification ' + i + ' -->');
-      lines.push('    <Rectangle x="0" y="' + yBase + '" w="(#view_width - #marginL - 40)" h="56" fillColor="#141418" cornerRadius="8" />');
+      lines.push('    <!-- 通知 ' + (i + 1) + ' -->');
+      lines.push('    <Group name="notif_item_' + i + '" x="0" y="' + yBase + '" w="(#view_width - #marginL - 40)">');
+      lines.push('      <Rectangle x="0" y="0" w="(#view_width - #marginL - 40)" h="56" fillColor="#141418" cornerRadius="8" />');
       if (showApp) {
-        lines.push('    <Text textExp="@notif_app_' + i + '" x="10" y="' + (yBase + 8) + '" size="10" color="' + c.appColor + '" w="(#view_width - #marginL - 60)" ellipsis="true" />');
+        lines.push('      <Text x="10" y="8" size="10" color="' + c.appColor + '" textExp="@notif_app_' + i + '" w="(#view_width - #marginL - 60)" ellipsis="true" />');
       }
-      lines.push('    <Text textExp="@notif_title_' + i + '" x="10" y="' + (yBase + (showApp ? 22 : 10)) + '" size="13" color="' + c.titleColor + '" bold="true" w="(#view_width - #marginL - 60)" ellipsis="true" />');
-      lines.push('    <Text textExp="@notif_body_' + i + '" x="10" y="' + (yBase + (showApp ? 38 : 28)) + '" size="11" color="' + c.bodyColor + '" w="(#view_width - #marginL - 60)" ellipsis="true" />');
+      lines.push('      <Text x="10" y="' + (showApp ? 22 : 10) + '" size="13" color="' + c.titleColor + '" textExp="@notif_title_' + i + '" bold="true" w="(#view_width - #marginL - 60)" ellipsis="true" />');
+      lines.push('      <Text x="10" y="' + (showApp ? 38 : 28) + '" size="11" color="' + c.bodyColor + '" textExp="@notif_body_' + i + '" w="(#view_width - #marginL - 60)" ellipsis="true" />');
       if (showTime) {
-        lines.push('    <Text textExp="formatDate(\'HH:mm\', #notif_time_' + i + ')" x="(#view_width - #marginL - 70)" y="' + (yBase + 8) + '" size="10" color="' + c.timeColor + '" textAlign="right" />');
+        lines.push('      <Text x="(#view_width - #marginL - 70)" y="8" size="10" color="' + c.timeColor + '" textExp="formatDate(\'HH:mm\', #notif_time_' + i + ')" textAlign="right" />');
       }
+      lines.push('    </Group>');
     }
-
     lines.push('  </Group>');
     lines.push('</Widget>');
     return lines.join('\n');
@@ -3327,7 +3433,6 @@ var carousel = {
       { key: 'transition', label: '过渡效果', type: 'select', default: 'fade', options: [
         { v: 'fade', l: '🌅 淡入淡出' },
         { v: 'slide', l: '➡️ 滑动' },
-        { v: 'zoom', l: '🔍 缩放' },
         { v: 'none', l: '⚡ 直接切换' },
       ]},
       { key: 'fitMode', label: '填充模式', type: 'select', default: 'cover', options: [
@@ -3365,41 +3470,37 @@ var carousel = {
     var lines = [];
     lines.push(generateAutoDetectMAML());
     lines.push('');
-    lines.push('  <!-- 照片轮播卡片 -->');
+    lines.push('  <!-- 照片轮播 -->');
     lines.push('  <Var name="slideIndex" type="number" expression="mod(floor(div(#time_sys, ' + interval + ')), 3)" />');
     lines.push('');
     lines.push('  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />');
 
-    // Slides (3 slots for user images)
     for (var i = 0; i < 3; i++) {
       lines.push('  <!-- Slide ' + (i + 1) + ' -->');
       if (transition === 'fade') {
         lines.push('  <Image src="images/slide_' + i + '.png" x="0" y="0" w="#view_width" h="#view_height" fitMode="' + fitMode + '" alpha="ifelse(eq(#slideIndex, ' + i + '), 1, 0)" />');
       } else if (transition === 'slide') {
         lines.push('  <Image src="images/slide_' + i + '.png" x="ifelse(eq(#slideIndex, ' + i + '), 0, ifelse(gt(#slideIndex, ' + i + '), neg(#view_width), #view_width))" y="0" w="#view_width" h="#view_height" fitMode="' + fitMode + '" />');
-      } else if (transition === 'zoom') {
-        lines.push('  <Image src="images/slide_' + i + '.png" x="ifelse(eq(#slideIndex, ' + i + '), 0, 0)" y="0" w="#view_width" h="#view_height" fitMode="' + fitMode + '" alpha="ifelse(eq(#slideIndex, ' + i + '), 1, 0)" />');
       } else {
         lines.push('  <Image src="images/slide_' + i + '.png" x="0" y="0" w="#view_width" h="#view_height" fitMode="' + fitMode + '" alpha="ifelse(eq(#slideIndex, ' + i + '), 1, 0)" />');
       }
     }
 
-    // Caption overlay
     if (showCaption && c.caption) {
       lines.push('');
       lines.push('  <!-- 标题 -->');
-      lines.push('  <Rectangle x="0" y="(#view_height - 50)" w="#view_width" h="50" fillColor="#000000" alpha="' + ((c.captionBgAlpha || 50) / 100).toFixed(2) + '" />');
-      lines.push('  <Text text="' + escXml(c.caption) + '" x="#marginL" y="(#view_height - 36)" size="14" color="' + c.captionColor + '" fontFamily="mipro-normal" />');
+      lines.push('  <Group name="caption_group" x="0" y="(#view_height - 50)">');
+      lines.push('    <Rectangle w="#view_width" h="50" fillColor="#000000" alpha="' + ((c.captionBgAlpha || 50) / 100).toFixed(2) + '" />');
+      lines.push('    <Text text="' + escXml(c.caption) + '" x="#marginL" y="14" size="14" color="' + c.captionColor + '" fontFamily="mipro-normal" />');
+      lines.push('  </Group>');
     }
 
-    // Indicators
     if (showIndicator) {
       lines.push('');
       lines.push('  <!-- 指示器 -->');
-      lines.push('  <Group x="((#view_width - 36) / 2)" y="(#view_height - 20)">');
+      lines.push('  <Group name="indicators" x="((#view_width - 36) / 2)" y="(#view_height - 20)">');
       for (var j = 0; j < 3; j++) {
-        var dotX = j * 14;
-        lines.push('    <Circle x="' + (dotX + 4) + '" y="4" r="3" fillColor="' + c.indicatorColor + '" alpha="ifelse(eq(#slideIndex, ' + j + '), 1, 0.3)" />');
+        lines.push('    <Circle x="' + (j * 14 + 4) + '" y="4" r="3" fillColor="' + c.indicatorColor + '" alpha="ifelse(eq(#slideIndex, ' + j + '), 1, 0.3)" />');
       }
       lines.push('  </Group>');
     }
@@ -3411,7 +3512,7 @@ var carousel = {
 // ─── js/templates/quick_settings.js ───
 
 var quick_settings = {
-  id: 'quick_settings', icon: '⚡', name: '快捷开关卡片', desc: '显示 WiFi/蓝牙/亮度等系统开关状态',
+  id: 'quick_settings', icon: '⚡', name: '快捷开关卡片', desc: 'WiFi/蓝牙/亮度等系统开关状态',
   updater: 'DateTime.Minute',
   config: [
     { group: '基本', fields: [
@@ -3451,8 +3552,11 @@ var quick_settings = {
     lines.push('    </ContentProviderBinder>');
     lines.push('  </VariableBinders>');
     lines.push('');
+    lines.push('  <!-- 背景 -->');
     lines.push('  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />');
-    lines.push('  <Group x="#marginL" y="20" w="(#view_width - #marginL - 40)">');
+    lines.push('');
+    lines.push('  <!-- 快捷设置内容组 -->');
+    lines.push('  <Group name="qs_content" x="#marginL" y="20" w="(#view_width - #marginL - 40)">');
     lines.push('    <Text text="快捷设置" x="0" y="0" size="16" color="' + c.titleColor + '" bold="true" fontFamily="mipro-demibold" />');
 
     var toggles = [];
@@ -3472,18 +3576,19 @@ var quick_settings = {
       var x = '(' + cellW + ' * ' + col + ')';
       var y = 30 + row * 72;
 
+      lines.push('    <!-- ' + t.label + ' -->');
+      lines.push('    <Group name="qs_' + t.label + '" x="' + x + '" y="' + y + '" w="' + cellW + '">');
       if (t.isSlider) {
-        lines.push('    <!-- ' + t.label + ' (slider) -->');
-        lines.push('    <Text text="' + t.icon + '" x="' + x + '" y="' + y + '" size="20" />');
-        lines.push('    <Rectangle x="' + x + '" y="' + (y + 30) + '" w="(' + cellW + ' - 16)" h="3" fillColor="' + c.inactiveColor + '" cornerRadius="1.5" />');
-        lines.push('    <Rectangle x="' + x + '" y="' + (y + 30) + '" w="((' + cellW + ' - 16) * ' + t.var + ' / 255)" h="3" fillColor="' + c.activeColor + '" cornerRadius="1.5" />');
-        lines.push('    <Text text="亮度" x="' + x + '" y="' + (y + 40) + '" size="10" color="' + c.labelColor + '" />');
+        lines.push('      <Text text="' + t.icon + '" x="0" y="0" size="20" />');
+        lines.push('      <Rectangle x="0" y="30" w="(' + cellW + ' - 16)" h="3" fillColor="' + c.inactiveColor + '" cornerRadius="1.5" />');
+        lines.push('      <Rectangle x="0" y="30" w="((' + cellW + ' - 16) * ' + t.var + ' / 255)" h="3" fillColor="' + c.activeColor + '" cornerRadius="1.5" />');
+        lines.push('      <Text text="亮度" x="0" y="40" size="10" color="' + c.labelColor + '" />');
       } else {
-        lines.push('    <!-- ' + t.label + ' -->');
-        lines.push('    <Circle x="(' + x + ' + ' + (iconSize / 2) + ')" y="' + (y + iconSize / 2) + '" r="' + (iconSize / 2) + '" fillColor="ifelse(' + t.var + ', ' + c.activeColor + ', ' + c.inactiveColor + ')" />');
-        lines.push('    <Text text="' + t.icon + '" x="(' + x + ' + ' + ((iconSize - 20) / 2) + ')" y="' + (y + ((iconSize - 20) / 2)) + '" size="18" />');
-        lines.push('    <Text text="' + t.label + '" x="' + x + '" y="' + (y + iconSize + 6) + '" size="10" color="' + c.labelColor + '" textAlign="center" w="' + cellW + '" />');
+        lines.push('      <Circle x="' + (iconSize / 2) + '" y="' + (iconSize / 2) + '" r="' + (iconSize / 2) + '" fillColor="ifelse(' + t.var + ', ' + c.activeColor + ', ' + c.inactiveColor + ')" />');
+        lines.push('      <Text text="' + t.icon + '" x="' + ((iconSize - 20) / 2) + '" y="' + ((iconSize - 20) / 2) + '" size="18" />');
+        lines.push('      <Text text="' + t.label + '" x="0" y="' + (iconSize + 6) + '" size="10" color="' + c.labelColor + '" textAlign="center" w="' + cellW + '" />');
       }
+      lines.push('    </Group>');
     });
 
     lines.push('  </Group>');
@@ -3640,9 +3745,32 @@ PreviewRenderer.prototype.evalExpression = function (expr) {
     .replace(/#year/g, now.getFullYear())
     .replace(/#month/g, now.getMonth() + 1)
     .replace(/#date/g, now.getDate())
-    .replace(/#dayIdx/g, 0);
+    .replace(/#dayIdx/g, 0)
+    .replace(/#time_sys/g, now.getTime())
+    .replace(/#step/g, 6542)
+    .replace(/#weather_humidity/g, 45);
   try {
-    var scope = 'var ifelse = function(c,a,b){return c?a:b;};';
+    // MAML 函数 → JS 映射
+    var scope = 'var ifelse = function(c,a,b){return c?a:b;};' +
+      'var concat = function(){return Array.prototype.slice.call(arguments).join("");};' +
+      'var clamp = function(v,lo,hi){return Math.min(Math.max(v,lo),hi);};' +
+      'var floor = function(v){return Math.floor(v);};' +
+      'var ceil = function(v){return Math.ceil(v);};' +
+      'var abs = function(v){return Math.abs(v);};' +
+      'var mod = function(a,b){return a%b;};' +
+      'var div = function(a,b){return Math.floor(a/b);};' +
+      'var gt = function(a,b){return a>b?1:0;};' +
+      'var lt = function(a,b){return a<b?1:0;};' +
+      'var neg = function(v){return -v;};' +
+      'var eq = function(a,b){return a===b?1:0;};' +
+      'var eqs = function(a,b){return String(a)===String(b)?1:0;};' +
+      'var max = function(a,b){return Math.max(a,b);};' +
+      'var min = function(a,b){return Math.min(a,b);};' +
+      'var sqrt = function(v){return Math.sqrt(v);};' +
+      'var rand = function(){return Math.random();};' +
+      'var strIsEmpty = function(s){return !s||s.length===0?1:0;};' +
+      'var len = function(s){return s?s.length:0;};' +
+      'var ** = function(a,b){return (a&&b)?1:0;};';
     var result = Function('"use strict";' + scope + 'return (' + cleaned + ')')();
     if (result != null) return String(result);
   } catch (e) {}
@@ -3776,6 +3904,26 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
       case 'progress': {
         var pw = (el.w || 200) * self.scale, ph = (el.h || 8) * self.scale;
         return '<div data-el-idx="' + i + '" style="position:absolute;left:' + (self.camW + el.x * self.scale) + 'px;top:' + (el.y * self.scale) + 'px;width:' + pw + 'px;height:' + ph + 'px;background:' + (el.bgColor || '#333') + ';border-radius:' + ((el.radius || 4) * self.scale) + 'px;' + dc + '"><div style="width:' + ((el.value || 60)) + '%;height:100%;background:' + el.color + ';border-radius:inherit"></div></div>' + rh + sizeLabel;
+      }
+      case 'group': {
+        var gOp = el.alpha !== undefined && el.alpha !== 1 ? 'opacity:' + el.alpha + ';' : '';
+        var gW = (el.w || 200) * self.scale;
+        var gH = (el.h || 200) * self.scale;
+        var childHtml = '';
+        if (el.children && el.children.length > 0) {
+          childHtml = self.renderElements(el.children, files, -1);
+        }
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + gW + 'px;height:' + gH + 'px;border:1px dashed rgba(124,109,240,0.4);border-radius:4px;' + gOp + dc + '">' +
+          '<div style="position:absolute;top:-16px;left:0;font-size:9px;color:rgba(124,109,240,0.7);white-space:nowrap">📦 ' + (el.name || 'Group') + '</div>' +
+          childHtml + '</div>' + rh + sizeLabel;
+      }
+      case 'layer': {
+        var lVis = el.visibility ? 'opacity:0.5;' : '';
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:0;top:0;width:100%;height:100%;background:rgba(108,92,231,0.08);border:1px dashed rgba(108,92,231,0.3);' + lVis + dc + '">' +
+          '<div style="position:absolute;top:4px;left:4px;font-size:9px;color:rgba(108,92,231,0.6)">🎨 Layer: ' + (el.name || '') + ' [' + (el.layerType || 'bottom') + ']</div></div>' + sizeLabel;
+      }
+      case 'musiccontrol': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 200) * self.scale + 'px;height:' + (el.h || 120) * self.scale + 'px;background:rgba(46,204,113,0.1);border:1px dashed rgba(46,204,113,0.4);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;color:#2ecc71;gap:4px;' + dc + '">🎵<span style="font-size:8px;opacity:0.7">MusicControl</span></div>' + sizeLabel;
       }
       default: return sizeLabel;
     }
@@ -4750,12 +4898,7 @@ function exportZip(maml, cardName, elements, files, isCustom, bgImage) {
   }
 
   var usedFiles = {};
-  elements.forEach(function (el) {
-    var fname = el.fileName || el.src;
-    if ((el.type === 'image' || el.type === 'video') && fname && files[fname]) {
-      usedFiles[fname] = files[fname];
-    }
-  });
+  collectUsedFiles(elements, files, usedFiles);
 
   // 背景图
   if (bgImage && bgImage.indexOf('data:') === 0) {
@@ -4864,13 +5007,12 @@ function importZip(file) {
           var doc = parser.parseFromString(xml, 'application/xml');
           var parseError = doc.querySelector('parsererror');
           if (!parseError) {
-            // DOM parsing succeeded
-            var widgets = doc.querySelectorAll('Text, Rectangle, Circle, Image, Video');
-            widgets.forEach(function (node) {
+            // DOM parsing succeeded - recursively parse node list
+            function parseMamlNode(node) {
               var tag = node.tagName.toLowerCase();
               var a = function (name) { return node.getAttribute(name) || ''; };
               if (tag === 'text') {
-                result.elements.push({
+                return {
                   type: 'text', text: a('text'), x: Number(a('x')) || 0, y: Number(a('y')) || 0,
                   size: Number(a('size')) || 24, color: a('color') || '#ffffff',
                   textAlign: a('textAlign') || 'left', bold: a('bold') === 'true',
@@ -4878,9 +5020,9 @@ function importZip(file) {
                   opacity: a('alpha') ? Math.round(parseFloat(a('alpha')) * 100) : 100,
                   rotation: Number(a('rotation')) || 0,
                   fontFamily: a('fontFamily') || 'default',
-                });
+                };
               } else if (tag === 'rectangle') {
-                result.elements.push({
+                return {
                   type: 'rectangle', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
                   w: Number(a('w')) || 100, h: Number(a('h')) || 40,
                   color: a('fillColor') || '#333333', radius: Number(a('cornerRadius')) || 0,
@@ -4888,31 +5030,112 @@ function importZip(file) {
                   rotation: Number(a('rotation')) || 0,
                   fillColor2: a('fillColor2') || '',
                   blur: Number(a('blur')) || 0,
-                });
+                };
               } else if (tag === 'circle') {
-                result.elements.push({
+                return {
                   type: 'circle', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
                   r: Number(a('r')) || 30, color: a('fillColor') || '#6c5ce7',
                   opacity: a('alpha') ? Math.round(parseFloat(a('alpha')) * 100) : 100,
                   strokeWidth: Number(a('stroke')) || 0,
                   strokeColor: a('strokeColor') || '#ffffff',
-                });
+                };
               } else if (tag === 'image') {
                 var imgSrc = (a('src') || '').replace(/^images\//, '');
-                result.elements.push({
+                return {
                   type: 'image', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
                   w: Number(a('w')) || 100, h: Number(a('h')) || 100,
                   fileName: imgSrc, src: imgSrc,
                   fit: a('fitMode') || 'cover',
-                });
+                };
               } else if (tag === 'video') {
                 var vidSrc = (a('src') || '').replace(/^videos\//, '');
-                result.elements.push({
+                return {
                   type: 'video', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
                   w: Number(a('w')) || 240, h: Number(a('h')) || 135,
                   fileName: vidSrc, src: vidSrc,
-                });
+                };
+              } else if (tag === 'lottie') {
+                return {
+                  type: 'lottie', x: Number(a('x')) || 50, y: Number(a('y')) || 50,
+                  w: Number(a('w')) || 120, h: Number(a('h')) || 120,
+                  src: a('src') || '', name: a('name') || '',
+                  align: a('align') || 'center',
+                  loop: Number(a('loop')) || 0,
+                  autoplay: a('autoplay') !== 'false',
+                };
+              } else if (tag === 'group') {
+                var children = [];
+                for (var ci = 0; ci < node.childNodes.length; ci++) {
+                  var child = node.childNodes[ci];
+                  if (child.nodeType === 1 && child.tagName) {
+                    var parsed = parseMamlNode(child);
+                    if (parsed) children.push(parsed);
+                  }
+                }
+                return {
+                  type: 'group', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+                  w: Number(a('w')) || 200, h: Number(a('h')) || 200,
+                  name: a('name') || '',
+                  alpha: a('alpha') ? Number(a('alpha')) : 1,
+                  visibility: a('visibility') || '',
+                  folmeMode: a('folmeMode') === 'true',
+                  align: a('align') || '',
+                  alignV: a('alignV') || '',
+                  children: children,
+                };
+              } else if (tag === 'layer') {
+                var layerChildren = [];
+                for (var li = 0; li < node.childNodes.length; li++) {
+                  var lchild = node.childNodes[li];
+                  if (lchild.nodeType === 1 && lchild.tagName) {
+                    var lparsed = parseMamlNode(lchild);
+                    if (lparsed) layerChildren.push(lparsed);
+                  }
+                }
+                return {
+                  type: 'layer', name: a('name') || '',
+                  alpha: a('alpha') ? Number(a('alpha')) : 1,
+                  visibility: a('visibility') || '',
+                  layerType: a('layerType') || 'bottom',
+                  blurRadius: Number(a('blurRadius')) || 0,
+                  blurColors: a('blurColors') || '',
+                  colorModes: Number(a('colorModes')) || 0,
+                  frameRate: Number(a('frameRate')) || -1,
+                  children: layerChildren,
+                };
+              } else if (tag === 'musiccontrol') {
+                var mcChildren = [];
+                for (var mi = 0; mi < node.childNodes.length; mi++) {
+                  var mchild = node.childNodes[mi];
+                  if (mchild.nodeType === 1 && mchild.tagName) {
+                    var mparsed = parseMamlNode(mchild);
+                    if (mparsed) mcChildren.push(mparsed);
+                  }
+                }
+                return {
+                  type: 'musiccontrol', name: a('name') || 'music_control',
+                  w: Number(a('w')) || 0, h: Number(a('h')) || 0,
+                  x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+                  autoShow: a('autoShow') !== 'false',
+                  autoRefresh: a('autoRefresh') !== 'false',
+                  enableLyric: a('enableLyric') === 'true',
+                  updateLyricInterval: Number(a('updateLyricInterval')) || 100,
+                  children: mcChildren,
+                };
               }
+              return null; // Unknown tag (framework tags, etc.)
+            }
+
+            var allNodes = doc.querySelectorAll('Text, Rectangle, Circle, Image, Video, Lottie, Group, Layer, MusicControl');
+            allNodes.forEach(function (node) {
+              // Skip nested nodes (children of Group/Layer are handled recursively)
+              if (node.parentElement && ['Group', 'Layer', 'MusicControl'].indexOf(node.parentElement.tagName) >= 0) return;
+              // Skip nodes inside Widget > Group (the marginL wrapper)
+              if (node.parentElement && node.parentElement.tagName === 'Group' && node.parentElement.parentElement && node.parentElement.parentElement.tagName === 'Widget') {
+                // This is inside a top-level Group, which is fine - parse it
+              }
+              var parsed = parseMamlNode(node);
+              if (parsed) result.elements.push(parsed);
             });
           } else {
             // Fallback to regex parsing
@@ -5089,8 +5312,10 @@ function exportPNG(cardName, cfg, elements, tpl, uploadedFiles, getDeviceFn) {
     }
 
     var imageLoaders = [];
-    if (elements) {
-      elements.forEach(function (el) {
+    // 展平嵌套元素（Group/Layer/MusicControl 子元素）
+    var flatElements = flattenElements(elements);
+    if (flatElements.length > 0) {
+      flatElements.forEach(function (el) {
         if (el.type !== 'image') return;
         var fi = el.fileName ? uploadedFiles[el.fileName] : null;
         if (!fi || !fi.dataUrl) return;
@@ -5109,8 +5334,8 @@ function exportPNG(cardName, cfg, elements, tpl, uploadedFiles, getDeviceFn) {
         if (item) imgMap[item.el.fileName] = item.img;
       });
 
-      if (elements) {
-        elements.forEach(function (el) {
+      if (flatElements.length > 0) {
+        flatElements.forEach(function (el) {
           ctx.save();
           var opacity = (el.opacity !== undefined ? el.opacity : 100) / 100;
           ctx.globalAlpha = opacity;
@@ -5240,7 +5465,8 @@ function exportSVG(cardName, cfg, elements, uploadedFiles, getDeviceFn) {
   svgParts.push('<svg xmlns="http://www.w3.org/2000/svg" width="' + device.width + '" height="' + device.height + '" viewBox="0 0 ' + device.width + ' ' + device.height + '">');
   svgParts.push('<rect width="100%" height="100%" fill="' + (cfg.bgColor || '#000000') + '"/>');
 
-  elements.forEach(function (el) {
+  var flatElements = flattenElements(elements);
+  flatElements.forEach(function (el) {
     var opacity = (el.opacity !== undefined ? el.opacity : 100) / 100;
     var opAttr = opacity < 1 ? ' opacity="' + opacity + '"' : '';
 
@@ -5409,6 +5635,178 @@ function importRearEyeFormat(file) {
     };
     reader.readAsText(file);
   });
+}
+
+// ─── MAML XML 导入 ──────────────────────────────────────────
+function importMAML(xmlString) {
+  var result = { cardName: '导入的 MAML', bgColor: '#000000', elements: [], updater: '' };
+
+  // Extract attributes from Widget tag
+  var widgetMatch = xmlString.match(/<Widget\s+([^>]+)>/);
+  if (widgetMatch) {
+    var attrs = {};
+    var re = /(\w+)="([^"]*)"/g;
+    var m;
+    while ((m = re.exec(widgetMatch[1])) !== null) attrs[m[1]] = m[2];
+    result.cardName = attrs.name || '导入的 MAML';
+    if (attrs.useVariableUpdater) result.updater = attrs.useVariableUpdater;
+  }
+
+  // Extract bg color
+  var bgMatch = xmlString.match(/<Rectangle\s[^>]*w="#view_width"[^>]*h="#view_height"[^>]*fillColor="(#[0-9a-fA-F]{6})"/);
+  if (bgMatch) result.bgColor = bgMatch[1];
+
+  // Parse elements
+  try {
+    var parser = new DOMParser();
+    var doc = parser.parseFromString(xmlString, 'application/xml');
+    var parseError = doc.querySelector('parsererror');
+    if (!parseError) {
+      function parseNode(node) {
+        var tag = node.tagName;
+        if (!tag) return null;
+        var a = function (name) { return node.getAttribute(name) || ''; };
+        var tagLower = tag.toLowerCase();
+
+        if (tagLower === 'text') {
+          return {
+            type: 'text', text: a('text') || a('textExp') || '', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+            size: Number(a('size')) || 24, color: a('color') || '#ffffff',
+            textAlign: a('textAlign') || 'left', bold: a('bold') === 'true',
+            multiLine: a('multiLine') === 'true', w: Number(a('w')) || 200,
+            opacity: a('alpha') ? Math.round(parseFloat(a('alpha')) * 100) : 100,
+            rotation: Number(a('rotation')) || 0,
+            fontFamily: a('fontFamily') || 'default',
+            expression: a('textExp') || '',
+          };
+        } else if (tagLower === 'rectangle') {
+          return {
+            type: 'rectangle', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+            w: Number(a('w')) || 100, h: Number(a('h')) || 40,
+            color: a('fillColor') || '#333333', radius: Number(a('cornerRadius')) || 0,
+            opacity: a('alpha') ? Math.round(parseFloat(a('alpha')) * 100) : 100,
+            rotation: Number(a('rotation')) || 0, fillColor2: a('fillColor2') || '',
+            blur: Number(a('blur')) || 0,
+          };
+        } else if (tagLower === 'circle') {
+          return {
+            type: 'circle', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+            r: Number(a('r')) || 30, color: a('fillColor') || '#6c5ce7',
+            opacity: a('alpha') ? Math.round(parseFloat(a('alpha')) * 100) : 100,
+          };
+        } else if (tagLower === 'image') {
+          var imgSrc = (a('src') || '').replace(/^images\//, '');
+          return {
+            type: 'image', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+            w: Number(a('w')) || 100, h: Number(a('h')) || 100,
+            fileName: imgSrc, src: imgSrc, fit: a('fitMode') || 'cover',
+          };
+        } else if (tagLower === 'video') {
+          var vidSrc = (a('src') || '').replace(/^videos\//, '');
+          return {
+            type: 'video', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+            w: Number(a('w')) || 240, h: Number(a('h')) || 135,
+            fileName: vidSrc, src: vidSrc,
+          };
+        } else if (tagLower === 'lottie') {
+          return {
+            type: 'lottie', x: Number(a('x')) || 50, y: Number(a('y')) || 50,
+            w: Number(a('w')) || 120, h: Number(a('h')) || 120,
+            src: a('src') || '', name: a('name') || '',
+          };
+        } else if (tagLower === 'group') {
+          var children = [];
+          for (var i = 0; i < node.childNodes.length; i++) {
+            var ch = node.childNodes[i];
+            if (ch.nodeType === 1) { var p = parseNode(ch); if (p) children.push(p); }
+          }
+          return {
+            type: 'group', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+            w: Number(a('w')) || 200, h: Number(a('h')) || 200,
+            name: a('name') || '', alpha: a('alpha') ? Number(a('alpha')) : 1,
+            visibility: a('visibility') || '', folmeMode: a('folmeMode') === 'true',
+            align: a('align') || '', alignV: a('alignV') || '',
+            children: children,
+          };
+        } else if (tagLower === 'layer') {
+          var lChildren = [];
+          for (var j = 0; j < node.childNodes.length; j++) {
+            var lc = node.childNodes[j];
+            if (lc.nodeType === 1) { var lp = parseNode(lc); if (lp) lChildren.push(lp); }
+          }
+          return {
+            type: 'layer', name: a('name') || '', alpha: a('alpha') ? Number(a('alpha')) : 1,
+            visibility: a('visibility') || '', layerType: a('layerType') || 'bottom',
+            blurRadius: Number(a('blurRadius')) || 0,
+            children: lChildren,
+          };
+        } else if (tagLower === 'musiccontrol') {
+          var mcChildren = [];
+          for (var k = 0; k < node.childNodes.length; k++) {
+            var mcc = node.childNodes[k];
+            if (mcc.nodeType === 1) { var mcp = parseNode(mcc); if (mcp) mcChildren.push(mcp); }
+          }
+          return {
+            type: 'musiccontrol', name: a('name') || 'music_control',
+            w: Number(a('w')) || 0, h: Number(a('h')) || 0,
+            enableLyric: a('enableLyric') === 'true',
+            children: mcChildren,
+          };
+        }
+        return null;
+      }
+
+      var widget = doc.querySelector('Widget');
+      if (widget) {
+        for (var ci = 0; ci < widget.childNodes.length; ci++) {
+          var child = widget.childNodes[ci];
+          if (child.nodeType === 1 && child.tagName) {
+            var parsed = parseNode(child);
+            if (parsed) result.elements.push(parsed);
+          }
+        }
+      }
+    }
+  } catch (e) { /* fallback: empty elements */ }
+
+  return result;
+}
+
+// ─── 递归工具：收集文件 / 展平元素 ──────────────────────────
+function collectUsedFiles(elements, files, usedFiles) {
+  if (!elements) return;
+  elements.forEach(function (el) {
+    var fname = el.fileName || el.src;
+    if ((el.type === 'image' || el.type === 'video') && fname && files[fname]) {
+      usedFiles[fname] = files[fname];
+    }
+    if (el.children && el.children.length > 0) {
+      collectUsedFiles(el.children, files, usedFiles);
+    }
+  });
+}
+
+// 展平嵌套元素列表（Group/Layer/MusicControl → 递归展开子元素）
+function flattenElements(elements, offsetX, offsetY) {
+  var result = [];
+  if (!elements) return result;
+  var ox = offsetX || 0;
+  var oy = offsetY || 0;
+  elements.forEach(function (el) {
+    if (el.type === 'group' || el.type === 'layer' || el.type === 'musiccontrol') {
+      var childOx = ox + (el.x || 0);
+      var childOy = oy + (el.y || 0);
+      if (el.children && el.children.length > 0) {
+        result = result.concat(flattenElements(el.children, childOx, childOy));
+      }
+    } else {
+      var flat = Object.assign({}, el);
+      flat.x = (flat.x || 0) + ox;
+      flat.y = (flat.y || 0) + oy;
+      result.push(flat);
+    }
+  });
+  return result;
 }
 
 // ─── js/transcode.js ───
@@ -6216,7 +6614,10 @@ var ElementDefaults = {
   line: function () { return { type: 'rectangle', x: 10, y: 100, w: 200, h: 2, color: '#555555', radius: 1, opacity: 60, rotation: 0, _isLine: true, locked: false }; },
   arc: function () { return { type: 'arc', x: 50, y: 50, r: 40, startAngle: 0, endAngle: 270, color: '#6c5ce7', strokeWidth: 6, locked: false }; },
   progress: function () { return { type: 'progress', x: 10, y: 100, w: 200, h: 8, color: '#6c5ce7', bgColor: '#333333', value: 60, radius: 4, locked: false }; },
-  lottie: function () { return { type: 'lottie', x: 50, y: 50, w: 120, h: 120, fileName: '', speed: 1, locked: false, _browserOnly: true }; },
+  lottie: function () { return { type: 'lottie', x: 50, y: 50, w: 120, h: 120, fileName: '', src: '', name: '', align: 'center', autoplay: true, loop: 0, speed: 1, locked: false, _browserOnly: true }; },
+  group: function () { return { type: 'group', x: 0, y: 0, w: 200, h: 200, name: 'group_' + Date.now(), alpha: 1, visibility: '', folmeMode: false, align: '', alignV: '', contentDescription: '', children: [], locked: false }; },
+  layer: function () { return { type: 'layer', name: 'layer_' + Date.now(), alpha: 1, visibility: '', layerType: 'bottom', blurRadius: 0, blurColors: '', colorModes: 0, frameRate: -1, updatePosition: true, updateSize: true, updateTranslation: true, children: [], locked: false }; },
+  musiccontrol: function () { return { type: 'musiccontrol', name: 'music_control', w: 0, h: 0, x: 0, y: 0, autoShow: false, autoRefresh: true, enableLyric: true, updateLyricInterval: 100, children: [], locked: false }; },
 };
 
 function getSelectedDevice() {
@@ -6233,8 +6634,10 @@ function addElement(type) {
   captureState('添加 ' + type);
   if (ElementDefaults[type]) {
     var newEl = JSON.parse(JSON.stringify(ElementDefaults[type]()));
-    if (type === 'lottie') toast('⚠️ Lottie 仅浏览器预览可用，MAML 不支持此格式', 'warning');
     if (type === 'arc') toast('⚠️ 弧形在 MAML 中用圆形模拟，预览用 SVG 渲染', 'info');
+    if (type === 'group') toast('📦 Group 容器：可以嵌套子元素', 'info');
+    if (type === 'layer') toast('🎨 Layer 层：超级材质底层效果', 'info');
+    if (type === 'musiccontrol') toast('🎵 MusicControl：音乐播放控件', 'info');
     S.elements.push(newEl);
     S.setSelIdx(S.elements.length - 1);
     S.setDirty(true);
@@ -6401,8 +6804,41 @@ function applyStylePreset(idx, preset) {
   toast('📦 已应用: ' + preset.name, 'success');
 }
 
-// ─── js/ui/config-panel.js ───
-// ─── Config Panel: 配置渲染 + 字段渲染 + 缩略图 ─────────────────
+// ─── js/ui/editors/common.js ───
+// ─── Element Editors: 共享工具函数 ──────────────────────────────────
+
+function esc(s) { return escHtml(s); }
+
+function fieldHtml(label, input, full) {
+  return '<div class="field"' + (full ? ' style="grid-column:1/-1"' : '') + '><label>' + label + '</label>' + input + '</div>';
+}
+
+function colorFieldHtml(label, value, prop, idx) {
+  return '<div class="field field-color"><label>' + label + '</label>' +
+    '<input type="color" value="' + value + '" data-prop="' + prop + '" data-idx="' + idx + '">' +
+    '<span class="color-val">' + value + '</span></div>';
+}
+
+function colorFieldHtml2(value, prop, idx) {
+  return '<input type="color" value="' + (value || '#000000') + '" data-prop="' + prop + '" data-idx="' + idx + '" style="width:32px;height:28px;padding:2px;border-radius:4px;cursor:pointer;border:1px solid var(--border)">';
+}
+
+var FONT_OPTIONS = [
+  { id: 'default', name: '系统默认' },
+  { id: 'mipro-normal', name: 'Mi Sans Regular' },
+  { id: 'mipro-demibold', name: 'Mi Sans SemiBold' },
+  { id: 'mipro-bold', name: 'Mi Sans Bold' },
+  { id: 'mipro-light', name: 'Mi Sans Light' },
+  { id: 'mibright', name: 'Mi Bright' },
+  { id: 'noto-sans-sc', name: 'Noto Sans SC' },
+  { id: 'roboto', name: 'Roboto' },
+  { id: 'monospace', name: '等宽' },
+];
+
+var LAYER_ICONS = {
+  text: '🔤', rectangle: '⬜', circle: '⭕', image: '🖼️', video: '🎬',
+  arc: '🌗', progress: '📊', lottie: '✨', group: '📦', layer: '🎨', musiccontrol: '🎵'
+};
 
 var COLOR_PRESETS = [
   '#ffffff', '#e0e0e0', '#888888', '#333333', '#000000',
@@ -6421,6 +6857,577 @@ var THEME_PRESETS = [
   { name: '糖果',     colors: ['#ff9ff3', '#feca57', '#ff6b6b', '#48dbfb', '#1dd1a1'] },
   { name: '森林',     colors: ['#2d5016', '#4a7c23', '#6ab04c', '#badc58', '#f9ca24'] },
 ];
+
+function renderColorPresets(prop, idx) {
+  var html = '<div class="color-presets">' +
+    COLOR_PRESETS.map(function (c) {
+      return '<div class="color-swatch" style="background:' + c + '" data-color="' + c + '" data-cprop="' + prop + '" data-cidx="' + idx + '" title="' + c + '"></div>';
+    }).join('') + '</div>';
+  html += '<div class="theme-presets">';
+  THEME_PRESETS.forEach(function (theme) {
+    html += '<div class="theme-preset" data-theme-cprop="' + prop + '" data-theme-cidx="' + idx + '" title="' + theme.name + '">' +
+      theme.colors.map(function (c) { return '<div class="theme-dot" style="background:' + c + '"></div>'; }).join('') +
+      '<span class="theme-name">' + theme.name + '</span></div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+// ── Camera zone warning ──
+function renderCameraWarning(el, idx, device) {
+  if (!isInCameraZone(el, device)) return '';
+  var safeX = cameraZoneWidth(device);
+  return '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin-bottom:12px;background:rgba(225,112,85,0.1);border:1px solid rgba(225,112,85,0.3);border-radius:8px;font-size:12px;color:#e17055"><span>⚠️</span> 此元素位于摄像头遮挡区内，建议将 X 调整到 ≥ ' + safeX + '</div>';
+}
+
+// ── Element type label ──
+function getElementTypeLabel(el) {
+  var labels = {
+    text: '文字', rectangle: '矩形', circle: '圆形', arc: '弧形',
+    image: '图片', video: '视频', progress: '进度条', lottie: 'Lottie 动画',
+    group: '容器组', layer: '材质层', musiccontrol: '音乐控件'
+  };
+  return labels[el.type] || el.type;
+}
+
+// ─── js/ui/editors/text-editor.js ───
+// ─── Text Element Editor ──────────────────────────────────────────
+
+var GRAD_PRESETS = [
+  { name: '赛博朋克', c1: '#ff00ff', c2: '#00ffff' },
+  { name: '日落', c1: '#e55039', c2: '#f39c12' },
+  { name: '海洋', c1: '#0984e3', c2: '#00cec9' },
+  { name: '森林', c1: '#2d5016', c2: '#6ab04c' },
+  { name: '极光', c1: '#6c5ce7', c2: '#00b894' },
+  { name: '霓虹', c1: '#ff00ff', c2: '#39ff14' },
+  { name: '暗金', c1: '#2c3e50', c2: '#f39c12' },
+  { name: '玫瑰', c1: '#e84393', c2: '#fd79a8' },
+];
+
+function renderTextEditor(el, idx) {
+  var html = '';
+
+  // ── 内容 ──
+  html += fieldHtml('文字', '<input type="text" value="' + esc(el.text || '') + '" data-prop="text" data-idx="' + idx + '">', true);
+  html += fieldHtml('表达式', '<input type="text" value="' + esc(el.expression || '') + '" data-prop="expression" data-idx="' + idx + '" placeholder="如 formatDate(\'HH:mm\', #time_sys)" style="font-size:11px"><div style="font-size:10px;color:var(--text3);margin-top:2px">留空使用静态文字，填写后用 textExp 生成</div>', true);
+
+  // ── 字体 & 大小 ──
+  html += fieldHtml('字号', '<input type="number" value="' + el.size + '" data-prop="size" data-idx="' + idx + '" min="8" max="200">');
+  html += colorFieldHtml('颜色', el.color || '#ffffff', 'color', idx);
+  html += '<div class="field"><label>字体</label><select data-prop="fontFamily" data-idx="' + idx + '">' +
+    FONT_OPTIONS.map(function (f) {
+      return '<option value="' + f.id + '"' + (el.fontFamily === f.id ? ' selected' : '') + '>' + f.name + '</option>';
+    }).join('') + '</select></div>';
+
+  // ── 对齐 ──
+  html += '<div class="field"><label>对齐</label><div style="display:flex;gap:2px">' +
+    ['left', 'center', 'right'].map(function (a) {
+      var icons = { left: '⬅', center: '≡', right: '➡' };
+      var isActive = (el.textAlign || 'left') === a;
+      return '<button class="el-btn" data-prop="textAlign" data-idx="' + idx + '" data-val="' + a + '" style="flex:1;justify-content:center;font-size:12px;padding:6px;background:' + (isActive ? 'var(--accent-glow)' : '') + ';border-color:' + (isActive ? 'var(--accent)' : 'var(--border)') + '">' + icons[a] + '</button>';
+    }).join('') + '</div></div>';
+
+  // ── 样式开关 ──
+  html += fieldHtml('加粗', '<label class="toggle-switch"><input type="checkbox" data-prop="bold" data-idx="' + idx + '"' + (el.bold ? ' checked' : '') + '><span class="toggle-slider"></span></label>');
+  html += fieldHtml('下划线', '<label class="toggle-switch"><input type="checkbox" data-prop="underline" data-idx="' + idx + '"' + (el.underline ? ' checked' : '') + '><span class="toggle-slider"></span></label>');
+  html += fieldHtml('删除线', '<label class="toggle-switch"><input type="checkbox" data-prop="strikethrough" data-idx="' + idx + '"' + (el.strikethrough ? ' checked' : '') + '><span class="toggle-slider"></span></label>');
+
+  // ── 间距 & 多行 ──
+  html += fieldHtml('字间距', '<input type="number" value="' + (el.letterSpacing || 0) + '" data-prop="letterSpacing" data-idx="' + idx + '" min="-5" max="20" step="0.5">');
+  html += fieldHtml('多行', '<label class="toggle-switch"><input type="checkbox" data-prop="multiLine" data-idx="' + idx + '"' + (el.multiLine ? ' checked' : '') + '><span class="toggle-slider"></span></label>');
+  if (el.multiLine) {
+    html += fieldHtml('行高', '<input type="range" min="10" max="30" value="' + Math.round((el.lineHeight || 1.4) * 10) + '" data-prop="lineHeight" data-idx="' + idx + '" step="1"><span style="font-size:10px;color:var(--text3)">' + (el.lineHeight || 1.4).toFixed(1) + '</span>');
+  }
+  html += fieldHtml('宽度', '<input type="number" value="' + (el.w || 200) + '" data-prop="w" data-idx="' + idx + '" min="20" max="999">');
+
+  // ── 阴影 ──
+  html += '<div class="field"><label>阴影</label><select data-prop="shadow" data-idx="' + idx + '">' +
+    [{ v: 'none', l: '无' }, { v: 'light', l: '轻阴影' }, { v: 'dark', l: '深阴影' }, { v: 'glow', l: '发光' }].map(function (s) {
+      return '<option value="' + s.v + '"' + ((el.shadow || 'none') === s.v ? ' selected' : '') + '>' + s.l + '</option>';
+    }).join('') + '</select></div>';
+
+  // ── 文字渐变 ──
+  html += renderTextGradient(el, idx);
+
+  // ── 文字描边 ──
+  html += fieldHtml('描边', '<div style="display:flex;gap:6px;align-items:center">' +
+    '<input type="number" value="' + (el.textStroke || 0) + '" data-prop="textStroke" data-idx="' + idx + '" min="0" max="10" style="width:60px">' +
+    (el.textStroke > 0 ? '<input type="color" value="' + (el.textStrokeColor || '#000000') + '" data-prop="textStrokeColor" data-idx="' + idx + '" style="width:32px;height:28px;padding:2px;border-radius:4px;cursor:pointer;border:1px solid var(--border)">' : '') +
+    '</div>');
+
+  return html;
+}
+
+function renderTextGradient(el, idx) {
+  var gc1 = el.color || '#6c5ce7';
+  var gc2 = el.gradientColor2 || '#00b894';
+  var html = '<div class="el-editor-section"><div class="el-editor-section-title">🌈 文字渐变</div>';
+  html += '<div style="height:36px;border-radius:8px;background:linear-gradient(135deg,' + gc1 + ',' + gc2 + ');margin-bottom:10px"></div>';
+  html += '<div style="display:flex;gap:10px;margin-bottom:10px">';
+  html += '<div class="field field-color" style="flex:1"><label>起始色</label><input type="color" value="' + gc1 + '" data-prop="color" data-idx="' + idx + '"><span class="color-val">' + gc1 + '</span></div>';
+  html += '<div class="field field-color" style="flex:1"><label>结束色</label><input type="color" value="' + gc2 + '" data-prop="gradientColor2" data-idx="' + idx + '"><span class="color-val">' + gc2 + '</span></div>';
+  html += '</div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">';
+  GRAD_PRESETS.forEach(function (p) {
+    html += '<div class="grad-preset" data-gp-c1="' + p.c1 + '" data-gp-c2="' + p.c2 + '" data-gp-idx="' + idx + '" data-gp-type="text" style="height:28px;border-radius:5px;background:linear-gradient(135deg,' + p.c1 + ',' + p.c2 + ');cursor:pointer;position:relative" title="' + p.name + '"><span style="position:absolute;bottom:1px;left:0;right:0;text-align:center;font-size:8px;color:rgba(255,255,255,.8);text-shadow:0 1px 2px rgba(0,0,0,.5)">' + p.name + '</span></div>';
+  });
+  html += '</div></div>';
+  return html;
+}
+
+// ─── js/ui/editors/shape-editor.js ───
+// ─── Shape Editor: rectangle / circle / arc / line / progress ─────
+
+var GRAD_PRESETS = [
+  { name: '赛博朋克', c1: '#ff00ff', c2: '#00ffff' },
+  { name: '日落', c1: '#e55039', c2: '#f39c12' },
+  { name: '海洋', c1: '#0984e3', c2: '#00cec9' },
+  { name: '森林', c1: '#2d5016', c2: '#6ab04c' },
+  { name: '极光', c1: '#6c5ce7', c2: '#00b894' },
+  { name: '霓虹', c1: '#ff00ff', c2: '#39ff14' },
+  { name: '暗金', c1: '#2c3e50', c2: '#f39c12' },
+  { name: '玫瑰', c1: '#e84393', c2: '#fd79a8' },
+];
+
+function renderRectangleEditor(el, idx) {
+  var html = '';
+  html += colorFieldHtml('颜色', el.color || '#333333', 'color', idx);
+
+  // 渐变
+  html += fieldHtml('渐变', '<div style="display:flex;gap:6px;align-items:center">' +
+    colorFieldHtml2(el.fillColor2 || '', 'fillColor2', idx) +
+    (el.fillColor2 ? '<button class="el-btn" data-clear-fill2 data-idx="' + idx + '" style="font-size:10px;padding:3px 6px">✕</button>' : '') +
+    '</div>');
+
+  // 渐变预设
+  html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:8px">';
+  GRAD_PRESETS.forEach(function (p) {
+    html += '<div class="grad-preset" data-gp-c1="' + p.c1 + '" data-gp-c2="' + p.c2 + '" data-gp-idx="' + idx + '" data-gp-type="rectangle" style="height:24px;border-radius:4px;background:linear-gradient(135deg,' + p.c1 + ',' + p.c2 + ');cursor:pointer" title="' + p.name + '"></div>';
+  });
+  html += '</div>';
+
+  html += fieldHtml('圆角', '<input type="number" value="' + (el.radius || 0) + '" data-prop="radius" data-idx="' + idx + '" min="0" max="500">');
+
+  // 描边
+  html += fieldHtml('描边', '<div style="display:flex;gap:6px;align-items:center">' +
+    '<input type="number" value="' + (el.strokeWidth || 0) + '" data-prop="strokeWidth" data-idx="' + idx + '" min="0" max="20" style="width:60px">' +
+    (el.strokeWidth > 0 ? colorFieldHtml2(el.strokeColor || '#ffffff', 'strokeColor', idx) : '') +
+    '</div>');
+
+  // 模糊
+  html += fieldHtml('模糊', '<input type="range" min="0" max="30" value="' + (el.blur || 0) + '" data-prop="blur" data-idx="' + idx + '"><span style="font-size:10px;color:var(--text3)">' + (el.blur || 0) + 'px</span>');
+
+  // CSS 滤镜
+  html += fieldHtml('亮度', '<input type="range" min="0" max="200" value="' + (el.brightness !== undefined ? el.brightness : 100) + '" data-prop="brightness" data-idx="' + idx + '"><span style="font-size:10px;color:var(--text3)">' + (el.brightness !== undefined ? el.brightness : 100) + '%</span>');
+  html += fieldHtml('饱和度', '<input type="range" min="0" max="200" value="' + (el.saturate !== undefined ? el.saturate : 100) + '" data-prop="saturate" data-idx="' + idx + '"><span style="font-size:10px;color:var(--text3)">' + (el.saturate !== undefined ? el.saturate : 100) + '%</span>');
+  html += fieldHtml('色相', '<input type="range" min="0" max="360" value="' + (el.hueRotate || 0) + '" data-prop="hueRotate" data-idx="' + idx + '"><span style="font-size:10px;color:var(--text3)">' + (el.hueRotate || 0) + '°</span>');
+
+  return html;
+}
+
+function renderCircleEditor(el, idx) {
+  var html = '';
+  html += colorFieldHtml('颜色', el.color || '#6c5ce7', 'color', idx);
+  html += fieldHtml('描边', '<div style="display:flex;gap:6px;align-items:center">' +
+    '<input type="number" value="' + (el.strokeWidth || 0) + '" data-prop="strokeWidth" data-idx="' + idx + '" min="0" max="20" style="width:60px">' +
+    (el.strokeWidth > 0 ? colorFieldHtml2(el.strokeColor || '#ffffff', 'strokeColor', idx) : '') +
+    '</div>');
+  return html;
+}
+
+function renderArcEditor(el, idx) {
+  var html = '';
+  html += colorFieldHtml('颜色', el.color || '#6c5ce7', 'color', idx);
+  html += fieldHtml('起始角', '<input type="number" value="' + (el.startAngle || 0) + '" data-prop="startAngle" data-idx="' + idx + '" min="0" max="360">°');
+  html += fieldHtml('终止角', '<input type="number" value="' + (el.endAngle || 270) + '" data-prop="endAngle" data-idx="' + idx + '" min="0" max="360">°');
+  html += fieldHtml('线宽', '<input type="number" value="' + (el.strokeWidth || 6) + '" data-prop="strokeWidth" data-idx="' + idx + '" min="1" max="30">');
+  return html;
+}
+
+function renderProgressEditor(el, idx) {
+  var html = '';
+  html += fieldHtml('进度', '<input type="range" min="0" max="100" value="' + (el.value || 60) + '" data-prop="value" data-idx="' + idx + '"><span style="font-size:10px;color:var(--text3)">' + (el.value || 60) + '%</span>');
+  html += colorFieldHtml('前景', el.color || '#6c5ce7', 'color', idx);
+  html += colorFieldHtml('背景', el.bgColor || '#333333', 'bgColor', idx);
+  html += fieldHtml('圆角', '<input type="number" value="' + (el.radius || 4) + '" data-prop="radius" data-idx="' + idx + '" min="0" max="50">');
+  return html;
+}
+
+// ─── js/ui/editors/media-editor.js ───
+// ─── Media Editor: image / video / lottie ─────────────────────────
+
+function renderImageEditor(el, idx) {
+  var html = '';
+  html += '<div class="field"><label>适配</label><select data-prop="fit" data-idx="' + idx + '">' +
+    ['cover', 'contain', 'fill', 'none'].map(function (f) {
+      return '<option value="' + f + '"' + ((el.fit || 'cover') === f ? ' selected' : '') + '>' + f + '</option>';
+    }).join('') + '</select></div>';
+  html += fieldHtml('圆角', '<input type="number" value="' + (el.radius || 0) + '" data-prop="radius" data-idx="' + idx + '" min="0" max="500">');
+
+  // CSS 滤镜
+  html += fieldHtml('亮度', '<input type="range" min="0" max="200" value="' + (el.brightness !== undefined ? el.brightness : 100) + '" data-prop="brightness" data-idx="' + idx + '"><span style="font-size:10px;color:var(--text3)">' + (el.brightness !== undefined ? el.brightness : 100) + '%</span>');
+  html += fieldHtml('饱和度', '<input type="range" min="0" max="200" value="' + (el.saturate !== undefined ? el.saturate : 100) + '" data-prop="saturate" data-idx="' + idx + '"><span style="font-size:10px;color:var(--text3)">' + (el.saturate !== undefined ? el.saturate : 100) + '%</span>');
+  html += fieldHtml('色相', '<input type="range" min="0" max="360" value="' + (el.hueRotate || 0) + '" data-prop="hueRotate" data-idx="' + idx + '"><span style="font-size:10px;color:var(--text3)">' + (el.hueRotate || 0) + '°</span>');
+
+  if (el.fileName) {
+    html += '<div style="grid-column:1/-1"><button class="el-btn" data-pick="image" style="font-size:11px">🖼 替换图片</button></div>';
+  }
+  return html;
+}
+
+function renderVideoEditor(el, idx) {
+  var html = '';
+  html += '<div class="field"><label>适配</label><select data-prop="fit" data-idx="' + idx + '">' +
+    ['cover', 'contain', 'fill', 'none'].map(function (f) {
+      return '<option value="' + f + '"' + ((el.fit || 'cover') === f ? ' selected' : '') + '>' + f + '</option>';
+    }).join('') + '</select></div>';
+  html += fieldHtml('圆角', '<input type="number" value="' + (el.radius || 0) + '" data-prop="radius" data-idx="' + idx + '" min="0" max="500">');
+
+  // CSS 滤镜
+  html += fieldHtml('亮度', '<input type="range" min="0" max="200" value="' + (el.brightness !== undefined ? el.brightness : 100) + '" data-prop="brightness" data-idx="' + idx + '"><span style="font-size:10px;color:var(--text3)">' + (el.brightness !== undefined ? el.brightness : 100) + '%</span>');
+  html += fieldHtml('饱和度', '<input type="range" min="0" max="200" value="' + (el.saturate !== undefined ? el.saturate : 100) + '" data-prop="saturate" data-idx="' + idx + '"><span style="font-size:10px;color:var(--text3)">' + (el.saturate !== undefined ? el.saturate : 100) + '%</span>');
+  html += fieldHtml('色相', '<input type="range" min="0" max="360" value="' + (el.hueRotate || 0) + '" data-prop="hueRotate" data-idx="' + idx + '"><span style="font-size:10px;color:var(--text3)">' + (el.hueRotate || 0) + '°</span>');
+
+  if (el.fileName) {
+    html += '<div style="grid-column:1/-1"><button class="el-btn" data-pick="video" style="font-size:11px">🎬 替换视频</button></div>';
+  }
+  return html;
+}
+
+function renderLottieEditor(el, idx) {
+  var html = '';
+  html += fieldHtml('资源', '<input type="text" value="' + esc(el.src || el.fileName || '') + '" data-prop="src" data-idx="' + idx + '" placeholder="如 assets/play.json">');
+  html += fieldHtml('名称', '<input type="text" value="' + esc(el.name || '') + '" data-prop="name" data-idx="' + idx + '" placeholder="MAML name 属性">');
+  html += fieldHtml('对齐', '<select data-prop="align" data-idx="' + idx + '">' +
+    ['center', 'left', 'right', 'top', 'bottom'].map(function (a) {
+      return '<option value="' + a + '"' + ((el.align || 'center') === a ? ' selected' : '') + '>' + a + '</option>';
+    }).join('') + '</select>');
+  html += fieldHtml('循环', '<input type="number" value="' + (el.loop !== undefined ? el.loop : 0) + '" data-prop="loop" data-idx="' + idx + '" min="0" max="999"><span style="font-size:10px;color:var(--text3)">0=无限</span>');
+  html += fieldHtml('速度', '<input type="range" min="1" max="50" value="' + Math.round((el.speed || 1) * 10) + '" data-prop="speed" data-idx="' + idx + '"><span style="font-size:10px;color:var(--text3)">' + (el.speed || 1).toFixed(1) + 'x</span>');
+  return html;
+}
+
+// ─── js/ui/editors/container-editor.js ───
+// ─── Container Editor: group / layer / musiccontrol ────────────────
+
+function renderGroupEditor(el, idx) {
+  var html = '';
+  html += fieldHtml('名称', '<input type="text" value="' + esc(el.name || '') + '" data-prop="name" data-idx="' + idx + '" placeholder="MAML name">');
+  html += fieldHtml('可见性', '<input type="text" value="' + esc(el.visibility || '') + '" data-prop="visibility" data-idx="' + idx + '" placeholder="如 !#enable_hyper_material">');
+  html += fieldHtml('Folme', '<label class="toggle-switch"><input type="checkbox" data-prop="folmeMode" data-idx="' + idx + '"' + (el.folmeMode ? ' checked' : '') + '><span class="toggle-slider"></span></label>');
+  html += fieldHtml('水平对齐', '<select data-prop="align" data-idx="' + idx + '">' +
+    ['', 'left', 'center', 'right'].map(function (a) {
+      return '<option value="' + a + '"' + ((el.align || '') === a ? ' selected' : '') + '>' + (a || '无') + '</option>';
+    }).join('') + '</select>');
+  html += fieldHtml('垂直对齐', '<select data-prop="alignV" data-idx="' + idx + '">' +
+    ['', 'top', 'center', 'bottom'].map(function (a) {
+      return '<option value="' + a + '"' + ((el.alignV || '') === a ? ' selected' : '') + '>' + (a || '无') + '</option>';
+    }).join('') + '</select>');
+  html += fieldHtml('描述', '<input type="text" value="' + esc(el.contentDescription || '') + '" data-prop="contentDescription" data-idx="' + idx + '" placeholder="contentDescriptionExp">');
+
+  // 子元素管理
+  html += '<div style="grid-column:1/-1;margin-top:8px;padding:8px;background:rgba(124,109,240,0.08);border-radius:6px">';
+  html += '<div style="font-size:11px;font-weight:600;margin-bottom:6px;color:var(--accent)">📦 子元素 (' + (el.children ? el.children.length : 0) + ')</div>';
+  html += '<div style="display:flex;gap:4px;flex-wrap:wrap">';
+  ['text', 'rectangle', 'circle', 'image', 'group'].forEach(function (childType) {
+    var icon = LAYER_ICONS[childType] || '❓';
+    html += '<button class="el-btn" data-add-child="' + idx + '" data-child-type="' + childType + '" style="font-size:10px;padding:3px 8px">+ ' + childType + '</button>';
+  });
+  html += '</div>';
+  if (el.children && el.children.length > 0) {
+    html += '<div style="margin-top:6px;max-height:120px;overflow-y:auto">';
+    el.children.forEach(function (child, ci) {
+      var childIcon = LAYER_ICONS[child.type] || '❓';
+      html += '<div style="display:flex;align-items:center;gap:4px;padding:2px 0;font-size:11px">' +
+        '<span>' + childIcon + '</span>' +
+        '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (child.name || child.text || child.type) + '</span>' +
+        '<button class="el-btn" data-remove-child="' + idx + '" data-child-idx="' + ci + '" style="font-size:9px;padding:1px 4px;color:var(--red)">✕</button>' +
+        '</div>';
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+
+  return html;
+}
+
+function renderLayerEditor(el, idx) {
+  var html = '';
+  html += fieldHtml('名称', '<input type="text" value="' + esc(el.name || '') + '" data-prop="name" data-idx="' + idx + '" placeholder="MAML name">');
+  html += fieldHtml('层类型', '<select data-prop="layerType" data-idx="' + idx + '">' +
+    ['bottom', 'top', 'overlay'].map(function (t) {
+      return '<option value="' + t + '"' + ((el.layerType || 'bottom') === t ? ' selected' : '') + '>' + t + '</option>';
+    }).join('') + '</select>');
+  html += fieldHtml('可见性', '<input type="text" value="' + esc(el.visibility || '') + '" data-prop="visibility" data-idx="' + idx + '" placeholder="如 #enable_hyper_material">');
+  html += fieldHtml('模糊半径', '<input type="number" value="' + (el.blurRadius || 0) + '" data-prop="blurRadius" data-idx="' + idx + '" min="0" max="500">');
+  html += fieldHtml('模糊色', '<input type="text" value="' + esc(el.blurColors || '') + '" data-prop="blurColors" data-idx="' + idx + '" placeholder="如 #00000000">');
+  html += fieldHtml('颜色模式', '<input type="number" value="' + (el.colorModes || 0) + '" data-prop="colorModes" data-idx="' + idx + '">');
+  html += fieldHtml('帧率', '<input type="number" value="' + (el.frameRate !== undefined ? el.frameRate : -1) + '" data-prop="frameRate" data-idx="' + idx + '"><span style="font-size:10px;color:var(--text3)">-1=跟随</span>');
+  html += fieldHtml('更新位置', '<label class="toggle-switch"><input type="checkbox" data-prop="updatePosition" data-idx="' + idx + '"' + (el.updatePosition !== false ? ' checked' : '') + '><span class="toggle-slider"></span></label>');
+  html += fieldHtml('更新大小', '<label class="toggle-switch"><input type="checkbox" data-prop="updateSize" data-idx="' + idx + '"' + (el.updateSize !== false ? ' checked' : '') + '><span class="toggle-slider"></span></label>');
+  html += fieldHtml('更新位移', '<label class="toggle-switch"><input type="checkbox" data-prop="updateTranslation" data-idx="' + idx + '"' + (el.updateTranslation !== false ? ' checked' : '') + '><span class="toggle-slider"></span></label>');
+
+  // 子元素
+  html += renderChildManager(el, idx);
+
+  return html;
+}
+
+function renderMusicControlEditor(el, idx) {
+  var html = '';
+  html += fieldHtml('名称', '<input type="text" value="' + esc(el.name || 'music_control') + '" data-prop="name" data-idx="' + idx + '">');
+  html += fieldHtml('歌词', '<label class="toggle-switch"><input type="checkbox" data-prop="enableLyric" data-idx="' + idx + '"' + (el.enableLyric !== false ? ' checked' : '') + '><span class="toggle-slider"></span></label>');
+  html += fieldHtml('刷新', '<label class="toggle-switch"><input type="checkbox" data-prop="autoRefresh" data-idx="' + idx + '"' + (el.autoRefresh !== false ? ' checked' : '') + '><span class="toggle-slider"></span></label>');
+  html += fieldHtml('自动显示', '<label class="toggle-switch"><input type="checkbox" data-prop="autoShow" data-idx="' + idx + '"' + (el.autoShow ? ' checked' : '') + '><span class="toggle-slider"></span></label>');
+  html += fieldHtml('歌词间隔', '<input type="number" value="' + (el.updateLyricInterval || 100) + '" data-prop="updateLyricInterval" data-idx="' + idx + '" min="50" max="5000"><span style="font-size:10px;color:var(--text3)">ms</span>');
+
+  // 子元素
+  html += renderChildManager(el, idx);
+
+  return html;
+}
+
+function renderChildManager(el, idx) {
+  var html = '<div style="grid-column:1/-1;margin-top:8px;padding:8px;background:rgba(124,109,240,0.08);border-radius:6px">';
+  html += '<div style="font-size:11px;font-weight:600;margin-bottom:6px;color:var(--accent)">📦 子元素 (' + (el.children ? el.children.length : 0) + ')</div>';
+  html += '<div style="display:flex;gap:4px;flex-wrap:wrap">';
+  ['text', 'rectangle', 'circle', 'image', 'group'].forEach(function (childType) {
+    html += '<button class="el-btn" data-add-child="' + idx + '" data-child-type="' + childType + '" style="font-size:10px;padding:3px 8px">+ ' + childType + '</button>';
+  });
+  html += '</div>';
+  if (el.children && el.children.length > 0) {
+    html += '<div style="margin-top:6px;max-height:120px;overflow-y:auto">';
+    el.children.forEach(function (child, ci) {
+      var childIcon = LAYER_ICONS[child.type] || '❓';
+      html += '<div style="display:flex;align-items:center;gap:4px;padding:2px 0;font-size:11px">' +
+        '<span>' + childIcon + '</span>' +
+        '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (child.name || child.text || child.type) + '</span>' +
+        '<button class="el-btn" data-remove-child="' + idx + '" data-child-idx="' + ci + '" style="font-size:9px;padding:1px 4px;color:var(--red)">✕</button>' +
+        '</div>';
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+// ─── js/ui/editors/index.js ───
+// ─── Editor Registry: 统一入口，按类型分发 ────────────────────────
+
+// ── Registry: 每种元素类型的专属编辑器 ──
+var EDITORS = {
+  text: renderTextEditor,
+  rectangle: renderRectangleEditor,
+  circle: renderCircleEditor,
+  arc: renderArcEditor,
+  progress: renderProgressEditor,
+  image: renderImageEditor,
+  video: renderVideoEditor,
+  lottie: renderLottieEditor,
+  group: renderGroupEditor,
+  layer: renderLayerEditor,
+  musiccontrol: renderMusicControlEditor,
+};
+
+// ── 动画选项列表 ──
+var ANIM_LIST = [
+  { v: 'none', l: '无动画' }, { v: 'fadeIn', l: '淡入' }, { v: 'fadeOut', l: '淡出' },
+  { v: 'slideInLeft', l: '从左滑入' }, { v: 'slideInRight', l: '从右滑入' },
+  { v: 'slideInUp', l: '从下滑入' }, { v: 'slideInDown', l: '从上滑入' },
+  { v: 'zoomIn', l: '放大进入' }, { v: 'zoomOut', l: '缩小退出' },
+  { v: 'bounce', l: '弹跳' }, { v: 'pulse', l: '脉冲' }, { v: 'shake', l: '抖动' },
+  { v: 'rotate', l: '旋转' }, { v: 'blink', l: '闪烁' },
+];
+
+// ── MAML 变量列表 ──
+var MAML_VARS = [
+  { var: '#step', desc: '步数', group: '健康' },
+  { var: '#battery_level', desc: '电量百分比', group: '健康' },
+  { var: '#battery_charging', desc: '是否充电', group: '健康' },
+  { var: '#weather_temp', desc: '天气温度', group: '天气' },
+  { var: '#weather_desc', desc: '天气描述', group: '天气' },
+  { var: '#weather_humidity', desc: '湿度', group: '天气' },
+  { var: '#weather_city', desc: '城市名', group: '天气' },
+  { var: '#music_title', desc: '音乐标题', group: '音乐' },
+  { var: '#music_artist', desc: '音乐歌手', group: '音乐' },
+  { var: '#view_width', desc: '视图宽度', group: '系统' },
+  { var: '#view_height', desc: '视图高度', group: '系统' },
+  { var: '#marginL', desc: '左边距(摄像头)', group: '系统' },
+  { var: '#hour', desc: '当前小时', group: '时间' },
+  { var: '#minute', desc: '当前分钟', group: '时间' },
+  { var: '#month', desc: '当前月份', group: '时间' },
+  { var: '#day', desc: '当前日期', group: '时间' },
+  { var: '#day_of_week', desc: '星期几', group: '时间' },
+];
+
+// ═══════════════════════════════════════════════════════════════════
+// Public API: 渲染指定元素的完整编辑器
+// ═══════════════════════════════════════════════════════════════════
+function renderElementEditor(el, idx, device) {
+  var html = '<div class="el-detail">';
+
+  // 摄像头警告
+  html += renderCameraWarning(el, idx, device);
+
+  // 元素头部 (类型 badge + 可见/锁定)
+  html += renderHeader(el, idx);
+
+  // ── Section: 位置 & 大小 ──
+  html += wrapSection('📍 位置 & 大小', renderPositionSection(el, idx));
+
+  // ── Section: 类型专属属性 (从注册表分发) ──
+  var typeEditor = EDITORS[el.type];
+  if (typeEditor) {
+    var label = getElementTypeLabel(el);
+    html += wrapSection('🎨 ' + label + '属性', '<div class="config-grid">' + typeEditor(el, idx) + '</div>');
+  }
+
+  // ── Section: 变换 & 效果 ──
+  html += wrapSection('✨ 变换 & 效果', '<div class="config-grid">' + renderTransformSection(el, idx) + '</div>');
+
+  // ── Section: MAML 变量绑定 ──
+  html += wrapSection('🔗 MAML 变量绑定', renderMamlVars(el, idx));
+
+  // ── Section: 颜色预设 ──
+  if (el.color !== undefined) {
+    html += wrapSection('🎨 颜色预设', renderColorPresets('color', idx));
+  }
+
+  // ── Section: 动画效果 ──
+  html += wrapSection('✨ 动画效果', '<div class="config-grid">' + renderAnimationSection(el, idx) + '</div>');
+
+  // ── Section: 快捷操作 ──
+  html += wrapSection('⚡ 快捷操作', renderQuickActions(el, idx));
+
+  html += '</div>';
+  return html;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Private: 各 Section 渲染
+// ═══════════════════════════════════════════════════════════════════
+
+function renderHeader(el, idx) {
+  var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">';
+  html += '<div style="display:flex;align-items:center;gap:8px">';
+  html += '<span class="el-badge">' + el.type + '</span>';
+  html += '<span style="font-size:13px;font-weight:600">' + getElementTypeLabel(el) + '</span>';
+  html += '</div>';
+  html += '<div style="display:flex;gap:8px;align-items:center">';
+  html += '<label class="check-label" style="font-size:11px"><input type="checkbox" data-prop="visible" data-idx="' + idx + '"' + (el.visible !== false ? ' checked' : '') + '> 👁</label>';
+  html += '<label class="check-label" style="font-size:11px"><input type="checkbox" data-prop="locked" data-idx="' + idx + '"' + (el.locked ? ' checked' : '') + '> 🔒</label>';
+  html += '</div></div>';
+  return html;
+}
+
+function renderPositionSection(el, idx) {
+  var html = '<div class="config-grid">';
+  html += fieldHtml('X', '<input type="number" value="' + el.x + '" data-prop="x" data-idx="' + idx + '">');
+  html += fieldHtml('Y', '<input type="number" value="' + el.y + '" data-prop="y" data-idx="' + idx + '">');
+  if (el.w !== undefined) html += fieldHtml('宽', '<input type="number" value="' + (el.w || 100) + '" data-prop="w" data-idx="' + idx + '" min="1" max="9999">');
+  if (el.h !== undefined) html += fieldHtml('高', '<input type="number" value="' + (el.h || 100) + '" data-prop="h" data-idx="' + idx + '" min="1" max="9999">');
+  if (el.r !== undefined) html += fieldHtml('半径', '<input type="number" value="' + (el.r || 30) + '" data-prop="r" data-idx="' + idx + '" min="1" max="999">');
+  html += '</div>';
+
+  // 对齐按钮
+  html += '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px">';
+  html += '<button class="el-btn" data-align="left" data-ai="' + idx + '" style="font-size:10px;padding:4px 8px">⬅ 左</button>';
+  html += '<button class="el-btn" data-align="hcenter" data-ai="' + idx + '" style="font-size:10px;padding:4px 8px">↔ 中</button>';
+  html += '<button class="el-btn" data-align="right" data-ai="' + idx + '" style="font-size:10px;padding:4px 8px">➡ 右</button>';
+  html += '<button class="el-btn" data-align="top" data-ai="' + idx + '" style="font-size:10px;padding:4px 8px">⬆ 顶</button>';
+  html += '<button class="el-btn" data-align="vcenter" data-ai="' + idx + '" style="font-size:10px;padding:4px 8px">↕ 中</button>';
+  html += '<button class="el-btn" data-align="bottom" data-ai="' + idx + '" style="font-size:10px;padding:4px 8px">⬇ 底</button>';
+  html += '</div>';
+
+  // 快捷尺寸
+  if (el.type === 'rectangle' || el.type === 'image' || el.type === 'video' || el.type === 'progress') {
+    html += '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">';
+    html += '<button class="el-btn" data-qsize="full" data-qi="' + idx + '" style="font-size:10px;padding:4px 8px">⛶ 全屏</button>';
+    html += '<button class="el-btn" data-qsize="half" data-qi="' + idx + '" style="font-size:10px;padding:4px 8px">◧ 半屏</button>';
+    html += '<button class="el-btn" data-qsize="quarter" data-qi="' + idx + '" style="font-size:10px;padding:4px 8px">◫ 1/4</button>';
+    html += '</div>';
+  }
+  return html;
+}
+
+function renderTransformSection(el, idx) {
+  var html = '';
+  html += fieldHtml('旋转', '<div style="display:flex;gap:6px;align-items:center"><input type="range" min="0" max="360" value="' + (el.rotation || 0) + '" data-prop="rotation" data-idx="' + idx + '" style="flex:1"><span style="font-size:11px;color:var(--text3);min-width:30px;text-align:right">' + (el.rotation || 0) + '°</span></div>');
+  html += fieldHtml('透明度', '<div style="display:flex;gap:6px;align-items:center"><input type="range" min="0" max="100" value="' + (el.opacity !== undefined ? el.opacity : 100) + '" data-prop="opacity" data-idx="' + idx + '" style="flex:1"><span style="font-size:11px;color:var(--text3);min-width:30px;text-align:right">' + (el.opacity !== undefined ? el.opacity : 100) + '%</span></div>');
+  return html;
+}
+
+function renderAnimationSection(el, idx) {
+  var html = '';
+  html += '<div class="field"><label>动画类型</label><select data-prop="animationName" data-idx="' + idx + '">';
+  ANIM_LIST.forEach(function (a) {
+    html += '<option value="' + a.v + '"' + ((el.animationName || '') === a.v ? ' selected' : '') + '>' + a.l + '</option>';
+  });
+  html += '</select></div>';
+  html += fieldHtml('持续 (ms)', '<input type="number" value="' + (el.animationDuration || 500) + '" data-prop="animationDuration" data-idx="' + idx + '" min="100" max="5000" step="100">');
+  html += fieldHtml('延迟 (ms)', '<input type="number" value="' + (el.animationDelay || 0) + '" data-prop="animationDelay" data-idx="' + idx + '" min="0" max="3000" step="100">');
+  html += fieldHtml('重复', '<input type="number" value="' + (el.animationRepeat || 1) + '" data-prop="animationRepeat" data-idx="' + idx + '" min="1" max="99">');
+  html += fieldHtml('无限循环', '<label class="toggle-switch"><input type="checkbox" data-prop="animationInfinite" data-idx="' + idx + '"' + (el.animationInfinite ? ' checked' : '') + '><span class="toggle-slider"></span></label>');
+  return html;
+}
+
+function renderMamlVars(el, idx) {
+  var html = '<div style="margin-bottom:6px"><input type="text" id="mamlVarSearch" placeholder="搜索变量..." style="width:100%;padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;outline:none"></div>';
+  var groups = {};
+  MAML_VARS.forEach(function (v) {
+    if (!groups[v.group]) groups[v.group] = [];
+    groups[v.group].push(v);
+  });
+  Object.keys(groups).forEach(function (g) {
+    html += '<div style="margin-bottom:4px"><div style="font-size:10px;color:var(--text3);font-weight:600;margin-bottom:2px">' + g + '</div>';
+    html += '<div style="display:flex;gap:3px;flex-wrap:wrap">';
+    groups[g].forEach(function (v) {
+      html += '<button class="el-btn maml-var-btn" data-var-insert="' + v.var + '" data-var-idx="' + idx + '" style="font-size:10px;padding:3px 8px" title="' + v.desc + '">' + v.var + '</button>';
+    });
+    html += '</div></div>';
+  });
+  // 表达式编辑
+  html += '<div style="margin-top:6px"><label style="font-size:10px;color:var(--text2)">表达式 (绑定到文字/宽度等)</label>';
+  html += '<input type="text" value="' + esc(el.expression || '') + '" data-prop="expression" data-idx="' + idx + '" placeholder="如: #step 步 或 #weather_temp°" style="width:100%;padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;outline:none;margin-top:3px"></div>';
+  return html;
+}
+
+function renderQuickActions(el, idx) {
+  var html = '<div style="display:flex;gap:4px;flex-wrap:wrap">';
+  html += '<button class="el-btn" data-duplicate="' + idx + '" style="font-size:11px">📋 复制</button>';
+  if (S.clipboard) html += '<button class="el-btn" data-paste-el style="font-size:11px">📌 粘贴</button>';
+  html += '<button class="el-btn" data-copy-style="' + idx + '" style="font-size:11px">🎨 复制样式</button>';
+  if (hasStyleClipboard()) html += '<button class="el-btn" data-paste-style="' + idx + '" style="font-size:11px">📌 粘贴样式</button>';
+  html += '<button class="el-btn" data-del="' + idx + '" style="font-size:11px;color:var(--red)">🗑️ 删除</button>';
+  html += '</div>';
+
+  if (S.elements.length >= 3) {
+    html += '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">';
+    html += '<button class="el-btn" data-distribute="horizontal" style="font-size:10px;padding:4px 8px">↔ 水平分布</button>';
+    html += '<button class="el-btn" data-distribute="vertical" style="font-size:10px;padding:4px 8px">↕ 垂直分布</button>';
+    html += '</div>';
+  }
+  if (S.elements.length >= 2) {
+    html += '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">';
+    html += '<button class="el-btn" data-match-size="width" style="font-size:10px;padding:4px 8px">📏 同宽</button>';
+    html += '<button class="el-btn" data-match-size="height" style="font-size:10px;padding:4px 8px">📐 同高</button>';
+    html += '<button class="el-btn" data-match-size="both" style="font-size:10px;padding:4px 8px">⬛ 同大小</button>';
+    html += '</div>';
+  }
+  html += '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">';
+  html += '<button class="el-btn" data-save-style="' + idx + '" style="font-size:11px">💾 保存样式</button>';
+  html += '<button class="el-btn" data-apply-styles style="font-size:11px">📦 应用样式</button>';
+  html += '</div>';
+  return html;
+}
+
+// ── 工具: 包裹 section ──
+function wrapSection(title, inner) {
+  return '<div class="el-editor-section"><div class="el-editor-section-title">' + title + '</div>' + inner + '</div>';
+}
+
+// ─── js/ui/config-panel.js ───
+// ─── Config Panel: 配置渲染 + 字段渲染 + 缩略图 ─────────────────
 
 var _activeCategory = 'all';
 var _thumbCache = {};
@@ -6562,7 +7569,11 @@ function renderConfig(getTemplateMAML) {
     '<button class="el-btn" data-add="arc"><span class="el-btn-icon">◠</span> 弧形</button>' +
     '<button class="el-btn" data-add="progress"><span class="el-btn-icon">▰</span> 进度条</button>' +
     '<button class="el-btn" data-add="lottie"><span class="el-btn-icon">🎭</span> Lottie</button>' +
-    '<button class="el-btn" data-action="importZip"><span class="el-btn-icon">📦</span> 导入ZIP</button>';
+    '<button class="el-btn" data-add="group"><span class="el-btn-icon">📦</span> Group</button>' +
+    '<button class="el-btn" data-add="layer"><span class="el-btn-icon">🎨</span> Layer</button>' +
+    '<button class="el-btn" data-add="musiccontrol"><span class="el-btn-icon">🎵</span> Music</button>' +
+    '<button class="el-btn" data-action="importZip"><span class="el-btn-icon">📦</span> 导入ZIP</button>' +
+    '<button class="el-btn" data-action="importMAML"><span class="el-btn-icon">📄</span> 导入MAML</button>';
 
   var elementSectionInner = '<div class="el-toolbar">' + coreAddBtns +
     '<div class="el-toolbar-more-wrap">' +
@@ -6574,8 +7585,8 @@ function renderConfig(getTemplateMAML) {
     '</div>';
 
   // Element list with layer-panel style: drag reorder, visibility, lock, delete, camera warning
-  var LAYER_ICONS = { text: '🔤', rectangle: '⬜', circle: '⭕', image: '🖼️', video: '🎬', arc: '🌗', progress: '📊', lottie: '✨' };
-  elementSectionInner += '<div class="el-list" id="elListDrag">';
+  // Element list with layer-panel style: drag reorder, visibility, lock, delete, camera warning
+  var elementSectionInner = '';
   // Render in reverse order (top layer first) like the layer panel
   for (var li = S.elements.length - 1; li >= 0; li--) {
     var el = S.elements[li];
@@ -6610,7 +7621,7 @@ function renderConfig(getTemplateMAML) {
 
   // Selected element editor
   if (S.selIdx >= 0 && S.selIdx < S.elements.length) {
-    html += renderElementEditorInline(S.elements[S.selIdx], S.selIdx, device);
+    html += renderElementEditor(S.elements[S.selIdx], S.selIdx, device);
 
     // Quick operations + copy/paste
     var quickOpsInner = '<div class="el-toolbar">' +
@@ -6640,21 +7651,6 @@ function renderConfig(getTemplateMAML) {
   document.getElementById('cfgContent').innerHTML = html;
 }
 
-function renderColorPresets(prop, idx) {
-  var html = '<div class="color-presets">' +
-    COLOR_PRESETS.map(function (c) {
-      return '<div class="color-swatch" style="background:' + c + '" data-color="' + c + '" data-cprop="' + prop + '" data-cidx="' + idx + '" title="' + c + '"></div>';
-    }).join('') + '</div>';
-  html += '<div class="theme-presets">';
-  THEME_PRESETS.forEach(function (theme) {
-    html += '<div class="theme-preset" data-theme-cprop="' + prop + '" data-theme-cidx="' + idx + '" title="' + theme.name + '">' +
-      theme.colors.map(function (c) { return '<div class="theme-dot" style="background:' + c + '"></div>'; }).join('') +
-      '<span class="theme-name">' + theme.name + '</span></div>';
-  });
-  html += '</div>';
-  return html;
-}
-
 function renderField(f) {
   var v = S.cfg[f.key];
   switch (f.type) {
@@ -6682,438 +7678,6 @@ function renderField(f) {
     default: return '';
   }
 }
-
-// ─── Design Tool Inline Helpers ───────────────────────────────────
-var FONTS = [
-  { id: 'default', name: '系统默认', family: '-apple-system, sans-serif' },
-  { id: 'mipro-normal', name: 'Mi Sans Regular', family: 'MiSans, sans-serif' },
-  { id: 'mipro-demibold', name: 'Mi Sans SemiBold', family: 'MiSans, sans-serif', weight: 600 },
-  { id: 'mipro-bold', name: 'Mi Sans Bold', family: 'MiSans, sans-serif', weight: 700 },
-  { id: 'mipro-light', name: 'Mi Sans Light', family: 'MiSans, sans-serif', weight: 300 },
-  { id: 'mibright', name: 'Mi Bright', family: 'MiBright, serif' },
-  { id: 'noto-sans-sc', name: 'Noto Sans SC', family: '"Noto Sans SC", sans-serif' },
-  { id: 'roboto', name: 'Roboto', family: 'Roboto, sans-serif' },
-  { id: 'monospace', name: '等宽', family: 'monospace' },
-];
-
-function hexToHSL(hex) {
-  hex = hex.replace('#', '');
-  var r = parseInt(hex.substr(0, 2), 16) / 255;
-  var g = parseInt(hex.substr(2, 2), 16) / 255;
-  var b = parseInt(hex.substr(4, 2), 16) / 255;
-  var max = Math.max(r, g, b), min = Math.min(r, g, b);
-  var h, s, l = (max + min) / 2;
-  if (max === min) { h = s = 0; }
-  else {
-    var d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-    else if (max === g) h = ((b - r) / d + 2) / 6;
-    else h = ((r - g) / d + 4) / 6;
-  }
-  return [h * 360, s * 100, l * 100];
-}
-
-function hslToHex(h, s, l) {
-  h /= 360; s /= 100; l /= 100;
-  var r, g, b;
-  if (s === 0) { r = g = b = l; }
-  else {
-    var hue2rgb = function (p, q, t) { if (t < 0) t += 1; if (t > 1) t -= 1; if (t < 1 / 6) return p + (q - p) * 6 * t; if (t < 1 / 2) return q; if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6; return p; };
-    var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-    var p = 2 * l - q;
-    r = hue2rgb(p, q, h + 1 / 3);
-    g = hue2rgb(p, q, h);
-    b = hue2rgb(p, q, h - 1 / 3);
-  }
-  return '#' + [r, g, b].map(function (x) { return Math.round(x * 255).toString(16).padStart(2, '0'); }).join('');
-}
-
-function generateHarmony(baseHex, type) {
-  var hsl = hexToHSL(baseHex);
-  var h = hsl[0], s = hsl[1], l = hsl[2];
-  var colors = [baseHex];
-  switch (type) {
-    case 'complementary': colors.push(hslToHex((h + 180) % 360, s, l)); break;
-    case 'triadic': colors.push(hslToHex((h + 120) % 360, s, l)); colors.push(hslToHex((h + 240) % 360, s, l)); break;
-    case 'split': colors.push(hslToHex((h + 150) % 360, s, l)); colors.push(hslToHex((h + 210) % 360, s, l)); break;
-    case 'analogous': colors.push(hslToHex((h + 30) % 360, s, l)); colors.push(hslToHex((h + 330) % 360, s, l)); break;
-    case 'monochromatic': colors.push(hslToHex(h, s, Math.min(l + 20, 95))); colors.push(hslToHex(h, s, Math.max(l - 20, 5))); colors.push(hslToHex(h, Math.max(s - 30, 10), l)); break;
-  }
-  return colors;
-}
-
-var GRAD_PRESETS = [
-  { name: '赛博朋克', c1: '#ff00ff', c2: '#00ffff' },
-  { name: '日落', c1: '#e55039', c2: '#f39c12' },
-  { name: '海洋', c1: '#0984e3', c2: '#00cec9' },
-  { name: '森林', c1: '#2d5016', c2: '#6ab04c' },
-  { name: '极光', c1: '#6c5ce7', c2: '#00b894' },
-  { name: '霓虹', c1: '#ff00ff', c2: '#39ff14' },
-  { name: '暗金', c1: '#2c3e50', c2: '#f39c12' },
-  { name: '玫瑰', c1: '#e84393', c2: '#fd79a8' },
-];
-
-var ANIM_LIST = [
-  { v: 'none', l: '无动画' }, { v: 'fadeIn', l: '淡入' }, { v: 'fadeOut', l: '淡出' },
-  { v: 'slideInLeft', l: '从左滑入' }, { v: 'slideInRight', l: '从右滑入' },
-  { v: 'slideInUp', l: '从下滑入' }, { v: 'slideInDown', l: '从上滑入' },
-  { v: 'zoomIn', l: '放大进入' }, { v: 'zoomOut', l: '缩小退出' },
-  { v: 'bounce', l: '弹跳' }, { v: 'pulse', l: '脉冲' }, { v: 'shake', l: '抖动' },
-  { v: 'rotate', l: '旋转' }, { v: 'blink', l: '闪烁' },
-];
-
-function renderDesignToolsInline(idx) {
-  var el = S.elements[idx];
-  if (!el) return '';
-  var html = '';
-
-  // ── 调色板 ──
-  var base = el.color || '#6c5ce7';
-  var types = [
-    { id: 'complementary', name: '互补色' },
-    { id: 'triadic', name: '三色' },
-    { id: 'split', name: '分裂互补' },
-    { id: 'analogous', name: '类似色' },
-    { id: 'monochromatic', name: '单色' },
-  ];
-  html += '<div class="config-section"><div class="config-section-title"><span>▸</span> 🎨 色彩搭配</div>';
-  html += '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">';
-  types.forEach(function (t) {
-    var colors = generateHarmony(base, t.id);
-    html += '<div style="flex:1;min-width:100px"><div style="font-size:10px;color:var(--text3);margin-bottom:3px">' + t.name + '</div><div style="display:flex;gap:2px;height:24px;border-radius:4px;overflow:hidden">';
-    colors.forEach(function (c) {
-      html += '<div style="flex:1;background:' + c + ';cursor:pointer" class="palette-swatch" data-color="' + c + '" data-apply-to="' + idx + '" title="' + c + '"></div>';
-    });
-    html += '</div></div>';
-  });
-  html += '</div></div>';
-
-  // ── 字体预览 (仅文字元素) ──
-  if (el.type === 'text') {
-    html += '<div class="config-section"><div class="config-section-title"><span>▸</span> 🔤 字体选择</div>';
-    FONTS.forEach(function (f) {
-      var isActive = el.fontFamily === f.id;
-      html += '<div class="font-preview-item' + (isActive ? ' active' : '') + '" data-font-apply="' + f.id + '" data-font-idx="' + idx + '" style="padding:8px 10px;margin-bottom:3px;border-radius:6px;cursor:pointer;border:1px solid ' + (isActive ? 'var(--accent)' : 'var(--border)') + ';background:' + (isActive ? 'var(--accent-glow)' : 'var(--surface2)') + '">' +
-        '<div style="font-size:10px;color:var(--text3)">' + f.name + '</div>' +
-        '<div style="font-family:' + f.family + ';font-size:16px;' + (f.weight ? 'font-weight:' + f.weight + ';' : '') + '">小米背屏 123 ABC</div></div>';
-    });
-    html += '</div>';
-  }
-
-  // ── 渐变编辑 (文字/矩形) ──
-  if (el.type === 'text' || el.type === 'rectangle') {
-    var gc1 = el.color || '#6c5ce7';
-    var gc2 = (el.type === 'text' ? el.gradientColor2 : el.fillColor2) || '#00b894';
-    html += '<div class="config-section"><div class="config-section-title"><span>▸</span> 🌈 渐变编辑</div>';
-    html += '<div style="height:36px;border-radius:8px;background:linear-gradient(135deg,' + gc1 + ',' + gc2 + ');margin-bottom:10px"></div>';
-    html += '<div style="display:flex;gap:10px;margin-bottom:10px">';
-    html += '<div class="field field-color" style="flex:1"><label>起始色</label><input type="color" value="' + gc1 + '" data-prop="color" data-idx="' + idx + '"><span class="color-val">' + gc1 + '</span></div>';
-    html += '<div class="field field-color" style="flex:1"><label>结束色</label><input type="color" value="' + gc2 + '" data-prop="' + (el.type === 'text' ? 'gradientColor2' : 'fillColor2') + '" data-idx="' + idx + '"><span class="color-val">' + gc2 + '</span></div>';
-    html += '</div>';
-    // Presets
-    html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">';
-    GRAD_PRESETS.forEach(function (p) {
-      html += '<div class="grad-preset" data-gp-c1="' + p.c1 + '" data-gp-c2="' + p.c2 + '" data-gp-idx="' + idx + '" data-gp-type="' + el.type + '" style="height:28px;border-radius:5px;background:linear-gradient(135deg,' + p.c1 + ',' + p.c2 + ');cursor:pointer;position:relative" title="' + p.name + '"><span style="position:absolute;bottom:1px;left:0;right:0;text-align:center;font-size:8px;color:rgba(255,255,255,.8);text-shadow:0 1px 2px rgba(0,0,0,.5)">' + p.name + '</span></div>';
-    });
-    html += '</div>';
-    html += '</div>';
-  }
-
-  // ── 动画编辑 ──
-  html += '<div class="config-section"><div class="config-section-title"><span>▸</span> ✨ 动画效果</div>';
-  html += '<div class="config-grid">';
-  html += '<div class="field"><label>动画类型</label><select data-prop="animationName" data-idx="' + idx + '">';
-  ANIM_LIST.forEach(function (a) {
-    html += '<option value="' + a.v + '"' + ((el.animationName || '') === a.v ? ' selected' : '') + '>' + a.l + '</option>';
-  });
-  html += '</select></div>';
-  html += '<div class="field"><label>持续 (ms)</label><input type="number" value="' + (el.animationDuration || 500) + '" data-prop="animationDuration" data-idx="' + idx + '" min="100" max="5000" step="100"></div>';
-  html += '<div class="field"><label>延迟 (ms)</label><input type="number" value="' + (el.animationDelay || 0) + '" data-prop="animationDelay" data-idx="' + idx + '" min="0" max="3000" step="100"></div>';
-  html += '<div class="field"><label>重复</label><input type="number" value="' + (el.animationRepeat || 1) + '" data-prop="animationRepeat" data-idx="' + idx + '" min="1" max="99"></div>';
-  html += '<div class="field"><label>无限循环</label><label class="toggle-switch"><input type="checkbox" data-prop="animationInfinite" data-idx="' + idx + '"' + (el.animationInfinite ? ' checked' : '') + '><span class="toggle-slider"></span></label></div>';
-  html += '</div></div>';
-
-  return html;
-}
-
-function renderElementEditorInline(el, idx, device) {
-  var html = '<div class="el-detail">';
-  if (isInCameraZone(el, device)) {
-    var safeX = cameraZoneWidth(device);
-    html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin-bottom:12px;background:rgba(225,112,85,0.1);border:1px solid rgba(225,112,85,0.3);border-radius:8px;font-size:12px;color:#e17055"><span>⚠️</span> 此元素位于摄像头遮挡区内，建议将 X 调整到 ≥ ' + safeX + '</div>';
-  }
-
-  // Element type header with lock + visible toggle
-  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">';
-  html += '<div style="display:flex;align-items:center;gap:8px">';
-  html += '<span class="el-badge">' + el.type + '</span>';
-  html += '<span style="font-size:13px;font-weight:600">' + getElementTypeLabel(el) + '</span>';
-  html += '</div>';
-  html += '<div style="display:flex;gap:8px;align-items:center">';
-  html += '<label class="check-label" style="font-size:11px"><input type="checkbox" data-prop="visible" data-idx="' + idx + '"' + (el.visible !== false ? ' checked' : '') + '> 👁</label>';
-  html += '<label class="check-label" style="font-size:11px"><input type="checkbox" data-prop="locked" data-idx="' + idx + '"' + (el.locked ? ' checked' : '') + '> 🔒</label>';
-  html += '</div></div>';
-
-  // ── Section: Position & Size ──
-  html += '<div class="el-editor-section">';
-  html += '<div class="el-editor-section-title">📍 位置 & 大小</div>';
-  html += '<div class="config-grid">';
-  html += fieldHtml('X', '<input type="number" value="' + el.x + '" data-prop="x" data-idx="' + idx + '">');
-  html += fieldHtml('Y', '<input type="number" value="' + el.y + '" data-prop="y" data-idx="' + idx + '">');
-  if (el.w !== undefined) html += fieldHtml('宽', '<input type="number" value="' + (el.w || 100) + '" data-prop="w" data-idx="' + idx + '" min="1" max="9999">');
-  if (el.h !== undefined) html += fieldHtml('高', '<input type="number" value="' + (el.h || 100) + '" data-prop="h" data-idx="' + idx + '" min="1" max="9999">');
-  if (el.r !== undefined) html += fieldHtml('半径', '<input type="number" value="' + (el.r || 30) + '" data-prop="r" data-idx="' + idx + '" min="1" max="999">');
-  html += '</div>';
-  // Align buttons
-  html += '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px">';
-  html += '<button class="el-btn" data-align="left" data-ai="' + idx + '" style="font-size:10px;padding:4px 8px">⬅ 左</button>';
-  html += '<button class="el-btn" data-align="hcenter" data-ai="' + idx + '" style="font-size:10px;padding:4px 8px">↔ 中</button>';
-  html += '<button class="el-btn" data-align="right" data-ai="' + idx + '" style="font-size:10px;padding:4px 8px">➡ 右</button>';
-  html += '<button class="el-btn" data-align="top" data-ai="' + idx + '" style="font-size:10px;padding:4px 8px">⬆ 顶</button>';
-  html += '<button class="el-btn" data-align="vcenter" data-ai="' + idx + '" style="font-size:10px;padding:4px 8px">↕ 中</button>';
-  html += '<button class="el-btn" data-align="bottom" data-ai="' + idx + '" style="font-size:10px;padding:4px 8px">⬇ 底</button>';
-  html += '</div>';
-  // Quick size buttons
-  if (el.type === 'rectangle' || el.type === 'image' || el.type === 'video' || el.type === 'progress') {
-    html += '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">';
-    html += '<button class="el-btn" data-qsize="full" data-qi="' + idx + '" style="font-size:10px;padding:4px 8px">⛶ 全屏</button>';
-    html += '<button class="el-btn" data-qsize="half" data-qi="' + idx + '" style="font-size:10px;padding:4px 8px">◧ 半屏</button>';
-    html += '<button class="el-btn" data-qsize="quarter" data-qi="' + idx + '" style="font-size:10px;padding:4px 8px">◫ 1/4</button>';
-    html += '</div>';
-  }
-  html += '</div>';
-
-  // ── Section: Style (type-specific) ──
-  html += '<div class="el-editor-section">';
-  html += '<div class="el-editor-section-title">🎨 样式</div>';
-  html += '<div class="config-grid">';
-
-  if (el.type === 'text') {
-    html += fieldHtml('文字', '<input type="text" value="' + esc(el.text || '') + '" data-prop="text" data-idx="' + idx + '">', true);
-    // Expression field for dynamic template elements
-    html += fieldHtml('表达式', '<input type="text" value="' + esc(el.expression || '') + '" data-prop="expression" data-idx="' + idx + '" placeholder="如 formatDate(\'HH:mm\', #time_sys)" style="font-size:11px"><div style="font-size:10px;color:var(--text3);margin-top:2px">留空使用静态文字，填写后用 textExp 生成</div>', true);
-    html += fieldHtml('字号', '<input type="number" value="' + el.size + '" data-prop="size" data-idx="' + idx + '" min="8" max="200">');
-    html += colorFieldHtml('颜色', el.color || '#ffffff', 'color', idx);
-    // Font family
-    html += '<div class="field"><label>字体</label><select data-prop="fontFamily" data-idx="' + idx + '">' +
-      FONT_OPTIONS.map(function (f) { return '<option value="' + f.id + '"' + (el.fontFamily === f.id ? ' selected' : '') + '>' + f.name + '</option>'; }).join('') +
-      '</select></div>';
-    // Text alignment
-    html += '<div class="field"><label>对齐</label><div style="display:flex;gap:2px">' +
-      ['left', 'center', 'right'].map(function (a) {
-        var icons = { left: '⬅', center: '≡', right: '➡' };
-        var isActive = (el.textAlign || 'left') === a;
-        return '<button class="el-btn" data-prop="textAlign" data-idx="' + idx + '" data-val="' + a + '" style="flex:1;justify-content:center;font-size:12px;padding:6px;background:' + (isActive ? 'var(--accent-glow)' : '') + ';border-color:' + (isActive ? 'var(--accent)' : 'var(--border)') + '">' + icons[a] + '</button>';
-      }).join('') + '</div></div>';
-    html += fieldHtml('加粗', '<label class="toggle-switch"><input type="checkbox" data-prop="bold" data-idx="' + idx + '"' + (el.bold ? ' checked' : '') + '><span class="toggle-slider"></span></label>');
-    // Text decorations
-    html += fieldHtml('下划线', '<label class="toggle-switch"><input type="checkbox" data-prop="underline" data-idx="' + idx + '"' + (el.underline ? ' checked' : '') + '><span class="toggle-slider"></span></label>');
-    html += fieldHtml('删除线', '<label class="toggle-switch"><input type="checkbox" data-prop="strikethrough" data-idx="' + idx + '"' + (el.strikethrough ? ' checked' : '') + '><span class="toggle-slider"></span></label>');
-    html += fieldHtml('字间距', '<input type="number" value="' + (el.letterSpacing || 0) + '" data-prop="letterSpacing" data-idx="' + idx + '" min="-5" max="20" step="0.5">');
-    html += fieldHtml('多行', '<label class="toggle-switch"><input type="checkbox" data-prop="multiLine" data-idx="' + idx + '"' + (el.multiLine ? ' checked' : '') + '><span class="toggle-slider"></span></label>');
-    if (el.multiLine) {
-      html += fieldHtml('行高', '<input type="range" min="10" max="30" value="' + Math.round((el.lineHeight || 1.4) * 10) + '" data-prop="lineHeight" data-idx="' + idx + '" step="1"><span style="font-size:10px;color:var(--text3)">' + (el.lineHeight || 1.4).toFixed(1) + '</span>');
-    }
-    html += fieldHtml('宽度', '<input type="number" value="' + (el.w || 200) + '" data-prop="w" data-idx="' + idx + '" min="20" max="999">');
-
-  } else if (el.type === 'rectangle') {
-    html += colorFieldHtml('颜色', el.color || '#333333', 'color', idx);
-    html += fieldHtml('渐变', '<div style="display:flex;gap:6px;align-items:center">' +
-      colorFieldHtml2(el.fillColor2 || '', 'fillColor2', idx) +
-      (el.fillColor2 ? '<button class="el-btn" data-clear-fill2 data-idx="' + idx + '" style="font-size:10px;padding:3px 6px">✕</button>' : '') +
-      '</div>');
-    html += fieldHtml('圆角', '<input type="number" value="' + (el.radius || 0) + '" data-prop="radius" data-idx="' + idx + '" min="0" max="500">');
-    html += fieldHtml('描边', '<div style="display:flex;gap:6px;align-items:center">' +
-      '<input type="number" value="' + (el.strokeWidth || 0) + '" data-prop="strokeWidth" data-idx="' + idx + '" min="0" max="20" style="width:60px">' +
-      (el.strokeWidth > 0 ? colorFieldHtml2(el.strokeColor || '#ffffff', 'strokeColor', idx) : '') +
-      '</div>');
-    html += fieldHtml('模糊', '<input type="range" min="0" max="30" value="' + (el.blur || 0) + '" data-prop="blur" data-idx="' + idx + '"><span style="font-size:10px;color:var(--text3)">' + (el.blur || 0) + 'px</span>');
-
-  } else if (el.type === 'circle') {
-    html += colorFieldHtml('颜色', el.color || '#6c5ce7', 'color', idx);
-    html += fieldHtml('描边', '<div style="display:flex;gap:6px;align-items:center">' +
-      '<input type="number" value="' + (el.strokeWidth || 0) + '" data-prop="strokeWidth" data-idx="' + idx + '" min="0" max="20" style="width:60px">' +
-      (el.strokeWidth > 0 ? colorFieldHtml2(el.strokeColor || '#ffffff', 'strokeColor', idx) : '') +
-      '</div>');
-
-  } else if (el.type === 'arc') {
-    html += colorFieldHtml('颜色', el.color || '#6c5ce7', 'color', idx);
-    html += fieldHtml('起始角', '<input type="number" value="' + (el.startAngle || 0) + '" data-prop="startAngle" data-idx="' + idx + '" min="0" max="360">°');
-    html += fieldHtml('终止角', '<input type="number" value="' + (el.endAngle || 270) + '" data-prop="endAngle" data-idx="' + idx + '" min="0" max="360">°');
-    html += fieldHtml('线宽', '<input type="number" value="' + (el.strokeWidth || 6) + '" data-prop="strokeWidth" data-idx="' + idx + '" min="1" max="30">');
-
-  } else if (el.type === 'image' || el.type === 'video') {
-    html += '<div class="field"><label>适配</label><select data-prop="fit" data-idx="' + idx + '">' +
-      ['cover', 'contain', 'fill', 'none'].map(function (f) { return '<option value="' + f + '"' + ((el.fit || 'cover') === f ? ' selected' : '') + '>' + f + '</option>'; }).join('') +
-      '</select></div>';
-    html += fieldHtml('圆角', '<input type="number" value="' + (el.radius || 0) + '" data-prop="radius" data-idx="' + idx + '" min="0" max="500">');
-    // File replace buttons
-    if (el.type === 'image' && el.fileName) html += '<div style="grid-column:1/-1"><button class="el-btn" data-pick="image" style="font-size:11px">🖼 替换图片</button></div>';
-    if (el.type === 'video' && el.fileName) html += '<div style="grid-column:1/-1"><button class="el-btn" data-pick="video" style="font-size:11px">🎬 替换视频</button></div>';
-
-  } else if (el.type === 'progress') {
-    html += fieldHtml('进度', '<input type="range" min="0" max="100" value="' + (el.value || 60) + '" data-prop="value" data-idx="' + idx + '"><span style="font-size:10px;color:var(--text3)">' + (el.value || 60) + '%</span>');
-    html += colorFieldHtml('前景', el.color || '#6c5ce7', 'color', idx);
-    html += colorFieldHtml('背景', el.bgColor || '#333333', 'bgColor', idx);
-    html += fieldHtml('圆角', '<input type="number" value="' + (el.radius || 4) + '" data-prop="radius" data-idx="' + idx + '" min="0" max="50">');
-
-  } else if (el.type === 'lottie') {
-    html += '<div style="grid-column:1/-1;padding:12px;background:rgba(155,89,182,0.1);border-radius:8px;font-size:12px;color:#9b59b6">🎭 Lottie 仅浏览器预览可用，建议替换为 Image 或 Video。</div>';
-    html += fieldHtml('速度', '<input type="range" min="1" max="50" value="' + Math.round((el.speed || 1) * 10) + '" data-prop="speed" data-idx="' + idx + '"><span style="font-size:10px;color:var(--text3)">' + (el.speed || 1).toFixed(1) + 'x</span>');
-  }
-  html += '</div></div>';
-
-  // ── Section: Transform & Effects ──
-  html += '<div class="el-editor-section">';
-  html += '<div class="el-editor-section-title">✨ 变换 & 效果</div>';
-  html += '<div class="config-grid">';
-  html += fieldHtml('旋转', '<div style="display:flex;gap:6px;align-items:center"><input type="range" min="0" max="360" value="' + (el.rotation || 0) + '" data-prop="rotation" data-idx="' + idx + '" style="flex:1"><span style="font-size:11px;color:var(--text3);min-width:30px;text-align:right">' + (el.rotation || 0) + '°</span></div>');
-  html += fieldHtml('透明度', '<div style="display:flex;gap:6px;align-items:center"><input type="range" min="0" max="100" value="' + (el.opacity !== undefined ? el.opacity : 100) + '" data-prop="opacity" data-idx="' + idx + '" style="flex:1"><span style="font-size:11px;color:var(--text3);min-width:30px;text-align:right">' + (el.opacity !== undefined ? el.opacity : 100) + '%</span></div>');
-
-  // Shadow (text only)
-  if (el.type === 'text') {
-    html += '<div class="field"><label>阴影</label><select data-prop="shadow" data-idx="' + idx + '">' +
-      [{ v: 'none', l: '无' }, { v: 'light', l: '轻阴影' }, { v: 'dark', l: '深阴影' }, { v: 'glow', l: '发光' }].map(function (s) {
-        return '<option value="' + s.v + '"' + ((el.shadow || 'none') === s.v ? ' selected' : '') + '>' + s.l + '</option>';
-      }).join('') + '</select></div>';
-  }
-  // CSS Filters (image/video/rectangle)
-  if (el.type === 'image' || el.type === 'video' || el.type === 'rectangle') {
-    html += fieldHtml('亮度', '<input type="range" min="0" max="200" value="' + (el.brightness !== undefined ? el.brightness : 100) + '" data-prop="brightness" data-idx="' + idx + '"><span style="font-size:10px;color:var(--text3)">' + (el.brightness !== undefined ? el.brightness : 100) + '%</span>');
-    html += fieldHtml('饱和度', '<input type="range" min="0" max="200" value="' + (el.saturate !== undefined ? el.saturate : 100) + '" data-prop="saturate" data-idx="' + idx + '"><span style="font-size:10px;color:var(--text3)">' + (el.saturate !== undefined ? el.saturate : 100) + '%</span>');
-    html += fieldHtml('色相', '<input type="range" min="0" max="360" value="' + (el.hueRotate || 0) + '" data-prop="hueRotate" data-idx="' + idx + '"><span style="font-size:10px;color:var(--text3)">' + (el.hueRotate || 0) + '°</span>');
-  }
-  html += '</div></div>';
-
-  // ── Section: MAML 变量绑定 ──
-  html += '<div class="el-editor-section">';
-  html += '<div class="el-editor-section-title">🔗 MAML 变量绑定</div>';
-  html += renderMamlVarBinding(el, idx);
-  html += '</div>';
-
-  // ── Color presets ──
-  if (el.color !== undefined) {
-    html += '<div class="el-editor-section">';
-    html += '<div class="el-editor-section-title">🎨 颜色预设</div>';
-    html += renderColorPresets('color', idx);
-    html += '</div>';
-  }
-
-  // ── Quick Actions ──
-  html += '<div class="el-editor-section">';
-  html += '<div class="el-editor-section-title">⚡ 快捷操作</div>';
-  html += '<div style="display:flex;gap:4px;flex-wrap:wrap">';
-  html += '<button class="el-btn" data-duplicate="' + idx + '" style="font-size:11px">📋 复制</button>';
-  if (S.clipboard) html += '<button class="el-btn" data-paste-el style="font-size:11px">📌 粘贴</button>';
-  html += '<button class="el-btn" data-copy-style="' + idx + '" style="font-size:11px">🎨 复制样式</button>';
-  if (hasStyleClipboard()) html += '<button class="el-btn" data-paste-style="' + idx + '" style="font-size:11px">📌 粘贴样式</button>';
-  html += '<button class="el-btn" data-del="' + idx + '" style="font-size:11px;color:var(--red)">🗑️ 删除</button>';
-  html += '</div>';
-  // Distribute & match size (conditional)
-  if (S.elements.length >= 3) {
-    html += '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">';
-    html += '<button class="el-btn" data-distribute="horizontal" style="font-size:10px;padding:4px 8px">↔ 水平分布</button>';
-    html += '<button class="el-btn" data-distribute="vertical" style="font-size:10px;padding:4px 8px">↕ 垂直分布</button>';
-    html += '</div>';
-  }
-  if (S.elements.length >= 2) {
-    html += '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">';
-    html += '<button class="el-btn" data-match-size="width" style="font-size:10px;padding:4px 8px">📏 同宽</button>';
-    html += '<button class="el-btn" data-match-size="height" style="font-size:10px;padding:4px 8px">📐 同高</button>';
-    html += '<button class="el-btn" data-match-size="both" style="font-size:10px;padding:4px 8px">⬛ 同大小</button>';
-    html += '</div>';
-  }
-  // Style presets
-  html += '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">';
-  html += '<button class="el-btn" data-save-style="' + idx + '" style="font-size:11px">💾 保存样式</button>';
-  html += '<button class="el-btn" data-apply-styles style="font-size:11px">📦 应用样式</button>';
-  html += '</div>';
-  html += '</div>';
-
-  // ── Design Tools ──
-  html += renderDesignToolsInline(idx);
-
-  html += '</div>';
-  return html;
-}
-
-// ── MAML Variable Binding Panel ──
-var MAML_VARS = [
-  { var: '#step', desc: '步数', group: '健康' },
-  { var: '#battery_level', desc: '电量百分比', group: '健康' },
-  { var: '#battery_charging', desc: '是否充电', group: '健康' },
-  { var: '#weather_temp', desc: '天气温度', group: '天气' },
-  { var: '#weather_desc', desc: '天气描述', group: '天气' },
-  { var: '#weather_humidity', desc: '湿度', group: '天气' },
-  { var: '#weather_city', desc: '城市名', group: '天气' },
-  { var: '#music_title', desc: '音乐标题', group: '音乐' },
-  { var: '#music_artist', desc: '音乐歌手', group: '音乐' },
-  { var: '#view_width', desc: '视图宽度', group: '系统' },
-  { var: '#view_height', desc: '视图高度', group: '系统' },
-  { var: '#marginL', desc: '左边距(摄像头)', group: '系统' },
-  { var: '#hour', desc: '当前小时', group: '时间' },
-  { var: '#minute', desc: '当前分钟', group: '时间' },
-  { var: '#month', desc: '当前月份', group: '时间' },
-  { var: '#day', desc: '当前日期', group: '时间' },
-  { var: '#day_of_week', desc: '星期几', group: '时间' },
-];
-
-function renderMamlVarBinding(el, idx) {
-  var html = '<div style="margin-bottom:6px"><input type="text" id="mamlVarSearch" placeholder="搜索变量..." style="width:100%;padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;outline:none"></div>';
-  var groups = {};
-  MAML_VARS.forEach(function (v) {
-    if (!groups[v.group]) groups[v.group] = [];
-    groups[v.group].push(v);
-  });
-  Object.keys(groups).forEach(function (g) {
-    html += '<div style="margin-bottom:4px"><div style="font-size:10px;color:var(--text3);font-weight:600;margin-bottom:2px">' + g + '</div>';
-    html += '<div style="display:flex;gap:3px;flex-wrap:wrap">';
-    groups[g].forEach(function (v) {
-      html += '<button class="el-btn maml-var-btn" data-var-insert="' + v.var + '" data-var-idx="' + idx + '" style="font-size:10px;padding:3px 8px" title="' + v.desc + '">' + v.var + '</button>';
-    });
-    html += '</div></div>';
-  });
-  // Expression editor
-  html += '<div style="margin-top:6px"><label style="font-size:10px;color:var(--text2)">表达式 (绑定到文字/宽度等)</label>';
-  html += '<input type="text" value="' + esc(el.expression || '') + '" data-prop="expression" data-idx="' + idx + '" placeholder="如: #step 步 或 #weather_temp°" style="width:100%;padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;outline:none;margin-top:3px"></div>';
-  return html;
-}
-
-// Helper: element type labels
-function getElementTypeLabel(el) {
-  var labels = { text: '文字', rectangle: '矩形', circle: '圆形', arc: '弧形', image: '图片', video: '视频', progress: '进度条', lottie: 'Lottie 动画' };
-  return labels[el.type] || el.type;
-}
-
-// Font options for the dropdown
-var FONT_OPTIONS = [
-  { id: 'default', name: '系统默认' },
-  { id: 'mipro-normal', name: 'Mi Sans Regular' },
-  { id: 'mipro-demibold', name: 'Mi Sans SemiBold' },
-  { id: 'mipro-bold', name: 'Mi Sans Bold' },
-  { id: 'mipro-light', name: 'Mi Sans Light' },
-  { id: 'mibright', name: 'Mi Bright' },
-  { id: 'noto-sans-sc', name: 'Noto Sans SC' },
-  { id: 'roboto', name: 'Roboto' },
-  { id: 'monospace', name: '等宽' },
-];
-
-// Helper: inline color field (small version for gradients)
-function colorFieldHtml2(value, prop, idx) {
-  return '<input type="color" value="' + (value || '#000000') + '" data-prop="' + prop + '" data-idx="' + idx + '" style="width:32px;height:28px;padding:2px;border-radius:4px;cursor:pointer;border:1px solid var(--border)">';
-}
-
-function fieldHtml(label, input, full) {
-  return '<div class="field"' + (full ? ' style="grid-column:1/-1"' : '') + '><label>' + label + '</label>' + input + '</div>';
-}
-
-function colorFieldHtml(label, value, prop, idx) {
-  return '<div class="field field-color"><label>' + label + '</label>' +
-    '<input type="color" value="' + value + '" data-prop="' + prop + '" data-idx="' + idx + '">' +
-    '<span class="color-val">' + value + '</span></div>';
-}
-
 function getSelectedDevice() {
   return getDevice(document.getElementById('deviceSelect').value);
 }
@@ -7540,22 +8104,95 @@ function _setMarketGistId(id) {
 
 // Fallback hardcoded templates
 var LOCAL_TEMPLATES = [
-  { id: 'ct_cyberpunk_clock', name: '赛博朋克时钟', author: 'community', icon: '🌃', desc: '霓虹风格时钟，深紫背景 + 荧光绿时间', likes: 128,
-    template: { tplId: 'clock', cfg: { cardName: '赛博朋克时钟', bgColor: '#0d0221', timeColor: '#39ff14', dateColor: '#ff00ff', timeSize: 56, dateFormat: 'MM/dd EEEE' } } },
-  { id: 'ct_minimal_weather', name: '极简天气', author: 'community', icon: '🌤️', desc: '纯白背景，大字温度，极简风格', likes: 95,
-    template: { tplId: 'weather', cfg: { cardName: '极简天气', bgColor: '#ffffff', tempColor: '#1a1a2e', tempSize: 64, descColor: '#888888', city: '北京' } } },
-  { id: 'ct_sunset_gradient', name: '日落渐变', author: 'community', icon: '🌅', desc: '温暖日落色调渐变背景 + 励志文字', likes: 87,
-    template: { tplId: 'gradient', cfg: { cardName: '日落渐变', bgColor1: '#e55039', bgColor2: '#f39c12', textColor: '#ffffff', textSize: 28, text: '每一天都是\\n新的开始' } } },
-  { id: 'ct_retro_battery', name: '复古电池', author: 'community', icon: '🔋', desc: '复古游戏机风格电池显示', likes: 72,
-    template: { tplId: 'battery', cfg: { cardName: '复古电池', bgColor: '#1a1a1a', textColor: '#00ff00', barColor: '#00ff41', accentColor: '#ff6600', demoLevel: 78 } } },
-  { id: 'ct_night_steps', name: '夜间步数', author: 'community', icon: '🌙', desc: '深蓝夜间主题步数卡片', likes: 63,
+  // ─── 时钟类 ───
+  { id: 'ct_cyberpunk_clock', name: '赛博朋克时钟', author: 'REAREye', icon: '🌃', desc: '霓虹风格，深紫背景 + 荧光绿时间', likes: 256,
+    template: { tplId: 'clock', cfg: { cardName: '赛博朋克时钟', bgColor: '#0d0221', timeColor: '#39ff14', dateColor: '#ff00ff', timeSize: 56, dateFormat: 'MM/dd EEEE', timeFormat: 'HH:mm' } } },
+  { id: 'ct_ocean_clock', name: '海洋时钟', author: 'REAREye', icon: '🌊', desc: '海蓝色调 + 大号时间显示', likes: 198,
+    template: { tplId: 'clock', cfg: { cardName: '海洋时钟', bgColor: '#0c2461', timeColor: '#48dbfb', dateColor: '#74b9ff', timeSize: 60, dateFormat: 'MM/dd EEEE', timeFormat: 'HH:mm' } } },
+  { id: 'ct_neon_clock', name: '霓虹时钟', author: 'REAREye', icon: '💜', desc: '纯黑底 + 紫色霓虹光效', likes: 187,
+    template: { tplId: 'clock', cfg: { cardName: '霓虹时钟', bgColor: '#000000', timeColor: '#a29bfe', dateColor: '#6c5ce7', timeSize: 64, dateFormat: 'yyyy/MM/dd EEEE', timeFormat: 'HH:mm' } } },
+  { id: 'ct_minimal_clock', name: '极简时钟', author: 'REAREye', icon: '⬜', desc: '白底黑字，干净利落', likes: 175,
+    template: { tplId: 'clock', cfg: { cardName: '极简时钟', bgColor: '#ffffff', timeColor: '#1a1a2e', dateColor: '#888888', timeSize: 64, dateFormat: 'MM-dd EEEE', timeFormat: 'HH:mm' } } },
+  { id: 'ct_retro_clock', name: '复古时钟', author: 'REAREye', icon: '🕹️', desc: '绿色终端风格，老式计算机', likes: 142,
+    template: { tplId: 'clock', cfg: { cardName: '复古时钟', bgColor: '#0a0a0a', timeColor: '#00ff41', dateColor: '#008f11', timeSize: 56, dateFormat: 'yyyy/MM/dd', timeFormat: 'HH:mm:ss' } } },
+  { id: 'ct_warm_clock', name: '暖色时钟', author: 'REAREye', icon: '🔥', desc: '深棕底色 + 暖橙色时间', likes: 134,
+    template: { tplId: 'clock', cfg: { cardName: '暖色时钟', bgColor: '#1a0f00', timeColor: '#fdcb6e', dateColor: '#e17055', timeSize: 60, dateFormat: 'MM/dd EEEE', timeFormat: 'HH:mm' } } },
+
+  // ─── 名言类 ───
+  { id: 'ct_aurora_quote', name: '极光名言', author: 'REAREye', icon: '✨', desc: '深蓝渐变 + 励志名言', likes: 201,
+    template: { tplId: 'quote', cfg: { cardName: '极光名言', bgColor: '#0a1628', textColor: '#ffffff', authorColor: '#a29bfe', accentColor: '#6c5ce7', textSize: 22, text: '万物皆有裂痕\n那是光照进来的地方', author: '— Leonard Cohen' } } },
+  { id: 'ct_sunset_quote', name: '日落名言', author: 'REAREye', icon: '🌅', desc: '温暖日落渐变 + 励志文字', likes: 189,
+    template: { tplId: 'quote', cfg: { cardName: '日落名言', bgColor: '#e55039', textColor: '#ffffff', authorColor: '#ffeaa7', accentColor: '#f39c12', textSize: 24, text: '凡是过往\n皆为序章', author: '— 莎士比亚' } } },
+  { id: 'ct_forest_quote', name: '森林名言', author: 'REAREye', icon: '🌲', desc: '深绿森林色调 + 自然名言', likes: 156,
+    template: { tplId: 'quote', cfg: { cardName: '森林名言', bgColor: '#0a1a0a', textColor: '#badc58', authorColor: '#6ab04c', accentColor: '#4a7c23', textSize: 22, text: '山川异域\n风月同天', author: '— 古诗' } } },
+  { id: 'ct_snow_quote', name: '雪夜名言', author: 'REAREye', icon: '❄️', desc: '冷白色调 + 冬日意境', likes: 148,
+    template: { tplId: 'quote', cfg: { cardName: '雪夜名言', bgColor: '#1a1a2e', textColor: '#dfe6e9', authorColor: '#74b9ff', accentColor: '#0984e3', textSize: 20, text: '晚来天欲雪\n能饮一杯无', author: '— 白居易' } } },
+
+  // ─── 渐变类 ───
+  { id: 'ct_sunset_gradient', name: '日落渐变', author: 'REAREye', icon: '🌇', desc: '橙红渐变 + 励志文字', likes: 210,
+    template: { tplId: 'gradient', cfg: { cardName: '日落渐变', bgColor1: '#e55039', bgColor2: '#f39c12', textColor: '#ffffff', textSize: 28, text: '每一天都是\n新的开始' } } },
+  { id: 'ct_ocean_gradient', name: '深海渐变', author: 'REAREye', icon: '🌀', desc: '蓝紫深海渐变', likes: 178,
+    template: { tplId: 'gradient', cfg: { cardName: '深海渐变', bgColor1: '#0c2461', bgColor2: '#6c5ce7', textColor: '#ffffff', textSize: 32, text: '深海\n宁静' } } },
+  { id: 'ct_candy_gradient', name: '糖果渐变', author: 'REAREye', icon: '🍬', desc: '粉蓝渐变，甜美风格', likes: 165,
+    template: { tplId: 'gradient', cfg: { cardName: '糖果渐变', bgColor1: '#ff9ff3', bgColor2: '#48dbfb', textColor: '#ffffff', textSize: 28, text: 'Sweet\nDay' } } },
+  { id: 'ct_galaxy_gradient', name: '银河渐变', author: 'REAREye', icon: '🌌', desc: '紫黑银河深空渐变', likes: 192,
+    template: { tplId: 'gradient', cfg: { cardName: '银河渐变', bgColor1: '#0d0221', bgColor2: '#3d157e', textColor: '#e2b0ff', textSize: 24, text: '星辰大海\n皆为征途' } } },
+
+  // ─── 电池类 ───
+  { id: 'ct_retro_battery', name: '复古电池', author: 'REAREye', icon: '🔋', desc: '复古游戏机风格', likes: 167,
+    template: { tplId: 'battery', cfg: { cardName: '复古电池', bgColor: '#1a1a1a', textColor: '#00ff00', barColor: '#00ff41', demoLevel: 78 } } },
+  { id: 'ct_flame_battery', name: '烈焰电池', author: 'REAREye', icon: '🔥', desc: '红色火焰风格电量显示', likes: 143,
+    template: { tplId: 'battery', cfg: { cardName: '烈焰电池', bgColor: '#1a0500', textColor: '#ff6b6b', barColor: '#e17055', demoLevel: 65 } } },
+  { id: 'ct_ice_battery', name: '冰霜电池', author: 'REAREye', icon: '🧊', desc: '蓝白色调冰晶风格', likes: 128,
+    template: { tplId: 'battery', cfg: { cardName: '冰霜电池', bgColor: '#0a1628', textColor: '#74b9ff', barColor: '#48dbfb', demoLevel: 82 } } },
+
+  // ─── 步数类 ───
+  { id: 'ct_night_steps', name: '夜间步数', author: 'REAREye', icon: '🌙', desc: '深蓝夜间主题', likes: 155,
     template: { tplId: 'steps', cfg: { cardName: '夜间步数', bgColor: '#0a1628', textColor: '#e0e0e0', barColor: '#4ecdc4', accentColor: '#74b9ff', goal: '10000' } } },
-  { id: 'ct_ocean_clock', name: '海洋时钟', author: 'community', icon: '🌊', desc: '海蓝色调 + 大号时间显示', likes: 58,
-    template: { tplId: 'clock', cfg: { cardName: '海洋时钟', bgColor: '#0c2461', timeColor: '#48dbfb', dateColor: '#74b9ff', timeSize: 60, dateFormat: 'MM/dd EEEE' } } },
-  { id: 'ct_golden_ring', name: '金色环形', author: 'community', icon: '🏆', desc: '金色环形进度 + 暗色背景', likes: 45,
-    template: { tplId: 'ring', cfg: { cardName: '金色环形', bgColor: '#0a0a0a', ringColor: '#f39c12', trackColor: '#2a2a2a', textColor: '#ffffff', labelColor: '#888888', ringSize: 8, demoValue: 72, source: 'battery' } } },
-  { id: 'ct_aurora_quote', name: '极光名言', author: 'community', icon: '✨', desc: '极光色渐变背景 + 励志名言', likes: 41,
-    template: { tplId: 'quote', cfg: { cardName: '极光名言', bgColor: '#0a1628', textColor: '#ffffff', authorColor: '#a29bfe', accentColor: '#6c5ce7', textSize: 22, text: '万物皆有裂痕\\n那是光照进来的地方', author: '— Leonard Cohen' } } },
+  { id: 'ct_sport_steps', name: '运动步数', author: 'REAREye', icon: '🏃', desc: '活力红橙运动风格', likes: 139,
+    template: { tplId: 'steps', cfg: { cardName: '运动步数', bgColor: '#1a0a00', textColor: '#ffffff', barColor: '#ff6b6b', accentColor: '#fdcb6e', goal: '8000' } } },
+  { id: 'ct_nature_steps', name: '自然步数', author: 'REAREye', icon: '🌿', desc: '绿色自然风格', likes: 121,
+    template: { tplId: 'steps', cfg: { cardName: '自然步数', bgColor: '#0a1a0a', textColor: '#badc58', barColor: '#6ab04c', accentColor: '#55efc4', goal: '10000' } } },
+
+  // ─── 环形进度 ───
+  { id: 'ct_golden_ring', name: '金色环形', author: 'REAREye', icon: '🏆', desc: '金色环形 + 暗色背景', likes: 176,
+    template: { tplId: 'ring', cfg: { cardName: '金色环形', bgColor: '#0a0a0a', ringColor: '#f39c12', trackColor: '#2a2a2a', textColor: '#ffffff', labelColor: '#888888', ringSize: 8, demoValue: 72, source: 'battery', goal: '10000' } } },
+  { id: 'ct_rainbow_ring', name: '彩虹环形', author: 'REAREye', icon: '🌈', desc: '多彩渐变环形进度', likes: 164,
+    template: { tplId: 'ring', cfg: { cardName: '彩虹环形', bgColor: '#0a0a1a', ringColor: '#ff6b6b', trackColor: '#1a1a2e', textColor: '#ffffff', labelColor: '#a29bfe', ringSize: 10, demoValue: 85, source: 'step', goal: '10000' } } },
+  { id: 'ct_emerald_ring', name: '翡翠环形', author: 'REAREye', icon: '💎', desc: '翠绿色环形 + 黑底', likes: 148,
+    template: { tplId: 'ring', cfg: { cardName: '翡翠环形', bgColor: '#000000', ringColor: '#00b894', trackColor: '#1a1a1a', textColor: '#ffffff', labelColor: '#55efc4', ringSize: 8, demoValue: 68, source: 'step', goal: '10000' } } },
+
+  // ─── 倒计时 ───
+  { id: 'ct_newyear_countdown', name: '新年倒计时', author: 'REAREye', icon: '🎆', desc: '紫色星空 + 新年倒数', likes: 195,
+    template: { tplId: 'countdown', cfg: { cardName: '新年倒计时', bgColor: '#1a0a2e', eventName: '距离新年', targetDate: '0101', accentColor: '#a29bfe', textColor: '#ffffff' } } },
+  { id: 'ct_birthday_countdown', name: '生日倒计时', author: 'REAREye', icon: '🎂', desc: '粉色系生日倒数', likes: 158,
+    template: { tplId: 'countdown', cfg: { cardName: '生日倒计时', bgColor: '#1a0a1a', eventName: '距离生日', targetDate: '0601', accentColor: '#fd79a8', textColor: '#ffffff' } } },
+  { id: 'ct_vacation_countdown', name: '假期倒计时', author: 'REAREye', icon: '🏖️', desc: '蓝色海洋 + 假期倒数', likes: 172,
+    template: { tplId: 'countdown', cfg: { cardName: '假期倒计时', bgColor: '#0a1628', eventName: '距离暑假', targetDate: '0701', accentColor: '#48dbfb', textColor: '#ffffff' } } },
+
+  // ─── 日历 ───
+  { id: 'ct_minimal_calendar', name: '极简日历', author: 'REAREye', icon: '📅', desc: '白底大字日期 + 日程', likes: 161,
+    template: { tplId: 'calendar', cfg: { cardName: '极简日历', bgColor: '#ffffff', dayColor: '#1a1a2e', daySize: 72, accentColor: '#6c5ce7', textColor: '#888888', event1: '09:00 团队会议', event2: '14:30 代码评审', event3: '' } } },
+  { id: 'ct_dark_calendar', name: '暗色日历', author: 'REAREye', icon: '🗓️', desc: '深色主题日历 + 日程', likes: 144,
+    template: { tplId: 'calendar', cfg: { cardName: '暗色日历', bgColor: '#0f0f1a', dayColor: '#ffffff', daySize: 72, accentColor: '#6c5ce7', textColor: '#888888', event1: '10:00 站会', event2: '15:00 1v1', event3: '18:00 健身' } } },
+
+  // ─── 仪表盘 ───
+  { id: 'ct_sci_dashboard', name: '科幻仪表盘', author: 'REAREye', icon: '📊', desc: '蓝色科技风聚合面板', likes: 188,
+    template: { tplId: 'dashboard', cfg: { cardName: '科幻仪表盘', bgColor: '#0a0e1a', timeColor: '#48dbfb', accentColor: '#0984e3', textColor: '#cccccc', dimColor: '#333355' } } },
+  { id: 'ct_warm_dashboard', name: '暖色仪表盘', author: 'REAREye', icon: '🌅', desc: '暖橙色聚合信息面板', likes: 152,
+    template: { tplId: 'dashboard', cfg: { cardName: '暖色仪表盘', bgColor: '#1a0f00', timeColor: '#fdcb6e', accentColor: '#e17055', textColor: '#f0c090', dimColor: '#886644' } } },
+
+  // ─── 每日一句 ───
+  { id: 'ct_poetry_daily', name: '诗词每日', author: 'REAREye', icon: '📜', desc: '7天循环古诗词', likes: 183,
+    template: { tplId: 'dailyquote', cfg: { cardName: '诗词每日', bgColor: '#0a0a1a', quote1: '人生若只如初见\n何事秋风悲画扇', quote2: '大鹏一日同风起\n扶摇直上九万里', quote3: '长风破浪会有时\n直挂云帆济沧海', quote4: '天生我材必有用\n千金散尽还复来', quote5: '海内存知己\n天涯若比邻', quote6: '落霞与孤鹜齐飞\n秋水共长天一色', quote7: '但愿人长久\n千里共婵娟' } } },
+  { id: 'ct_motivation_daily', name: '励志每日', author: 'REAREye', icon: '💪', desc: '7天循环励志语录', likes: 167,
+    template: { tplId: 'dailyquote', cfg: { cardName: '励志每日', bgColor: '#0a0e1a', quote1: 'Stay hungry\nStay foolish', quote2: 'The only way to do great work\nis to love what you do', quote3: 'Innovation distinguishes\nbetween a leader\nand a follower', quote4: 'Your time is limited\ndon\'t waste it', quote5: 'Think different', quote6: 'Less is more', quote7: 'Just do it' } } },
+
+  // ─── 双时钟 ───
+  { id: 'ct_world_clock', name: '世界时钟', author: 'REAREye', icon: '🌍', desc: '北京 + 纽约双时区', likes: 155,
+    template: { tplId: 'dualclock', cfg: { cardName: '世界时钟', bgColor: '#000000', city1: '北京', offset1: 8, timeColor1: '#ffffff', city2: '纽约', offset2: -5, timeColor2: '#6c5ce7', timeSize: 44 } } },
+  { id: 'ct_work_clock', name: '工作时钟', author: 'REAREye', icon: '💼', desc: '本地 + 伦敦工作时间', likes: 138,
+    template: { tplId: 'dualclock', cfg: { cardName: '工作时钟', bgColor: '#0a0a1a', city1: '上海', offset1: 8, timeColor1: '#48dbfb', city2: '伦敦', offset2: 0, timeColor2: '#fdcb6e', timeSize: 44 } } },
 ];
 
 var _marketModal = null;
@@ -8211,12 +8848,12 @@ var _dragSrcIdx = -1;
 
 var TYPE_ICONS = {
   text: '🔤', rectangle: '⬜', circle: '⭕', image: '🖼️', video: '🎬',
-  arc: '🌗', progress: '📊', lottie: '✨',
+  arc: '🌗', progress: '📊', lottie: '✨', group: '📦', layer: '🎨', musiccontrol: '🎵',
 };
 
 var TYPE_LABELS = {
   text: '文字', rectangle: '矩形', circle: '圆形', image: '图片', video: '视频',
-  arc: '弧形', progress: '进度条', lottie: 'Lottie',
+  arc: '弧形', progress: '进度条', lottie: 'Lottie', group: '容器组', layer: '材质层', musiccontrol: '音乐控件',
 };
 
 function esc(s) {
@@ -8592,6 +9229,9 @@ var COMMANDS = [
   { id: 'addText', icon: 'T', label: '添加文字元素', shortcut: '', category: '元素', fn: function (c) { c.addElement('text'); } },
   { id: 'addRect', icon: '▢', label: '添加矩形元素', shortcut: '', category: '元素', fn: function (c) { c.addElement('rectangle'); } },
   { id: 'addCircle', icon: '○', label: '添加圆形元素', shortcut: '', category: '元素', fn: function (c) { c.addElement('circle'); } },
+  { id: 'addGroup', icon: '📦', label: '添加 Group 容器', shortcut: '', category: '元素', fn: function (c) { c.addElement('group'); } },
+  { id: 'addLayer', icon: '🎨', label: '添加 Layer 层', shortcut: '', category: '元素', fn: function (c) { c.addElement('layer'); } },
+  { id: 'addMusic', icon: '🎵', label: '添加 MusicControl', shortcut: '', category: '元素', fn: function (c) { c.addElement('musiccontrol'); } },
   { id: 'designTools', icon: '🎨', label: '打开设计工具', shortcut: '', category: '工具', fn: function (c) { c.openDesignTools('palette'); } },
   { id: 'bindingWizard', icon: '🔗', label: '数据绑定向导', shortcut: '', category: '工具', fn: function (c) { c.openBindingWizard(); } },
   { id: 'mamlLint', icon: '✅', label: 'MAML 语法检查', shortcut: '', category: '工具', fn: function (c) { c.runMamlLint(); } },
@@ -10056,79 +10696,8 @@ function generateCustomMAML() {
   lines.push(generateAutoDetectMAML());
   lines.push('  <Rectangle w="#view_width" h="#view_height" fillColor="' + S.cfg.bgColor + '" />');
   S.elements.forEach(function (el) {
-    switch (el.type) {
-      case 'text': {
-        var a = el.textAlign && el.textAlign !== 'left' ? ' textAlign="' + el.textAlign + '"' : '';
-        var ml = el.multiLine ? ' multiLine="true"' : '';
-        var w = el.multiLine || (el.textAlign && el.textAlign !== 'left') ? ' w="' + (el.w || 200) + '"' : '';
-        var b = el.bold ? ' bold="true"' : '';
-        var ff = el.fontFamily && el.fontFamily !== 'default' ? ' fontFamily="' + el.fontFamily + '"' : '';
-        var alpha = (el.opacity !== undefined && el.opacity !== 100) ? ' alpha="' + (el.opacity / 100).toFixed(2) + '"' : '';
-        var sh = '';
-        if (el.shadow === 'light') sh = ' shadow="1" shadowColor="#000000"';
-        else if (el.shadow === 'dark') sh = ' shadow="3" shadowColor="#000000"';
-        else if (el.shadow === 'glow') sh = ' shadow="4" shadowColor="' + (el.color || '#ffffff') + '"';
-        var tg = '';
-        if (el.textGradient && el.textGradient !== 'none') {
-          var gradColors = { sunset: '#ff6b6b,#feca57', ocean: '#0984e3,#00cec9', neon: '#ff00ff,#00ffff', gold: '#f39c12,#fdcb6e', aurora: '#6c5ce7,#00b894' };
-          var gc = el.textGradient === 'custom' ? (el.color || '#ffffff') + ',' + (el.gradientColor2 || '#ff6b6b') : gradColors[el.textGradient] || gradColors.sunset;
-          tg = ' gradientColors="' + gc + '" gradientOrientation="top_bottom"';
-        }
-        var ts = '';
-        if (el.textStroke && el.textStroke > 0) ts = ' stroke="' + el.textStroke + '" strokeColor="' + (el.textStrokeColor || '#000000') + '"';
-        var rot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
-        var lh = el.multiLine && el.lineHeight && el.lineHeight !== 1.4 ? ' lineHeight="' + el.lineHeight + '"' : '';
-        // Support expression (textExp) for dynamic template elements
-        if (el.expression) {
-          lines.push('    <Text textExp="' + el.expression + '" x="' + el.x + '" y="' + el.y + '" size="' + el.size + '" color="' + el.color + '"' + w + a + ml + b + ff + alpha + sh + tg + ts + rot + lh + ' />');
-        } else {
-          lines.push('    <Text text="' + escXml(el.text || '') + '" x="' + el.x + '" y="' + el.y + '" size="' + el.size + '" color="' + el.color + '"' + w + a + ml + b + ff + alpha + sh + tg + ts + rot + lh + ' />');
-        }
-        break;
-      }
-      case 'rectangle': {
-        var rectAlpha = (el.opacity !== undefined && el.opacity !== 100) ? ' alpha="' + (el.opacity / 100).toFixed(2) + '"' : '';
-        var rectFill = el.fillColor2 ? ' fillColor="' + el.color + '" fillColor2="' + el.fillColor2 + '"' : ' fillColor="' + el.color + '"';
-        var rectRot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
-        var rectBlur = el.blur ? ' blur="' + el.blur + '"' : '';
-        lines.push('    <Rectangle x="' + el.x + '" y="' + el.y + '" w="' + el.w + '" h="' + el.h + '"' + rectFill + (el.radius ? ' cornerRadius="' + el.radius + '"' : '') + rectAlpha + rectRot + rectBlur + ' />');
-        break;
-      }
-      case 'circle': {
-        var circAlpha = (el.opacity !== undefined && el.opacity !== 100) ? ' alpha="' + (el.opacity / 100).toFixed(2) + '"' : '';
-        var circStroke = el.strokeWidth > 0 ? ' stroke="' + el.strokeWidth + '" strokeColor="' + (el.strokeColor || '#ffffff') + '"' : '';
-        lines.push('    <Circle x="' + el.x + '" y="' + el.y + '" r="' + el.r + '" fillColor="' + el.color + '"' + circAlpha + circStroke + (el.rotation ? ' rotation="' + el.rotation + '"' : '') + ' />');
-        break;
-      }
-      case 'image': {
-        var imgSrc = el.src || el.fileName || '';
-        var folder = imgSrc && S.uploadedFiles[imgSrc] && S.uploadedFiles[imgSrc].mimeType.indexOf('video/') === 0 ? 'videos' : 'images';
-        lines.push('    <Image src="' + folder + '/' + escXml(imgSrc) + '" x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 100) + '" h="' + (el.h || 100) + '" />');
-        break;
-      }
-      case 'video':
-        lines.push('    <Video src="videos/' + escXml(el.src || el.fileName || '') + '" x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 240) + '" h="' + (el.h || 135) + '" autoPlay="true" loop="true" />');
-        break;
-      case 'arc':
-        lines.push('    <!-- Arc: MAML 不原生支持弧形，用圆形近似 -->');
-        lines.push('    <Circle x="' + el.x + '" y="' + el.y + '" r="' + (el.r || 40) + '" fillColor="transparent" stroke="' + (el.strokeWidth || 6) + '" strokeColor="' + el.color + '" />');
-        break;
-      case 'progress':
-        lines.push('    <Rectangle x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 200) + '" h="' + (el.h || 8) + '" fillColor="' + (el.bgColor || '#333333') + '" cornerRadius="' + (el.radius || 4) + '" />');
-        lines.push('    <Rectangle x="' + el.x + '" y="' + el.y + '" w="' + Math.round((el.w || 200) * (el.value || 60) / 100) + '" h="' + (el.h || 8) + '" fillColor="' + el.color + '" cornerRadius="' + (el.radius || 4) + '" />');
-        break;
-      case 'lottie':
-        lines.push('    <!-- ⚠️ Lottie 动画: MAML 引擎不支持此格式，请替换为 Image 或 Video 元素 -->');
-        break;
-    }
-    if (el.animationName && lines.length > 0) {
-      var lastLine = lines[lines.length - 1];
-      if (lastLine.indexOf('/>') > 0) {
-        var anim = ' animationName="' + el.animationName + '" animationDuration="' + (el.animationDuration || 500) + '" animationDelay="' + (el.animationDelay || 0) + '" animationRepeat="' + (el.animationRepeat || 1) + '"';
-        if (el.animationInfinite) anim += ' animationInfinite="true"';
-        lines[lines.length - 1] = lastLine.replace(' />', anim + ' />');
-      }
-    }
+    var xml = renderEl(el, S.uploadedFiles, '    ');
+    if (xml) lines.push(xml);
   });
   return lines.join('\n');
 }
@@ -10354,6 +10923,21 @@ function handleImportZip() {
     }).catch(function (e) { toast('导入失败: ' + e.message, 'error'); });
   };
   input.click();
+}
+
+// ─── MAML XML 导入 ─────────────────────────────────────────
+function importMAMLFromXml(xmlString) {
+  var data = importMAML(xmlString);
+  S.setTpl(TEMPLATES.find(function (t) { return t.id === 'custom'; }));
+  S.setCfg({ cardName: data.cardName, bgColor: data.bgColor });
+  S.setElements(data.elements);
+  S.setUploadedFiles({});
+  S.setSelIdx(-1);
+  S.setDirty(true);
+  resetHistory();
+  renderTplGrid();
+  goStep(1, stepCallbacks);
+  toast('✅ MAML 已导入 (' + data.elements.length + ' 个元素)', 'success');
 }
 
 // ─── File Handling ────────────────────────────────────────────────
@@ -10685,6 +11269,7 @@ function setupEvents() {
     if (actionBtn) {
       var a = actionBtn.dataset.action;
       if (a === 'importZip') handleImportZip();
+      else if (a === 'importMAML') { /* handled by separate listener below */ }
       else if (a === 'shareTemplate') shareTemplate();
       else if (a === 'shareQR') JCM.showQR();
       else if (a === 'exportTemplate') { exportTemplateJSON(S.tpl ? S.tpl.id : 'custom', S.cfg, S.elements); toast('✅ 配置已导出', 'success'); }
@@ -10943,6 +11528,66 @@ function setupEvents() {
       renderConfig(getTemplateMAML);
       toast('📌 已粘贴', 'success');
     }
+  });
+
+  // Group/Layer/MusicControl 子元素管理
+  document.getElementById('cfgContent').addEventListener('click', function (e) {
+    var addBtn = e.target.closest('[data-add-child]');
+    if (addBtn) {
+      var parentIdx = Number(addBtn.dataset.addChild);
+      var childType = addBtn.dataset.childType;
+      if (parentIdx >= 0 && parentIdx < S.elements.length && ElementDefaults[childType]) {
+        captureState('添加子元素');
+        var parent = S.elements[parentIdx];
+        if (!parent.children) parent.children = [];
+        var newChild = JSON.parse(JSON.stringify(ElementDefaults[childType]()));
+        newChild.x = 0;
+        newChild.y = parent.children.length * 30;
+        parent.children.push(newChild);
+        S.setDirty(true);
+        renderConfig(getTemplateMAML);
+        toast('📦 已添加子元素: ' + childType, 'success');
+      }
+      return;
+    }
+    var removeBtn = e.target.closest('[data-remove-child]');
+    if (removeBtn) {
+      var pIdx = Number(removeBtn.dataset.removeChild);
+      var cIdx = Number(removeBtn.dataset.childIdx);
+      if (pIdx >= 0 && pIdx < S.elements.length) {
+        var par = S.elements[pIdx];
+        if (par.children && cIdx >= 0 && cIdx < par.children.length) {
+          captureState('删除子元素');
+          par.children.splice(cIdx, 1);
+          S.setDirty(true);
+          renderConfig(getTemplateMAML);
+          toast('🗑️ 已删除子元素', 'success');
+        }
+      }
+      return;
+    }
+  });
+
+  // MAML 导入
+  document.getElementById('cfgContent').addEventListener('click', function (e) {
+    var importBtn = e.target.closest('[data-action="importMAML"]');
+    if (!importBtn) return;
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.xml';
+    input.onchange = function () {
+      if (!input.files || !input.files[0]) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        try {
+          importMAMLFromXml(reader.result);
+        } catch (err) {
+          toast('❌ 导入失败: ' + err.message, 'error');
+        }
+      };
+      reader.readAsText(input.files[0]);
+    };
+    input.click();
   });
 
   // Element list drag reorder

@@ -2,7 +2,7 @@
 // 拆分后的入口文件，导入子模块并暴露 JCM 全局接口
 import * as S from '../state.js';
 import { getDevice, generateAutoDetectMAML } from '../devices.js';
-import { escXml, generateMAML, validateMAML } from '../maml.js';
+import { generateMAML, validateMAML, renderEl } from '../maml.js';
 import { TEMPLATES } from '../templates/index.js';
 import { renderTemplatePreview, PreviewRenderer } from '../live-preview.js';
 import { captureState, undo, redo, undoTo, getHistoryLabels, resetHistory } from '../history.js';
@@ -60,79 +60,8 @@ function generateCustomMAML() {
   lines.push(generateAutoDetectMAML());
   lines.push('  <Rectangle w="#view_width" h="#view_height" fillColor="' + S.cfg.bgColor + '" />');
   S.elements.forEach(function (el) {
-    switch (el.type) {
-      case 'text': {
-        var a = el.textAlign && el.textAlign !== 'left' ? ' textAlign="' + el.textAlign + '"' : '';
-        var ml = el.multiLine ? ' multiLine="true"' : '';
-        var w = el.multiLine || (el.textAlign && el.textAlign !== 'left') ? ' w="' + (el.w || 200) + '"' : '';
-        var b = el.bold ? ' bold="true"' : '';
-        var ff = el.fontFamily && el.fontFamily !== 'default' ? ' fontFamily="' + el.fontFamily + '"' : '';
-        var alpha = (el.opacity !== undefined && el.opacity !== 100) ? ' alpha="' + (el.opacity / 100).toFixed(2) + '"' : '';
-        var sh = '';
-        if (el.shadow === 'light') sh = ' shadow="1" shadowColor="#000000"';
-        else if (el.shadow === 'dark') sh = ' shadow="3" shadowColor="#000000"';
-        else if (el.shadow === 'glow') sh = ' shadow="4" shadowColor="' + (el.color || '#ffffff') + '"';
-        var tg = '';
-        if (el.textGradient && el.textGradient !== 'none') {
-          var gradColors = { sunset: '#ff6b6b,#feca57', ocean: '#0984e3,#00cec9', neon: '#ff00ff,#00ffff', gold: '#f39c12,#fdcb6e', aurora: '#6c5ce7,#00b894' };
-          var gc = el.textGradient === 'custom' ? (el.color || '#ffffff') + ',' + (el.gradientColor2 || '#ff6b6b') : gradColors[el.textGradient] || gradColors.sunset;
-          tg = ' gradientColors="' + gc + '" gradientOrientation="top_bottom"';
-        }
-        var ts = '';
-        if (el.textStroke && el.textStroke > 0) ts = ' stroke="' + el.textStroke + '" strokeColor="' + (el.textStrokeColor || '#000000') + '"';
-        var rot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
-        var lh = el.multiLine && el.lineHeight && el.lineHeight !== 1.4 ? ' lineHeight="' + el.lineHeight + '"' : '';
-        // Support expression (textExp) for dynamic template elements
-        if (el.expression) {
-          lines.push('    <Text textExp="' + el.expression + '" x="' + el.x + '" y="' + el.y + '" size="' + el.size + '" color="' + el.color + '"' + w + a + ml + b + ff + alpha + sh + tg + ts + rot + lh + ' />');
-        } else {
-          lines.push('    <Text text="' + escXml(el.text || '') + '" x="' + el.x + '" y="' + el.y + '" size="' + el.size + '" color="' + el.color + '"' + w + a + ml + b + ff + alpha + sh + tg + ts + rot + lh + ' />');
-        }
-        break;
-      }
-      case 'rectangle': {
-        var rectAlpha = (el.opacity !== undefined && el.opacity !== 100) ? ' alpha="' + (el.opacity / 100).toFixed(2) + '"' : '';
-        var rectFill = el.fillColor2 ? ' fillColor="' + el.color + '" fillColor2="' + el.fillColor2 + '"' : ' fillColor="' + el.color + '"';
-        var rectRot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
-        var rectBlur = el.blur ? ' blur="' + el.blur + '"' : '';
-        lines.push('    <Rectangle x="' + el.x + '" y="' + el.y + '" w="' + el.w + '" h="' + el.h + '"' + rectFill + (el.radius ? ' cornerRadius="' + el.radius + '"' : '') + rectAlpha + rectRot + rectBlur + ' />');
-        break;
-      }
-      case 'circle': {
-        var circAlpha = (el.opacity !== undefined && el.opacity !== 100) ? ' alpha="' + (el.opacity / 100).toFixed(2) + '"' : '';
-        var circStroke = el.strokeWidth > 0 ? ' stroke="' + el.strokeWidth + '" strokeColor="' + (el.strokeColor || '#ffffff') + '"' : '';
-        lines.push('    <Circle x="' + el.x + '" y="' + el.y + '" r="' + el.r + '" fillColor="' + el.color + '"' + circAlpha + circStroke + (el.rotation ? ' rotation="' + el.rotation + '"' : '') + ' />');
-        break;
-      }
-      case 'image': {
-        var imgSrc = el.src || el.fileName || '';
-        var folder = imgSrc && S.uploadedFiles[imgSrc] && S.uploadedFiles[imgSrc].mimeType.indexOf('video/') === 0 ? 'videos' : 'images';
-        lines.push('    <Image src="' + folder + '/' + escXml(imgSrc) + '" x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 100) + '" h="' + (el.h || 100) + '" />');
-        break;
-      }
-      case 'video':
-        lines.push('    <Video src="videos/' + escXml(el.src || el.fileName || '') + '" x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 240) + '" h="' + (el.h || 135) + '" autoPlay="true" loop="true" />');
-        break;
-      case 'arc':
-        lines.push('    <!-- Arc: MAML 不原生支持弧形，用圆形近似 -->');
-        lines.push('    <Circle x="' + el.x + '" y="' + el.y + '" r="' + (el.r || 40) + '" fillColor="transparent" stroke="' + (el.strokeWidth || 6) + '" strokeColor="' + el.color + '" />');
-        break;
-      case 'progress':
-        lines.push('    <Rectangle x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 200) + '" h="' + (el.h || 8) + '" fillColor="' + (el.bgColor || '#333333') + '" cornerRadius="' + (el.radius || 4) + '" />');
-        lines.push('    <Rectangle x="' + el.x + '" y="' + el.y + '" w="' + Math.round((el.w || 200) * (el.value || 60) / 100) + '" h="' + (el.h || 8) + '" fillColor="' + el.color + '" cornerRadius="' + (el.radius || 4) + '" />');
-        break;
-      case 'lottie':
-        lines.push('    <!-- ⚠️ Lottie 动画: MAML 引擎不支持此格式，请替换为 Image 或 Video 元素 -->');
-        break;
-    }
-    if (el.animationName && lines.length > 0) {
-      var lastLine = lines[lines.length - 1];
-      if (lastLine.indexOf('/>') > 0) {
-        var anim = ' animationName="' + el.animationName + '" animationDuration="' + (el.animationDuration || 500) + '" animationDelay="' + (el.animationDelay || 0) + '" animationRepeat="' + (el.animationRepeat || 1) + '"';
-        if (el.animationInfinite) anim += ' animationInfinite="true"';
-        lines[lines.length - 1] = lastLine.replace(' />', anim + ' />');
-      }
-    }
+    var xml = renderEl(el, S.uploadedFiles, '    ');
+    if (xml) lines.push(xml);
   });
   return lines.join('\n');
 }
