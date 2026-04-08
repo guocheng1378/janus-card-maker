@@ -1665,3 +1665,11 @@ input[type=range]::-moz-range-track{
   font-size:14px;font-weight:600;color:var(--accent2);z-index:100;
   animation:fadeIn .15s ease;pointer-events:none;
 }
+
+/* ─── Recent Template Badge ─── */
+.tpl-recent-badge{
+  position:absolute;top:8px;right:8px;z-index:2;
+  font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;
+  background:var(--accent);color:#fff;opacity:.8;
+  animation:fadeIn .3s ease;
+}
