@@ -36,6 +36,15 @@ const JS_FILES = [
   'js/templates/notification.js',
   'js/templates/carousel.js',
   'js/templates/quick_settings.js',
+  'js/templates/torch.js',
+  'js/templates/screen_time.js',
+  'js/templates/storage.js',
+  'js/templates/signal.js',
+  'js/templates/water.js',
+  'js/templates/stopwatch.js',
+  'js/templates/world_clock3.js',
+  'js/templates/todo.js',
+  // 新增模板 end
   'js/templates/index.js',  // 汇总所有模板
   // Core
   'js/live-preview.js',
