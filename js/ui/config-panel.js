@@ -178,6 +178,16 @@ export function renderConfig(getTemplateMAML) {
 
   var html = '';
 
+  // Camera zone warning
+  if (S.elements.some(function(el) { return el.x < device.width * device.cameraZoneRatio; })) {
+    html += '<div style="padding:8px 12px;margin-bottom:12px;background:rgba(231,122,98,.08);border:1px solid rgba(231,122,98,.2);border-radius:var(--radius-sm);font-size:12px;color:var(--red);display:flex;align-items:center;gap:8px"><span>⚠️</span> 有元素在摄像头遮挡区内，可能被遮挡</div>';
+  }
+
+  // Custom template welcome
+  if (S.tpl.id === 'custom' && S.elements.length === 0) {
+    html += '<div style="text-align:center;padding:32px 20px;margin-bottom:16px;background:var(--surface);border:1px dashed var(--border);border-radius:var(--radius)"><div style="font-size:40px;margin-bottom:12px;opacity:.5">🎨</div><div style="font-size:14px;font-weight:600;margin-bottom:4px">从零开始创建卡片</div><div style="font-size:12px;color:var(--text2)">点击下方按钮添加文字、图片、矩形等元素</div><div style="margin-top:12px;font-size:11px;color:var(--text3)">💡 按 <kbd style="font-size:10px;padding:2px 6px;border-radius:4px;background:var(--surface2);border:1px solid var(--border)">N</kbd> 快速添加文字</div></div>';
+  }
+
   // Template config groups
   S.tpl.config.forEach(function (group) {
     html += sec('tpl_' + group.group, group.group, '<div class="config-grid">' +
