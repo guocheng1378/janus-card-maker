@@ -58,6 +58,15 @@ import flip_clock from './flip_clock.js';
 import breathing from './breathing.js';
 import pixel_clock from './pixel_clock.js';
 
+// -- 新增模板: MAML v2 功能展示 --
+import animated_clock from './animated_clock.js';
+import slide_unlock from './slide_unlock.js';
+import smart_battery from './smart_battery.js';
+import action_buttons from './action_buttons.js';
+import number_clock from './number_clock.js';
+import weather_cp from './weather_cp.js';
+import persistent_counter from './persistent_counter.js';
+
 export const TEMPLATES = [
   // 原有 22 个
   clock, quote, battery, countdown, gradient,
@@ -70,6 +79,9 @@ export const TEMPLATES = [
   torch, screen_time, storage, signal,
   hitokoto, news, exchange_rate, bilibili,
   dice, flip_clock, breathing, pixel_clock,
+  // MAML v2 新功能模板
+  animated_clock, slide_unlock, smart_battery, action_buttons,
+  number_clock, weather_cp, persistent_counter,
 ];
 
 export const TPL_CATEGORIES = [
@@ -99,4 +111,7 @@ export const TPL_CATEGORY_MAP = {
   hitokoto: 'network', news: 'network', exchange_rate: 'network', bilibili: 'network',
   // 趣味
   dice: 'fun',
+  animated_clock: 'general', slide_unlock: 'general', smart_battery: 'general',
+  action_buttons: 'tool', number_clock: 'general', weather_cp: 'device',
+  persistent_counter: 'tool',
 };

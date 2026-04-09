@@ -408,6 +408,61 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
       case 'musiccontrol': {
         return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 200) * self.scale + 'px;height:' + (el.h || 120) * self.scale + 'px;background:rgba(46,204,113,0.1);border:1px dashed rgba(46,204,113,0.4);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;color:#2ecc71;gap:4px;' + dc + '">🎵<span style="font-size:8px;opacity:0.7">MusicControl</span></div>' + sizeLabel;
       }
+      case 'numberimage': {
+        var niText = el.expression ? '~' + (el.number || '12') : (el.number || '12');
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 30) * self.scale + 'px;height:' + (el.h || 50) * self.scale + 'px;background:rgba(255,193,7,0.1);border:1px dashed rgba(255,193,7,0.4);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:' + (el.h || 50) * self.scale * 0.6 + 'px;color:#ffc107;' + dc + '">#' + self.esc(niText) + '</div>' + sizeLabel;
+      }
+      case 'mask': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:60px;height:60px;background:rgba(255,152,0,0.15);border:1px dashed rgba(255,152,0,0.5);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#ff9800;' + dc + '">🎭 Mask</div>' + sizeLabel;
+      }
+      case 'slider': {
+        var slW = (el.w || 280) * self.scale, slH = (el.h || 60) * self.scale;
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + slW + 'px;height:' + slH + 'px;background:rgba(0,150,136,0.1);border:1px dashed rgba(0,150,136,0.4);border-radius:8px;display:flex;align-items:center;justify-content:space-between;padding:0 8px;font-size:10px;color:#009688;' + dc + '">👆<div style="flex:1;height:2px;background:rgba(0,150,136,0.3);margin:0 6px;border-radius:1px"></div>🎯<span style="font-size:8px;opacity:0.7;margin-left:4px">Slider: ' + self.esc(el.name || '') + '</span></div>' + sizeLabel;
+      }
+      case 'button': {
+        var btW = (el.w || 100) * self.scale, btH = (el.h || 40) * self.scale;
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + btW + 'px;height:' + btH + 'px;background:rgba(33,150,243,0.15);border:1px dashed rgba(33,150,243,0.5);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#2196f3;' + dc + '">🔘 Button' + (el.name ? ': ' + self.esc(el.name) : '') + '</div>' + sizeLabel;
+      }
+      case 'variable': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:4px;top:' + py + 'px;font-size:8px;color:rgba(156,39,176,0.6);white-space:nowrap;pointer-events:none">📦 Var: ' + self.esc(el.name || '?') + '</div>';
+      }
+      case 'variablearray': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:4px;top:' + py + 'px;font-size:8px;color:rgba(156,39,176,0.6);white-space:nowrap;pointer-events:none">📦 VarArray: ' + self.esc(el.name || '?') + '</div>';
+      }
+      case 'trigger': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:4px;top:' + py + 'px;font-size:8px;color:rgba(244,67,54,0.6);white-space:nowrap;pointer-events:none">⚡ Trigger: ' + self.esc(el.action || 'click') + '</div>';
+      }
+      case 'variablecommand':
+      case 'bindercommand':
+      case 'musiccommand':
+      case 'frameratecommand':
+      case 'multicommand': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:8px;top:' + py + 'px;font-size:8px;color:rgba(96,125,139,0.5);white-space:nowrap;pointer-events:none">⚙️ ' + self.esc(el.type) + '</div>';
+      }
+      case 'ifcommand': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:4px;top:' + py + 'px;font-size:8px;color:rgba(255,152,0,0.6);white-space:nowrap;pointer-events:none">❓ IfCommand</div>';
+      }
+      case 'variablebinders': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:4px;top:' + py + 'px;font-size:8px;color:rgba(33,150,243,0.6);white-space:nowrap;pointer-events:none">🔗 VariableBinders</div>';
+      }
+      case 'contentprovider': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:4px;top:' + py + 'px;font-size:8px;color:rgba(33,150,243,0.6);white-space:nowrap;pointer-events:none">📊 ContentProvider</div>';
+      }
+      case 'permanence': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:4px;top:' + py + 'px;font-size:8px;color:rgba(76,175,80,0.6);white-space:nowrap;pointer-events:none">💾 Permanence: ' + self.esc(el.name || '?') + '</div>';
+      }
+      case 'folmestate': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:4px;top:' + py + 'px;font-size:8px;color:rgba(233,30,99,0.6);white-space:nowrap;pointer-events:none">✨ FolmeState</div>';
+      }
+      case 'folmeconfig': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:4px;top:' + py + 'px;font-size:8px;color:rgba(233,30,99,0.6);white-space:nowrap;pointer-events:none">✨ FolmeConfig</div>';
+      }
+      case 'mipalettebinder': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:4px;top:' + py + 'px;font-size:8px;color:rgba(255,87,34,0.6);white-space:nowrap;pointer-events:none">🎨 MiPaletteBinder</div>';
+      }
+      case 'wallpaper': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:0;top:0;width:100%;height:100%;background:rgba(158,158,158,0.08);border:1px dashed rgba(158,158,158,0.3);display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(158,158,158,0.5);' + dc + '">🖼 Wallpaper</div>';
+      }
       default: return sizeLabel;
     }
   }).join('');
