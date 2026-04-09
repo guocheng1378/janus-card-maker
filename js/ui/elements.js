@@ -178,6 +178,31 @@ export function arrangeGrid(cols, gapH, gapV) {
   toast('📊 已网格排列 (' + cols + '列)', 'success');
 }
 
+// ── Align multiple elements (all to selected element) ──
+export function alignMultipleElements(align) {
+  if (S.elements.length < 2 || S.selIdx < 0) return;
+  captureState('多元素对齐 ' + align);
+  var src = S.elements[S.selIdx];
+  var srcW = src.w || (src.r ? src.r * 2 : 0) || 100;
+  var srcH = src.h || (src.r ? src.r * 2 : 0) || 30;
+
+  S.elements.forEach(function (el, i) {
+    if (i === S.selIdx) return;
+    var ew = el.w || (el.r ? el.r * 2 : 0) || 100;
+    var eh = el.h || (el.r ? el.r * 2 : 0) || 30;
+    switch (align) {
+      case 'left':     el.x = src.x; break;
+      case 'right':    el.x = src.x + srcW - ew; break;
+      case 'hcenter':  el.x = Math.round(src.x + (srcW - ew) / 2); break;
+      case 'top':      el.y = src.y; break;
+      case 'bottom':   el.y = src.y + srcH - eh; break;
+      case 'vcenter':  el.y = Math.round(src.y + (srcH - eh) / 2); break;
+    }
+  });
+  S.setDirty(true);
+  toast('🔗 已对齐到选中元素', 'success');
+}
+
 // ── Apply constraint on device change ──
 export function applyConstraint(el, device) {
   if (!el.constraint) return;

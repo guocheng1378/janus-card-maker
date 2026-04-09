@@ -194,6 +194,103 @@ export function renderEl(el, files, indent) {
   }
 }
 
+// ── 响应式渲染: 将硬编码坐标转为 MAML 表达式，自动适配各机型 ──
+// REF_W / REF_H = 基准机型尺寸 (Pro Max: 976×596)
+var REF_W = 976, REF_H = 596;
+
+function respX(val) {
+  if (val <= 0) return '0';
+  // 如果在摄像头区域右边，用 #marginL + offset
+  var marginL = Math.round(REF_W * 0.30);
+  if (val > marginL) {
+    var offset = val - marginL;
+    return '(#marginL + round(' + offset + ' * #scaleX))';
+  }
+  return 'round(' + val + ' * #scaleX)';
+}
+
+function respY(val) {
+  if (val <= 0) return '0';
+  return 'round(' + val + ' * #scaleY)';
+}
+
+function respW(val) {
+  if (val <= 0) return '0';
+  return 'round(' + val + ' * #scaleX)';
+}
+
+function respH(val) {
+  if (val <= 0) return '0';
+  return 'round(' + val + ' * #scaleY)';
+}
+
+function respSize(val) {
+  if (val <= 0) return '12';
+  return 'round(' + val + ' * #scaleX)';
+}
+
+export function renderElResponsive(el, files, indent) {
+  var p = indent || '    ';
+  if (el._rawXml) return p + el._rawXml;
+
+  switch (el.type) {
+    case 'text': {
+      var t = el.expression ? 'textExp="' + el.expression + '"' : 'text="' + escXml(el.text || '') + '"';
+      var a = el.textAlign && el.textAlign !== 'left' ? ' textAlign="' + el.textAlign + '"' : '';
+      var ml = el.multiLine ? ' multiLine="true"' : '';
+      var rw = el.multiLine || (el.textAlign && el.textAlign !== 'left') ? ' w="' + respW(el.w || 200) + '"' : '';
+      var b = el.bold ? ' bold="true"' : '';
+      var ff = el.fontFamily && el.fontFamily !== 'default' ? ' fontFamily="' + el.fontFamily + '"' : '';
+      var sh = '';
+      if (el.shadow === 'light') sh = ' shadow="1" shadowColor="#000000"';
+      else if (el.shadow === 'dark') sh = ' shadow="3" shadowColor="#000000"';
+      else if (el.shadow === 'glow') sh = ' shadow="4" shadowColor="' + (el.color || '#ffffff') + '"';
+      var tg = '';
+      if (el.textGradient && el.textGradient !== 'none') {
+        var gradColors = { sunset: '#ff6b6b,#feca57', ocean: '#0984e3,#00cec9', neon: '#ff00ff,#00ffff', gold: '#f39c12,#fdcb6e', aurora: '#6c5ce7,#00b894' };
+        var gc = el.textGradient === 'custom' ? (el.color || '#ffffff') + ',' + (el.gradientColor2 || '#ff6b6b') : gradColors[el.textGradient] || gradColors.sunset;
+        var tgo = el.gradientOrientation && el.gradientOrientation !== 'top_bottom' ? el.gradientOrientation : 'top_bottom';
+        tg = ' gradientColors="' + gc + '" gradientOrientation="' + tgo + '"';
+      }
+      var ts = '';
+      if (el.textStroke && el.textStroke > 0) ts = ' stroke="' + el.textStroke + '" strokeColor="' + (el.textStrokeColor || '#000000') + '"';
+      var rot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
+      var lh = el.multiLine && el.lineHeight && el.lineHeight !== 1.4 ? ' lineHeight="' + el.lineHeight + '"' : '';
+      return p + '<Text ' + t + ' x="' + respX(el.x) + '" y="' + respY(el.y) + '" size="' + respSize(el.size) + '" color="' + el.color + '"' + rw + a + ml + b + ff + alphaAttr(el) + sh + tg + ts + rot + lh + ' />';
+    }
+    case 'rectangle': {
+      var rectRot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
+      var blur = el.blur ? ' blur="' + el.blur + '"' : '';
+      var rectStroke = el.strokeWidth > 0 ? ' stroke="' + el.strokeWidth + '" strokeColor="' + (el.strokeColor || '#ffffff') + '"' : '';
+      var gradOri = (el.fillColor2 && el.gradientOrientation && el.gradientOrientation !== 'top_bottom') ? ' gradientOrientation="' + el.gradientOrientation + '"' : '';
+      var fillColor2 = el.fillColor2 ? ' fillColor2="' + el.fillColor2 + '"' : '';
+      return p + '<Rectangle x="' + respX(el.x) + '" y="' + respY(el.y) + '" w="' + respW(el.w) + '" h="' + respH(el.h) + '" fillColor="' + el.color + '"' + fillColor2 + (el.radius ? ' cornerRadius="' + el.radius + '"' : '') + alphaAttr(el) + rectRot + blur + rectStroke + gradOri + ' />';
+    }
+    case 'circle':
+      return p + '<Circle x="' + respX(el.x) + '" y="' + respY(el.y) + '" r="' + respW(el.r) + '" fillColor="' + el.color + '"' + alphaAttr(el) + ' />';
+    case 'image': {
+      var srcFile = el.src || el.fileName || '';
+      var folder = srcFile && files[srcFile] && files[srcFile].mimeType.indexOf('video/') === 0 ? 'videos' : 'images';
+      var fitAttr = el.fit && el.fit !== 'cover' ? ' fitMode="' + el.fit + '"' : '';
+      var imgRadius = el.radius ? ' cornerRadius="' + el.radius + '"' : '';
+      return p + '<Image src="' + folder + '/' + escXml(srcFile) + '" x="' + respX(el.x) + '" y="' + respY(el.y) + '" w="' + respW(el.w || 100) + '" h="' + respH(el.h || 100) + '"' + fitAttr + imgRadius + alphaAttr(el) + ' />';
+    }
+    case 'video':
+      return p + '<Video src="videos/' + escXml(el.src || el.fileName || '') + '" x="' + respX(el.x) + '" y="' + respY(el.y) + '" w="' + respW(el.w || 240) + '" h="' + respH(el.h || 135) + '" autoPlay="true" loop="true" />';
+    case 'progress': {
+      var pw = respW(el.w || 200);
+      var ph = respH(el.h || 8);
+      var pv = el.value || 60;
+      var pr = el.radius || 4;
+      var barW = 'round(' + (el.w || 200) + ' * ' + (pv / 100) + ' * #scaleX)';
+      return p + '<Rectangle x="' + respX(el.x) + '" y="' + respY(el.y) + '" w="' + pw + '" h="' + ph + '" fillColor="' + (el.bgColor || '#333333') + '" cornerRadius="' + pr + '" />\n' +
+        p + '<Rectangle x="' + respX(el.x) + '" y="' + respY(el.y) + '" w="' + barW + '" h="' + ph + '" fillColor="' + el.color + '" cornerRadius="' + pr + '" />';
+    }
+    default:
+      return renderEl(el, files, indent); // fallback to static
+  }
+}
+
 export function generateMAML(opts) {
   var lines = [];
   var attrs = 'screenWidth="' + opts.device.width + '" frameRate="0" scaleByDensity="false"';

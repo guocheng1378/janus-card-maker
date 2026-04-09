@@ -179,6 +179,17 @@ function renderPositionSection(el, idx) {
     html += '</div>';
   }
 
+  // 🔗 多元素对齐 (对齐到选中元素)
+  if (S.elements.length >= 2) {
+    html += '<div style="margin-top:8px"><div style="font-size:10px;color:var(--text3);font-weight:600;margin-bottom:4px">🔗 多元素对齐 (→选中)</div>';
+    html += '<div style="display:flex;gap:3px;flex-wrap:wrap">';
+    ['left', 'hcenter', 'right', 'top', 'vcenter', 'bottom'].forEach(function (a) {
+      var icons = { left: '⬅ 左对齐', hcenter: '↔ 居中', right: '➡ 右对齐', top: '⬆ 顶对齐', vcenter: '↕ 居中', bottom: '⬇ 底对齐' };
+      html += '<button class="el-btn" data-multi-align="' + a + '" style="font-size:10px;padding:3px 6px">' + icons[a] + '</button>';
+    });
+    html += '</div></div>';
+  }
+
   // 🎯 约束布局
   var constraintOptions = [
     { v: '', l: '自由' }, { v: 'pin-left', l: '⬅ 钉左' }, { v: 'pin-right', l: '➡ 钉右' },

@@ -1,6 +1,7 @@
 // ─── Devices: 设备参数 ─────────────────────────────────────────────
 
 export const DEVICES = {
+  auto:  { id: 'auto',  label: '🔄 自动适配 — 976×596(基准)', width: 976, height: 596, cameraZoneRatio: 0.30, isAuto: true },
   q200:  { id: 'q200',  label: 'Pro — 904×572',       width: 904,  height: 572,  cameraZoneRatio: 0.30 },
   p2:    { id: 'p2',    label: 'Pro Max — 976×596',    width: 976,  height: 596,  cameraZoneRatio: 0.30 },
   q100:  { id: 'q100',  label: '标准版 — 840×520',     width: 840,  height: 520,  cameraZoneRatio: 0.28 },
@@ -8,7 +9,11 @@ export const DEVICES = {
 };
 
 export function getDevice(id) {
-  return DEVICES[id] || DEVICES.p2;
+  return DEVICES[id] || DEVICES.auto;
+}
+
+export function isAutoDevice(device) {
+  return device && device.isAuto === true;
 }
 
 export function cameraZoneWidth(device) {
