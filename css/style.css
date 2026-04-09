@@ -533,11 +533,9 @@ a.theme-toggle{text-decoration:none}
   animation:modalIn .25s cubic-bezier(.4,0,.2,1);
 }
 @keyframes modalIn{from{opacity:0}to{opacity:1}}
-.modal{
-  animation:modalSlideIn .3s cubic-bezier(.34,1.56,.64,1);
-}
 @keyframes modalSlideIn{from{opacity:0;transform:translateY(16px) scale(.96)}to{opacity:1;transform:none}}
 .modal{
+  animation:modalSlideIn .3s cubic-bezier(.34,1.56,.64,1);
   background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
   width:420px;max-width:90vw;max-height:80vh;overflow:auto;box-shadow:var(--shadow);
 }
@@ -946,12 +944,7 @@ kbd{
 /* ─── Config Section Collapse ─── */
 
 /* ─── Smart Alignment Guide Lines ─── */
-.align-guide{
-  position:absolute;z-index:25;pointer-events:none;
-  background:var(--accent);opacity:0.6;
-}
-.align-guide-h{height:1px;width:100%;left:0}
-.align-guide-v{width:1px;height:100%;top:0}
+/* (styles defined later in file, with animation and glow) */
 .align-guide-equal{
   background:var(--green)!important;opacity:0.8;
   box-shadow:0 0 6px rgba(0,201,160,0.4);

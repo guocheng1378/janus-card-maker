@@ -52,7 +52,7 @@ rear-eye-card-maker/
 │   ├── transcode.js        ← FFmpeg.wasm 视频转码
 │   ├── changelog.js        ← 更新日志
 │   ├── i18n.js             ← 国际化
-│   ├── templates/          ← 预设模板定义（19 个）
+│   ├── templates/          ← 预设模板定义（17 个）
 │   └── ui/                 ← UI 子模块
 │       ├── index.js        ← UI 入口 + 事件 + JCM 全局接口
 │       ├── toast.js        ← Toast 通知
@@ -112,51 +112,39 @@ npm run build
 
 ## 模板
 
-### 预设模板（22 个）
+### 预设模板（17 个）
 
-| 模板 | 说明 | 动态更新 |
+| 模板 | 类别 | 动态更新 |
 |------|------|----------|
-| ⏰ 时钟卡片 | 时间 + 日期 | DateTime.Minute |
-| 💬 名言卡片 | 文字 + 作者 | 静态 |
-| 🔋 电池卡片 | 电量条 + 状态 | Battery |
-| ⏳ 倒计时卡片 | 倒计时到指定日期 | DateTime.Day |
-| 🌈 渐变文字卡片 | 渐变背景 + 居中文字 | 静态 |
-| 🏃 步数卡片 | 步数 + 进度条 | Step |
-| 📅 日历卡片 | 日期 + 日程 | DateTime.Day |
-| 🌏 双时钟 | 两个时区 | DateTime.Minute |
-| 💊 每日一句 | 每天轮换语录 | DateTime.Day |
-| 🎯 环形进度 | 步数/电量环形图 | Step,Battery |
-| 📊 仪表盘 | 聚合时间/步数/电量/天气 | DateTime.Minute |
-| 🖼️ 纯图片 | 壁纸/照片/二维码 | 静态 |
-| 🎤 歌词卡片 | 绑定系统音乐，显示歌词 | DateTime.Minute |
-| 🎬 动态壁纸 | 背景视频/动画 | 静态 |
-| 🖼️ 照片轮播 | 多张图片定时切换 | 静态 |
-| 🛠️ 自定义 | 从零创建 | - |
-
-### 设备绑定模板（6 个）
-
-| 模板 | 说明 | 数据绑定 |
-|------|------|----------|
-| 🌤️ 天气卡片 | 绑定系统天气 | ContentProvider: weather |
-| 🎵 音乐卡片 | 绑定系统播放器 | MusicControl |
-| ❤️ 健康数据 | 心率/血氧/步数/睡眠 | DateTime.Minute |
-| 📅 日程卡片 | 绑定系统日历 | DateTime.Hour |
-| 🔔 通知卡片 | 显示系统最新通知 | DateTime.Minute |
-| ⚡ 快捷开关 | WiFi/蓝牙/亮度等开关状态 | DateTime.Minute |
-
-> ⚠️ 设备绑定模板需要在小米背屏设备上使用，浏览器预览显示占位图。
+| 🛠️ 自定义 | 通用 | 静态 |
+| 🕐 动画时钟 | 时钟 | DateTime.Second |
+| 🔓 滑动解锁 | 通用 | DateTime.Minute |
+| 🔋 智能电池 | 设备 | Battery |
+| ⚡ 快捷按钮 | 工具 | DateTime.Minute |
+| 🔢 数字时钟 | 时钟 | DateTime.Minute |
+| 🌤️ 天气CP绑定 | 设备 | DateTime.Hour |
+| 📊 持久计数器 | 工具 | DateTime.Minute |
+| 🏋️ 健身圆环 | 健康 | Sensor |
+| 🎵 音乐卡片 | 设备 | Music |
+| 📅 精美日期 | 时钟 | DateTime.Day |
+| 🌍 双时区时钟 | 时钟 | DateTime.Second |
+| 📝 快捷便签 | 通用 | DateTime.Minute |
+| 🔆 亮度滑块 | 设备 | DateTime.Minute |
+| 💡 呼吸灯 | 通用 | DateTime.Second |
+| 🖼️ 相框卡片 | 通用 | 静态 |
+| 🍅 番茄钟 | 工具 | DateTime.Second |
 
 ## 功能清单
 
 ### 编辑
-- 🎨 22 个预设模板
+- 🎨 17 个预设模板
 - 🛠️ 自定义模式：文字、矩形、圆形、线条、图片、视频
 - 🔤 字体选择（8 种）
 - 🌈 文字渐变（6 种预设 + 自定义）
 - ✏️ 文字描边（粗细 + 颜色）
 - 📐 矩形渐变 + 模糊效果
 - 📷 摄像头避让（按设备实际比例）
-- ↩️ 撤销/重做（Ctrl+Z / Ctrl+Y，50 步）
+- ↩️ 撤销/重做（Ctrl+Z / Ctrl+Y，30 步）
 - 📋 复制粘贴（Ctrl+C / Ctrl+V）
 - 🎯 元素对齐（6 种对齐方式）
 - 📐 吸附网格 + 智能对齐线
