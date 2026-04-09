@@ -37,6 +37,7 @@
           <button onclick="JCM.openMarket();JCM.toggleMoreMenu()">🏪 模板市场</button>
           <button onclick="JCM.openDesignTools();JCM.toggleMoreMenu()">🎨 设计工具</button>
           <button onclick="JCM.showSnapshots();JCM.toggleMoreMenu()">📸 版本快照</button>
+          <button onclick="JCM.showGistBackup();JCM.toggleMoreMenu()">🌐 Gist 云备份</button>
           <button onclick="JCM.toggleHistory();JCM.toggleMoreMenu()">📜 操作历史</button>
           <button onclick="JCM.toggleHelp();JCM.toggleMoreMenu()">⌨️ 快捷键</button>
           <button onclick="JCM.toggleChangelog();JCM.toggleMoreMenu()">📝 更新日志</button>
@@ -139,6 +140,9 @@
         </select>
         <label class="check-label">
           <input type="checkbox" id="showCamera" checked> 摄像头遮挡区
+        </label>
+        <label class="check-label">
+          <input type="checkbox" id="showSafeZone"> 🛡️ 安全区
         </label>
         <label class="check-label">
           <input type="checkbox" id="showGrid" onchange="JCM.toggleGrid()"> <span data-i18n="preview.grid">网格</span>

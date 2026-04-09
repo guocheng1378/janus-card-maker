@@ -952,6 +952,16 @@ kbd{
 }
 .align-guide-h{height:1px;width:100%;left:0}
 .align-guide-v{width:1px;height:100%;top:0}
+.align-guide-equal{
+  background:var(--green)!important;opacity:0.8;
+  box-shadow:0 0 6px rgba(0,201,160,0.4);
+}
+.align-guide-equal::after{
+  content:attr(data-label);position:absolute;
+  font-size:9px;color:var(--green);background:rgba(0,0,0,.7);
+  padding:1px 5px;border-radius:3px;top:-12px;left:50%;transform:translateX(-50%);
+  white-space:nowrap;
+}
 
 /* ─── Ruler: 标尺 + 坐标 + 十字准线 ─── */
 .ruler-tooltip{

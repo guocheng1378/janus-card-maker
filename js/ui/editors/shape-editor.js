@@ -34,6 +34,27 @@ export function renderRectangleEditor(el, idx) {
       }).join('') + '</select>');
   }
 
+  // 多色阶渐变编辑器
+  var stops = el.gradientStops || (el.fillColor2 ? [{ color: el.color, pos: 0 }, { color: el.fillColor2, pos: 100 }] : null);
+  if (el.fillColor2 || (stops && stops.length > 0)) {
+    var stopsData = stops || [{ color: el.color, pos: 0 }, { color: el.fillColor2 || '#ffffff', pos: 100 }];
+    var gradCSS = stopsData.map(function (s) { return s.color + ' ' + s.pos + '%'; }).join(',');
+    var gradAngle = { top_bottom: '180deg', left_right: '90deg', tl_br: '135deg', tr_bl: '225deg' };
+    var angle = gradAngle[el.gradientOrientation] || '180deg';
+    html += '<div style="margin:8px 0"><div style="font-size:10px;color:var(--text3);margin-bottom:4px">🌈 多色阶渐变</div>';
+    html += '<div style="height:32px;border-radius:6px;background:linear-gradient(' + angle + ',' + gradCSS + ');margin-bottom:6px;position:relative;border:1px solid var(--border)"></div>';
+    html += '<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">';
+    stopsData.forEach(function (s, si) {
+      html += '<div style="display:flex;align-items:center;gap:2px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 4px">' +
+        '<input type="color" value="' + s.color + '" data-gradient-stop-color="' + si + '" data-idx="' + idx + '" style="width:20px;height:18px;padding:0;border:none;cursor:pointer">' +
+        '<input type="number" value="' + s.pos + '" data-gradient-stop-pos="' + si + '" data-idx="' + idx + '" min="0" max="100" style="width:32px;font-size:10px;text-align:center;border:none;background:transparent;color:var(--text)">%' +
+        (stopsData.length > 2 ? '<button class="el-btn" data-remove-gradient-stop="' + si + '" data-idx="' + idx + '" style="font-size:9px;padding:0 3px;color:var(--red)">✕</button>' : '') +
+        '</div>';
+    });
+    html += '<button class="el-btn" data-add-gradient-stop data-idx="' + idx + '" style="font-size:10px;padding:2px 6px">+ 色标</button>';
+    html += '</div></div>';
+  }
+
   // 渐变预设
   html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:8px">';
   GRAD_PRESETS.forEach(function (p) {

@@ -14,6 +14,24 @@ PreviewRenderer.prototype.bg = function (bg, inner) {
   return '<div style="position:absolute;inset:0;background:' + bg + '"></div>' + inner;
 };
 
+// 安全区域叠加层
+PreviewRenderer.prototype.safeZoneOverlay = function () {
+  var camW = this.device.cameraZoneRatio * 100;
+  var margin = 10;
+  var d = this.device;
+  return '<div style="position:absolute;inset:0;z-index:15;pointer-events:none">' +
+    // 摄像头区域 (红色半透明)
+    '<div style="position:absolute;left:0;top:0;width:' + camW + '%;height:100%;background:rgba(239,122,98,0.08);border-right:1.5px dashed rgba(239,122,98,0.5)">' +
+    '<div style="position:absolute;top:4px;left:4px;font-size:8px;color:rgba(239,122,98,0.7);font-weight:600">📷 摄像头</div>' +
+    '<div style="position:absolute;top:16px;left:4px;font-size:7px;color:rgba(239,122,98,0.5)">' + Math.round(d.width * d.cameraZoneRatio) + 'px</div>' +
+    '</div>' +
+    // 安全区域 (绿色边框)
+    '<div style="position:absolute;left:' + camW + '%;top:' + margin + 'px;right:' + margin + 'px;bottom:' + margin + 'px;border:1px dashed rgba(0,201,160,0.35);border-radius:4px">' +
+    '<div style="position:absolute;top:-1px;right:2px;font-size:7px;color:rgba(0,201,160,0.6)">安全区 ' + Math.round(d.width * (1 - d.cameraZoneRatio) - margin * 2) + '×' + (d.height - margin * 2) + '</div>' +
+    '</div>' +
+    '</div>';
+};
+
 PreviewRenderer.prototype.esc = function (s) {
   return escHtml(s);
 };
@@ -169,9 +187,94 @@ PreviewRenderer.prototype.renderCustom = function (c) {
 };
 
 // ─── Element Rendering ────────────────────────────────────────────
+PreviewRenderer.prototype.renderDistances = function (elements, selIdx) {
+  if (selIdx < 0 || selIdx >= elements.length) return '';
+  var self = this;
+  var sel = elements[selIdx];
+  var selW = (sel.w || (sel.r ? sel.r * 2 : 0) || 100);
+  var selH = (sel.h || (sel.r ? sel.r * 2 : 0) || 30);
+  var selCX = sel.x + selW / 2;
+  var selCY = sel.y + selH / 2;
+  var html = '';
+
+  elements.forEach(function (el, i) {
+    if (i === selIdx || el.visible === false) return;
+    var ew = (el.w || (el.r ? el.r * 2 : 0) || 100);
+    var eh = (el.h || (el.r ? el.r * 2 : 0) || 30);
+
+    // 水平距离
+    var hDist, hLabelX;
+    if (el.x >= sel.x + selW) {
+      hDist = el.x - (sel.x + selW);
+      hLabelX = (sel.x + selW + el.x) / 2;
+    } else if (sel.x >= el.x + ew) {
+      hDist = sel.x - (el.x + ew);
+      hLabelX = (el.x + ew + sel.x) / 2;
+    } else {
+      hDist = 0;
+      hLabelX = Math.max(sel.x, el.x);
+    }
+
+    // 垂直距离
+    var vDist, vLabelY;
+    if (el.y >= sel.y + selH) {
+      vDist = el.y - (sel.y + selH);
+      vLabelY = (sel.y + selH + el.y) / 2;
+    } else if (sel.y >= el.y + eh) {
+      vDist = sel.y - (el.y + eh);
+      vLabelY = (el.y + eh + sel.y) / 2;
+    } else {
+      vDist = 0;
+      vLabelY = Math.max(sel.y, el.y);
+    }
+
+    if (hDist > 0 && hDist < 200) {
+      var lx = self.camW + hLabelX * self.scale;
+      var ly1 = Math.min(sel.y, el.y) * self.scale;
+      var ly2 = Math.max(sel.y + selH, el.y + eh) * self.scale;
+      html += '<div style="position:absolute;left:' + lx + 'px;top:' + ly1 + 'px;width:1px;height:' + (ly2 - ly1) + 'px;background:rgba(253,203,110,0.5);z-index:25;pointer-events:none"></div>';
+      html += '<div style="position:absolute;left:' + (lx - 12) + 'px;top:' + ((ly1 + ly2) / 2 - 7) + 'px;font-size:9px;color:#fdcb6e;background:rgba(0,0,0,.7);padding:1px 5px;border-radius:3px;z-index:26;pointer-events:none;white-space:nowrap">' + Math.round(hDist) + '</div>';
+    }
+    if (vDist > 0 && vDist < 200) {
+      var ly = self.camW + vLabelY * self.scale;
+      var lx1 = Math.min(sel.x, el.x) * self.scale + self.camW;
+      var lx2 = Math.max(sel.x + selW, el.x + ew) * self.scale + self.camW;
+      html += '<div style="position:absolute;left:' + lx1 + 'px;top:' + ly + 'px;height:1px;width:' + (lx2 - lx1) + 'px;background:rgba(253,203,110,0.5);z-index:25;pointer-events:none"></div>';
+      html += '<div style="position:absolute;left:' + ((lx1 + lx2) / 2 - 12) + 'px;top:' + (ly - 8) + 'px;font-size:9px;color:#fdcb6e;background:rgba(0,0,0,.7);padding:1px 5px;border-radius:3px;z-index:26;pointer-events:none;white-space:nowrap">' + Math.round(vDist) + '</div>';
+    }
+  });
+
+  // 等间距检测
+  if (elements.length >= 3) {
+    var sorted = elements.map(function (e, idx) { return { idx: idx, el: e }; }).filter(function (s) { return s.idx !== selIdx && s.el.visible !== false; });
+    // 水平等间距
+    sorted.sort(function (a, b) { return a.el.x - b.el.x; });
+    var gaps = [];
+    for (var gi = 1; gi < sorted.length; gi++) {
+      gaps.push({ gap: sorted[gi].el.x - sorted[gi - 1].el.x, i1: sorted[gi - 1].idx, i2: sorted[gi].idx });
+    }
+    for (var g = 0; g < gaps.length - 1; g++) {
+      if (Math.abs(gaps[g].gap - gaps[g + 1].gap) < 2 && gaps[g].gap > 0) {
+        // 等间距!
+        var eqX = (sorted[g + 1].el.x + sorted[g + 2].el.x) / 2;
+        html += '<div style="position:absolute;left:' + (self.camW + eqX * self.scale) + 'px;top:2px;font-size:8px;color:#00c9a0;background:rgba(0,0,0,.7);padding:1px 4px;border-radius:3px;z-index:27;pointer-events:none">≈' + Math.round(gaps[g].gap) + '</div>';
+      }
+    }
+  }
+
+  return html;
+};
+
 PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
   var self = this;
-  return elements.map(function (el, i) {
+  var html = '';
+
+  // 距离测量线 (在元素下方渲染)
+  if (selIdx >= 0) {
+    html += self.renderDistances(elements, selIdx);
+  }
+
+  html += elements.map(function (el, i) {
     if (el.visible === false && i !== selIdx) return ''; // skip hidden (unless selected)
     var px = self.camW + el.x * self.scale;
     var py = el.y * self.scale;

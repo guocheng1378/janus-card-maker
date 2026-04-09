@@ -966,6 +966,16 @@ kbd{
 }
 .align-guide-h{height:1px;width:100%;left:0}
 .align-guide-v{width:1px;height:100%;top:0}
+.align-guide-equal{
+  background:var(--green)!important;opacity:0.8;
+  box-shadow:0 0 6px rgba(0,201,160,0.4);
+}
+.align-guide-equal::after{
+  content:attr(data-label);position:absolute;
+  font-size:9px;color:var(--green);background:rgba(0,0,0,.7);
+  padding:1px 5px;border-radius:3px;top:-12px;left:50%;transform:translateX(-50%);
+  white-space:nowrap;
+}
 
 /* ─── Ruler: 标尺 + 坐标 + 十字准线 ─── */
 .ruler-tooltip{
@@ -1817,6 +1827,7 @@ input[type=range]::-moz-range-track{
           <button onclick="JCM.openMarket();JCM.toggleMoreMenu()">🏪 模板市场</button>
           <button onclick="JCM.openDesignTools();JCM.toggleMoreMenu()">🎨 设计工具</button>
           <button onclick="JCM.showSnapshots();JCM.toggleMoreMenu()">📸 版本快照</button>
+          <button onclick="JCM.showGistBackup();JCM.toggleMoreMenu()">🌐 Gist 云备份</button>
           <button onclick="JCM.toggleHistory();JCM.toggleMoreMenu()">📜 操作历史</button>
           <button onclick="JCM.toggleHelp();JCM.toggleMoreMenu()">⌨️ 快捷键</button>
           <button onclick="JCM.toggleChangelog();JCM.toggleMoreMenu()">📝 更新日志</button>
@@ -1919,6 +1930,9 @@ input[type=range]::-moz-range-track{
         </select>
         <label class="check-label">
           <input type="checkbox" id="showCamera" checked> 摄像头遮挡区
+        </label>
+        <label class="check-label">
+          <input type="checkbox" id="showSafeZone"> 🛡️ 安全区
         </label>
         <label class="check-label">
           <input type="checkbox" id="showGrid" onchange="JCM.toggleGrid()"> <span data-i18n="preview.grid">网格</span>
@@ -5700,6 +5714,24 @@ PreviewRenderer.prototype.bg = function (bg, inner) {
   return '<div style="position:absolute;inset:0;background:' + bg + '"></div>' + inner;
 };
 
+// 安全区域叠加层
+PreviewRenderer.prototype.safeZoneOverlay = function () {
+  var camW = this.device.cameraZoneRatio * 100;
+  var margin = 10;
+  var d = this.device;
+  return '<div style="position:absolute;inset:0;z-index:15;pointer-events:none">' +
+    // 摄像头区域 (红色半透明)
+    '<div style="position:absolute;left:0;top:0;width:' + camW + '%;height:100%;background:rgba(239,122,98,0.08);border-right:1.5px dashed rgba(239,122,98,0.5)">' +
+    '<div style="position:absolute;top:4px;left:4px;font-size:8px;color:rgba(239,122,98,0.7);font-weight:600">📷 摄像头</div>' +
+    '<div style="position:absolute;top:16px;left:4px;font-size:7px;color:rgba(239,122,98,0.5)">' + Math.round(d.width * d.cameraZoneRatio) + 'px</div>' +
+    '</div>' +
+    // 安全区域 (绿色边框)
+    '<div style="position:absolute;left:' + camW + '%;top:' + margin + 'px;right:' + margin + 'px;bottom:' + margin + 'px;border:1px dashed rgba(0,201,160,0.35);border-radius:4px">' +
+    '<div style="position:absolute;top:-1px;right:2px;font-size:7px;color:rgba(0,201,160,0.6)">安全区 ' + Math.round(d.width * (1 - d.cameraZoneRatio) - margin * 2) + '×' + (d.height - margin * 2) + '</div>' +
+    '</div>' +
+    '</div>';
+};
+
 PreviewRenderer.prototype.esc = function (s) {
   return escHtml(s);
 };
@@ -5855,9 +5887,94 @@ PreviewRenderer.prototype.renderCustom = function (c) {
 };
 
 // ─── Element Rendering ────────────────────────────────────────────
+PreviewRenderer.prototype.renderDistances = function (elements, selIdx) {
+  if (selIdx < 0 || selIdx >= elements.length) return '';
+  var self = this;
+  var sel = elements[selIdx];
+  var selW = (sel.w || (sel.r ? sel.r * 2 : 0) || 100);
+  var selH = (sel.h || (sel.r ? sel.r * 2 : 0) || 30);
+  var selCX = sel.x + selW / 2;
+  var selCY = sel.y + selH / 2;
+  var html = '';
+
+  elements.forEach(function (el, i) {
+    if (i === selIdx || el.visible === false) return;
+    var ew = (el.w || (el.r ? el.r * 2 : 0) || 100);
+    var eh = (el.h || (el.r ? el.r * 2 : 0) || 30);
+
+    // 水平距离
+    var hDist, hLabelX;
+    if (el.x >= sel.x + selW) {
+      hDist = el.x - (sel.x + selW);
+      hLabelX = (sel.x + selW + el.x) / 2;
+    } else if (sel.x >= el.x + ew) {
+      hDist = sel.x - (el.x + ew);
+      hLabelX = (el.x + ew + sel.x) / 2;
+    } else {
+      hDist = 0;
+      hLabelX = Math.max(sel.x, el.x);
+    }
+
+    // 垂直距离
+    var vDist, vLabelY;
+    if (el.y >= sel.y + selH) {
+      vDist = el.y - (sel.y + selH);
+      vLabelY = (sel.y + selH + el.y) / 2;
+    } else if (sel.y >= el.y + eh) {
+      vDist = sel.y - (el.y + eh);
+      vLabelY = (el.y + eh + sel.y) / 2;
+    } else {
+      vDist = 0;
+      vLabelY = Math.max(sel.y, el.y);
+    }
+
+    if (hDist > 0 && hDist < 200) {
+      var lx = self.camW + hLabelX * self.scale;
+      var ly1 = Math.min(sel.y, el.y) * self.scale;
+      var ly2 = Math.max(sel.y + selH, el.y + eh) * self.scale;
+      html += '<div style="position:absolute;left:' + lx + 'px;top:' + ly1 + 'px;width:1px;height:' + (ly2 - ly1) + 'px;background:rgba(253,203,110,0.5);z-index:25;pointer-events:none"></div>';
+      html += '<div style="position:absolute;left:' + (lx - 12) + 'px;top:' + ((ly1 + ly2) / 2 - 7) + 'px;font-size:9px;color:#fdcb6e;background:rgba(0,0,0,.7);padding:1px 5px;border-radius:3px;z-index:26;pointer-events:none;white-space:nowrap">' + Math.round(hDist) + '</div>';
+    }
+    if (vDist > 0 && vDist < 200) {
+      var ly = self.camW + vLabelY * self.scale;
+      var lx1 = Math.min(sel.x, el.x) * self.scale + self.camW;
+      var lx2 = Math.max(sel.x + selW, el.x + ew) * self.scale + self.camW;
+      html += '<div style="position:absolute;left:' + lx1 + 'px;top:' + ly + 'px;height:1px;width:' + (lx2 - lx1) + 'px;background:rgba(253,203,110,0.5);z-index:25;pointer-events:none"></div>';
+      html += '<div style="position:absolute;left:' + ((lx1 + lx2) / 2 - 12) + 'px;top:' + (ly - 8) + 'px;font-size:9px;color:#fdcb6e;background:rgba(0,0,0,.7);padding:1px 5px;border-radius:3px;z-index:26;pointer-events:none;white-space:nowrap">' + Math.round(vDist) + '</div>';
+    }
+  });
+
+  // 等间距检测
+  if (elements.length >= 3) {
+    var sorted = elements.map(function (e, idx) { return { idx: idx, el: e }; }).filter(function (s) { return s.idx !== selIdx && s.el.visible !== false; });
+    // 水平等间距
+    sorted.sort(function (a, b) { return a.el.x - b.el.x; });
+    var gaps = [];
+    for (var gi = 1; gi < sorted.length; gi++) {
+      gaps.push({ gap: sorted[gi].el.x - sorted[gi - 1].el.x, i1: sorted[gi - 1].idx, i2: sorted[gi].idx });
+    }
+    for (var g = 0; g < gaps.length - 1; g++) {
+      if (Math.abs(gaps[g].gap - gaps[g + 1].gap) < 2 && gaps[g].gap > 0) {
+        // 等间距!
+        var eqX = (sorted[g + 1].el.x + sorted[g + 2].el.x) / 2;
+        html += '<div style="position:absolute;left:' + (self.camW + eqX * self.scale) + 'px;top:2px;font-size:8px;color:#00c9a0;background:rgba(0,0,0,.7);padding:1px 4px;border-radius:3px;z-index:27;pointer-events:none">≈' + Math.round(gaps[g].gap) + '</div>';
+      }
+    }
+  }
+
+  return html;
+};
+
 PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
   var self = this;
-  return elements.map(function (el, i) {
+  var html = '';
+
+  // 距离测量线 (在元素下方渲染)
+  if (selIdx >= 0) {
+    html += self.renderDistances(elements, selIdx);
+  }
+
+  html += elements.map(function (el, i) {
     if (el.visible === false && i !== selIdx) return ''; // skip hidden (unless selected)
     var px = self.camW + el.x * self.scale;
     var py = el.y * self.scale;
@@ -6530,7 +6647,7 @@ function getActiveScreen() {
   return document.querySelector('#page2 .preview-screen');
 }
 
-// ─── Smart Align ──────────────────────────────────────────────────
+// ─── Smart Align + Equal Spacing Detection ────────────────────────
 function applySmartAlign(nx, ny) {
   var el = S.elements[dragging.idx];
   var elW = el.w || (el.r ? el.r * 2 : 0) || 50;
@@ -6565,6 +6682,36 @@ function applySmartAlign(nx, ny) {
     if (Math.abs(ny + elH - (other.y + oH)) < snapThreshold) { ny = other.y + oH - elH; guides.push({ type: 'h', pos: other.y + oH }); }
     if (Math.abs(elCY - oCY) < snapThreshold) { ny = Math.round(oCY - elH / 2); guides.push({ type: 'h', pos: oCY }); }
   }
+
+  // 等间距检测: 检查拖动元素与其他元素是否等距
+  if (S.elements.length >= 3) {
+    var others = [];
+    for (var j = 0; j < S.elements.length; j++) {
+      if (j === dragging.idx) continue;
+      others.push({ x: S.elements[j].x, y: S.elements[j].y, w: S.elements[j].w || 50, h: S.elements[j].h || 30 });
+    }
+    // 水平等间距检测
+    others.sort(function (a, b) { return a.x - b.x; });
+    var curGaps = [];
+    for (var g = 1; g < others.length; g++) {
+      curGaps.push(others[g].x - (others[g - 1].x + others[g - 1].w));
+    }
+    // Check if inserting the dragged element creates equal spacing
+    for (var ci = 0; ci <= others.length; ci++) {
+      var leftEdge = ci > 0 ? others[ci - 1].x + others[ci - 1].w : -999;
+      var rightEdge = ci < others.length ? others[ci].x : 9999;
+      var gap = rightEdge - leftEdge - elW;
+      if (gap > 0 && curGaps.length >= 1) {
+        var refGap = curGaps[0];
+        if (Math.abs(gap - refGap) < 4) {
+          // Snap to equal spacing!
+          nx = ci > 0 ? others[ci - 1].x + others[ci - 1].w + refGap : others[ci].x - elW - refGap;
+          guides.push({ type: 'equal-h', pos: nx, label: '≈' + refGap + 'px' });
+        }
+      }
+    }
+  }
+
   return { x: nx, y: ny, guides: guides };
 }
 
@@ -6575,9 +6722,15 @@ function renderGuideLines(guides, scale) {
   screen.querySelectorAll('.align-guide').forEach(function (g) { g.remove(); });
   guides.forEach(function (g) {
     var div = document.createElement('div');
-    div.className = 'align-guide ' + (g.type === 'h' ? 'align-guide-h' : 'align-guide-v');
-    if (g.type === 'h') div.style.top = (g.pos * scale) + 'px';
-    else div.style.left = (g.pos * scale) + 'px';
+    if (g.type === 'equal-h') {
+      div.className = 'align-guide align-guide-v align-guide-equal';
+      div.style.left = (g.pos * scale) + 'px';
+      if (g.label) div.setAttribute('data-label', g.label);
+    } else {
+      div.className = 'align-guide ' + (g.type === 'h' ? 'align-guide-h' : 'align-guide-v');
+      if (g.type === 'h') div.style.top = (g.pos * scale) + 'px';
+      else div.style.left = (g.pos * scale) + 'px';
+    }
     screen.appendChild(div);
   });
 }
@@ -9493,6 +9646,27 @@ function renderRectangleEditor(el, idx) {
       }).join('') + '</select>');
   }
 
+  // 多色阶渐变编辑器
+  var stops = el.gradientStops || (el.fillColor2 ? [{ color: el.color, pos: 0 }, { color: el.fillColor2, pos: 100 }] : null);
+  if (el.fillColor2 || (stops && stops.length > 0)) {
+    var stopsData = stops || [{ color: el.color, pos: 0 }, { color: el.fillColor2 || '#ffffff', pos: 100 }];
+    var gradCSS = stopsData.map(function (s) { return s.color + ' ' + s.pos + '%'; }).join(',');
+    var gradAngle = { top_bottom: '180deg', left_right: '90deg', tl_br: '135deg', tr_bl: '225deg' };
+    var angle = gradAngle[el.gradientOrientation] || '180deg';
+    html += '<div style="margin:8px 0"><div style="font-size:10px;color:var(--text3);margin-bottom:4px">🌈 多色阶渐变</div>';
+    html += '<div style="height:32px;border-radius:6px;background:linear-gradient(' + angle + ',' + gradCSS + ');margin-bottom:6px;position:relative;border:1px solid var(--border)"></div>';
+    html += '<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">';
+    stopsData.forEach(function (s, si) {
+      html += '<div style="display:flex;align-items:center;gap:2px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 4px">' +
+        '<input type="color" value="' + s.color + '" data-gradient-stop-color="' + si + '" data-idx="' + idx + '" style="width:20px;height:18px;padding:0;border:none;cursor:pointer">' +
+        '<input type="number" value="' + s.pos + '" data-gradient-stop-pos="' + si + '" data-idx="' + idx + '" min="0" max="100" style="width:32px;font-size:10px;text-align:center;border:none;background:transparent;color:var(--text)">%' +
+        (stopsData.length > 2 ? '<button class="el-btn" data-remove-gradient-stop="' + si + '" data-idx="' + idx + '" style="font-size:9px;padding:0 3px;color:var(--red)">✕</button>' : '') +
+        '</div>';
+    });
+    html += '<button class="el-btn" data-add-gradient-stop data-idx="' + idx + '" style="font-size:10px;padding:2px 6px">+ 色标</button>';
+    html += '</div></div>';
+  }
+
   // 渐变预设
   html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:8px">';
   GRAD_PRESETS.forEach(function (p) {
@@ -9938,6 +10112,32 @@ function renderAnimationSection(el, idx) {
   html += fieldHtml('延迟 (ms)', '<input type="number" value="' + (el.animationDelay || 0) + '" data-prop="animationDelay" data-idx="' + idx + '" min="0" max="3000" step="100">');
   html += fieldHtml('重复', '<input type="number" value="' + (el.animationRepeat || 1) + '" data-prop="animationRepeat" data-idx="' + idx + '" min="1" max="99">');
   html += fieldHtml('无限循环', '<label class="toggle-switch"><input type="checkbox" data-prop="animationInfinite" data-idx="' + idx + '"' + (el.animationInfinite ? ' checked' : '') + '><span class="toggle-slider"></span></label>');
+
+  // 时间轴可视化
+  if (el.animationName && el.animationName !== 'none') {
+    var dur = el.animationDuration || 500;
+    var delay = el.animationDelay || 0;
+    var total = dur + delay + 200; // padding
+    var delayPct = (delay / total * 100);
+    var durPct = (dur / total * 100);
+    html += '<div style="margin-top:8px"><div style="font-size:10px;color:var(--text3);margin-bottom:4px">⏱️ 时间轴</div>';
+    html += '<div style="position:relative;height:28px;background:var(--surface3);border-radius:6px;overflow:hidden;border:1px solid var(--border)">';
+    // 延迟区
+    if (delay > 0) {
+      html += '<div style="position:absolute;left:0;top:0;width:' + delayPct + '%;height:100%;background:repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(124,109,240,0.1) 3px,rgba(124,109,240,0.1) 4px);display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--text3)">延迟 ' + delay + 'ms</div>';
+    }
+    // 动画区
+    html += '<div style="position:absolute;left:' + delayPct + '%;top:0;width:' + durPct + '%;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:' + (delay > 0 ? '0 6px 6px 0' : '6px') + ';display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:600;text-shadow:0 1px 2px rgba(0,0,0,.3)">' + el.animationName + ' ' + dur + 'ms</div>';
+    // 循环标记
+    if (el.animationInfinite) {
+      html += '<div style="position:absolute;right:4px;top:2px;font-size:8px;color:var(--accent)">∞</div>';
+    }
+    html += '</div>';
+    // 时间刻度
+    html += '<div style="display:flex;justify-content:space-between;font-size:8px;color:var(--text3);margin-top:2px"><span>0ms</span><span>' + Math.round(total / 2) + 'ms</span><span>' + total + 'ms</span></div>';
+    html += '</div>';
+  }
+
   return html;
 }
 
@@ -12114,6 +12314,249 @@ function isActive() {
   return _active;
 }
 
+// ─── js/ui/gist-backup.js ───
+// ─── Gist Backup: GitHub Gist 云备份 ──────────────────────────────
+
+var GIST_API = 'https://api.github.com/gists';
+
+function getToken() {
+  return localStorage.getItem('jcm-gh-token') || '';
+}
+
+function saveToken(t) {
+  localStorage.setItem('jcm-gh-token', t);
+}
+
+function decodeToken(encoded) {
+  try {
+    var key = navigator.userAgent.length + '_' + screen.width + 'x' + screen.height;
+    var decoded = atob(encoded);
+    var result = '';
+    for (var i = 0; i < decoded.length; i++) {
+      result += String.fromCharCode(decoded.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+    }
+    return result;
+  } catch (e) { return ''; }
+}
+
+function getRealToken() {
+  var raw = getToken();
+  if (!raw) return '';
+  return decodeToken(raw);
+}
+
+function showGistBackupModal() {
+  var existing = document.getElementById('gistBackupModal');
+  if (existing) existing.remove();
+
+  var overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'gistBackupModal';
+  overlay.style.display = '';
+  overlay.onclick = function () { overlay.remove(); };
+
+  var modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.maxWidth = '480px';
+  modal.onclick = function (e) { e.stopPropagation(); };
+
+  var hasToken = !!getRealToken();
+
+  var html = '<div class="modal-header"><h3>🌐 Gist 云备份</h3><button class="modal-close" onclick="document.getElementById(\'gistBackupModal\').remove()">✕</button></div>';
+  html += '<div class="modal-body">';
+
+  if (!hasToken) {
+    html += '<div style="text-align:center;padding:20px">' +
+      '<div style="font-size:32px;margin-bottom:12px">🔑</div>' +
+      '<div style="font-size:13px;color:var(--text2);margin-bottom:16px">需要 GitHub Token 来使用 Gist 备份<br><small style="color:var(--text3)">Token 需要 gist 权限</small></div>' +
+      '<button class="btn btn-secondary" onclick="JCM.showGistTokenInput()" style="width:100%">设置 GitHub Token</button>' +
+      '</div>';
+  } else {
+    html += '<div style="display:flex;flex-direction:column;gap:10px;padding:8px 0">';
+    html += '<button class="btn btn-secondary" onclick="JCM.gistBackup()" style="width:100%;justify-content:flex-start"><span style="margin-right:8px">☁️</span> 备份到 Gist</button>';
+    html += '<button class="btn btn-secondary" onclick="JCM.gistRestore()" style="width:100%;justify-content:flex-start"><span style="margin-right:8px">📥</span> 从 Gist 恢复</button>';
+    html += '<div style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px">';
+    html += '<div style="font-size:11px;color:var(--text3);margin-bottom:8px">备份内容: 模板配置 + 元素数据 (不含图片/视频)</div>';
+    html += '<button class="el-btn" onclick="JCM.showGistTokenInput()" style="font-size:11px;width:100%">🔑 更换 Token</button>';
+    html += '</div></div>';
+  }
+
+  html += '</div>';
+  modal.innerHTML = html;
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+}
+
+function showGistTokenInput() {
+  var existing = document.getElementById('gistBackupModal');
+  if (existing) existing.remove();
+
+  var token = prompt('输入 GitHub Personal Access Token (需要 gist 权限):\n\n⚠️ Token 以 Base64 明文存储在浏览器本地，仅限个人设备使用。');
+  if (!token) return;
+
+  // Simple obfuscation
+  var key = navigator.userAgent.length + '_' + screen.width + 'x' + screen.height;
+  var encoded = '';
+  for (var i = 0; i < token.length; i++) {
+    encoded += String.fromCharCode(token.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+  }
+  saveToken(btoa(encoded));
+  toast('🔑 Token 已保存', 'success');
+  showGistBackupModal();
+}
+
+function gistBackup() {
+  if (!S.tpl) return toast('请先选择模板', 'error');
+
+  var token = getRealToken();
+  if (!token) return toast('请先设置 Token', 'error');
+
+  var data = {
+    templateId: S.tpl.id,
+    templateName: S.tpl.name,
+    config: S.cfg,
+    elements: S.elements,
+    timestamp: Date.now(),
+  };
+
+  var p = toastProgress('正在备份到 Gist...');
+  fetch(GIST_API, {
+    method: 'POST',
+    headers: {
+      'Authorization': 'token ' + token,
+      'Accept': 'application/vnd.github+json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      description: 'REAREye 卡片备份: ' + (S.cfg.cardName || S.tpl.name) + ' @ ' + new Date().toLocaleString('zh-CN'),
+      public: false,
+      files: {
+        'rear-eye-card.json': {
+          content: JSON.stringify(data, null, 2),
+        },
+      },
+    }),
+  }).then(function (res) {
+    if (res.status === 201) return res.json();
+    if (res.status === 401) throw new Error('Token 无效');
+    if (res.status === 403) throw new Error('权限不足，Token 需要 gist 权限');
+    throw new Error('HTTP ' + res.status);
+  }).then(function (gist) {
+    p.close('✅ 备份成功!', 'success');
+    // Save gist ID for future updates
+    try {
+      var backups = JSON.parse(localStorage.getItem('jcm-gist-backups') || '[]');
+      backups.unshift({ id: gist.id, name: S.cfg.cardName || S.tpl.name, url: gist.html_url, time: Date.now() });
+      if (backups.length > 10) backups = backups.slice(0, 10);
+      localStorage.setItem('jcm-gist-backups', JSON.stringify(backups));
+    } catch (e) {}
+    toast('🔗 ' + gist.html_url, 'info');
+  }).catch(function (e) {
+    p.close('❌ 备份失败: ' + e.message, 'error');
+  });
+}
+
+function gistRestore() {
+  var token = getRealToken();
+  if (!token) return toast('请先设置 Token', 'error');
+
+  // Show list of recent backups
+  var backups = [];
+  try { backups = JSON.parse(localStorage.getItem('jcm-gist-backups') || '[]'); } catch (e) {}
+
+  if (backups.length > 0) {
+    showGistRestorePicker(backups, token);
+  } else {
+    var gistId = prompt('输入 Gist ID 或 URL:');
+    if (!gistId) return;
+    // Extract ID from URL if needed
+    var match = gistId.match(/([a-f0-9]{32})/);
+    if (match) gistId = match[1];
+    fetchGist(gistId, token);
+  }
+}
+
+function showGistRestorePicker(backups, token) {
+  var existing = document.getElementById('gistRestorePicker');
+  if (existing) existing.remove();
+
+  var overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'gistRestorePicker';
+  overlay.style.display = '';
+  overlay.onclick = function () { overlay.remove(); };
+
+  var modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.maxWidth = '400px';
+  modal.onclick = function (e) { e.stopPropagation(); };
+
+  var html = '<div class="modal-header"><h3>📥 选择备份</h3><button class="modal-close" onclick="document.getElementById(\'gistRestorePicker\').remove()">✕</button></div>';
+  html += '<div class="modal-body" style="max-height:40vh;overflow-y:auto">';
+  backups.forEach(function (b) {
+    var timeStr = new Date(b.time).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    html += '<div class="card-lib-item" style="cursor:pointer" data-gist-restore="' + b.id + '">' +
+      '<div class="card-lib-icon">☁️</div>' +
+      '<div class="card-lib-info"><div class="card-lib-name">' + (b.name || '备份') + '</div>' +
+      '<div class="card-lib-meta"><span>' + timeStr + '</span></div></div></div>';
+  });
+  html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">' +
+    '<button class="el-btn" onclick="JCM.gistRestoreById()" style="width:100%;font-size:11px">🔗 输入 Gist ID</button></div>';
+  html += '</div>';
+  modal.innerHTML = html;
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  overlay.querySelectorAll('[data-gist-restore]').forEach(function (btn) {
+    btn.onclick = function () {
+      overlay.remove();
+      fetchGist(btn.dataset.gistRestore, token);
+    };
+  });
+}
+
+function gistRestoreById() {
+  var existing = document.getElementById('gistRestorePicker');
+  if (existing) existing.remove();
+  var gistId = prompt('输入 Gist ID 或 URL:');
+  if (!gistId) return;
+  var match = gistId.match(/([a-f0-9]{32})/);
+  if (match) gistId = match[1];
+  var token = getRealToken();
+  if (!token) return toast('请先设置 Token', 'error');
+  fetchGist(gistId, token);
+}
+
+function fetchGist(gistId, token) {
+  var p = toastProgress('正在从 Gist 恢复...');
+  fetch(GIST_API + '/' + gistId, {
+    headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github+json' },
+  }).then(function (res) {
+    if (res.ok) return res.json();
+    throw new Error('HTTP ' + res.status);
+  }).then(function (gist) {
+    var file = gist.files['rear-eye-card.json'];
+    if (!file) throw new Error('不是 REAREye 备份');
+    var data = JSON.parse(file.content);
+    p.close('✅ 数据已获取', 'success');
+    // Apply
+    var TEMPLATES = window.__jcm_templates;
+    if (!TEMPLATES) return toast('模板未加载', 'error');
+    var tpl = TEMPLATES.find(function (t) { return t.id === data.templateId; }) || TEMPLATES.find(function (t) { return t.id === 'custom'; });
+    S.setTpl(tpl);
+    S.setCfg(data.config || {});
+    S.setElements(data.elements || []);
+    S.setUploadedFiles({});
+    S.setSelIdx(-1);
+    S.setDirty(true);
+    toast('✅ 已从 Gist 恢复', 'success');
+    // Go to step 1
+    if (window.JCM) window.JCM.goStep(1);
+  }).catch(function (e) {
+    p.close('❌ 恢复失败: ' + e.message, 'error');
+  });
+}
+
 // ─── js/ui/binding-wizard.js ───
 // ─── Binding Wizard: 可视化数据绑定向导 ────────────────────────────
 
@@ -12719,6 +13162,7 @@ function showSnapshotsModal(stepCallbacks) {
         '<div class="card-lib-info"><div class="card-lib-name">' + snap.label + '</div>' +
         '<div class="card-lib-meta"><span>' + (snap.tplName || snap.tplId) + '</span><span>·</span><span>' + timeStr + '</span></div></div>' +
         '<div class="card-lib-actions">' +
+        '<button class="card-lib-btn" data-snap-compare="' + snap.id + '" title="与当前版本对比">🔀</button>' +
         '<button class="card-lib-btn" data-snap-restore="' + snap.id + '" title="恢复">📂</button>' +
         '<button class="card-lib-btn" data-snap-delete="' + snap.id + '" title="删除" style="color:var(--red)">🗑️</button>' +
         '</div></div>';
@@ -12758,7 +13202,93 @@ function showSnapshotsModal(stepCallbacks) {
       toast('🗑️ 快照已删除', 'success');
     };
   });
+
+  // 版本对比
+  overlay.querySelectorAll('[data-snap-compare]').forEach(function (btn) {
+    btn.onclick = function () {
+      var snapA = restoreSnapshot(btn.dataset.snapCompare);
+      if (!snapA) return;
+      // Find current state as B
+      var snapB = {
+        label: '当前',
+        tplId: S.tpl ? S.tpl.id : '',
+        tplName: S.tpl ? S.tpl.name : '',
+        cfg: JSON.parse(JSON.stringify(S.cfg)),
+        elements: JSON.parse(JSON.stringify(S.elements)),
+      };
+      showCompareView(snapA, snapB, overlay);
+    };
+  });
 }
+
+// 版本对比视图
+function showCompareView(snapA, snapB, parentOverlay) {
+  var existing = document.getElementById('compareModal');
+  if (existing) existing.remove();
+
+  var overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'compareModal';
+  overlay.style.display = '';
+  overlay.onclick = function () { overlay.remove(); };
+
+  var modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.maxWidth = '700px';
+  modal.style.maxHeight = '80vh';
+  modal.onclick = function (e) { e.stopPropagation(); };
+
+  // Diff elements count
+  var countA = (snapA.elements || []).length;
+  var countB = (snapB.elements || []).length;
+  var changes = [];
+
+  // Compare configs
+  var allKeys = {};
+  Object.keys(snapA.cfg || {}).forEach(function (k) { allKeys[k] = true; });
+  Object.keys(snapB.cfg || {}).forEach(function (k) { allKeys[k] = true; });
+  Object.keys(allKeys).forEach(function (k) {
+    var vA = JSON.stringify(snapA.cfg[k]);
+    var vB = JSON.stringify(snapB.cfg[k]);
+    if (vA !== vB) changes.push({ key: k, a: vA, b: vB });
+  });
+
+  var html = '<div class="modal-header"><h3>📸 版本对比</h3><button class="modal-close" onclick="document.getElementById(\'compareModal\').remove()">✕</button></div>';
+  html += '<div class="modal-body" style="max-height:60vh;overflow-y:auto">';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">';
+  html += '<div style="padding:10px;background:var(--surface2);border-radius:8px"><div style="font-size:12px;font-weight:600;color:var(--accent)">' + snapA.label + '</div><div style="font-size:11px;color:var(--text3)">' + countA + ' 个元素</div></div>';
+  html += '<div style="padding:10px;background:var(--surface2);border-radius:8px"><div style="font-size:12px;font-weight:600;color:var(--green)">' + snapB.label + '</div><div style="font-size:11px;color:var(--text3)">' + countB + ' 个元素</div></div>';
+  html += '</div>';
+
+  if (countA !== countB) {
+    html += '<div style="padding:8px;background:rgba(253,203,110,0.1);border:1px solid rgba(253,203,110,0.3);border-radius:6px;font-size:12px;color:var(--orange);margin-bottom:12px">⚠️ 元素数量不同: ' + countA + ' → ' + countB + '</div>';
+  }
+
+  if (changes.length > 0) {
+    html += '<div style="font-size:11px;font-weight:600;margin-bottom:6px">配置变更 (' + changes.length + '):</div>';
+    changes.forEach(function (c) {
+      html += '<div style="padding:6px 10px;margin-bottom:4px;background:var(--surface2);border-radius:6px;font-size:11px">' +
+        '<div style="color:var(--text2);font-weight:600">' + esc(c.key) + '</div>' +
+        '<div style="color:var(--red);text-decoration:line-through">' + esc(c.a || '(空)') + '</div>' +
+        '<div style="color:var(--green)">' + esc(c.b || '(空)') + '</div></div>';
+    });
+  } else {
+    html += '<div style="text-align:center;padding:20px;color:var(--text3)">✅ 配置无变化</div>';
+  }
+
+  html += '<div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">';
+  html += '<button class="btn btn-secondary" onclick="document.getElementById(\'compareModal\').remove()">关闭</button>';
+  if (parentOverlay) {
+    html += '<button class="btn btn-secondary" onclick="document.getElementById(\'compareModal\').remove()" style="border-color:var(--accent)">返回快照列表</button>';
+  }
+  html += '</div></div>';
+
+  modal.innerHTML = html;
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+}
+
+function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
 // ─── js/ui/export-adb.js ───
 // ─── ADB Push + Export Formats: ADB 直推 + GIF/PDF 导出 ──────────
@@ -13861,8 +14391,12 @@ function renderPreview() {
     renderMultiDevicePreview(showCam);
   } else {
     // 单机型预览
+    var renderer = new PreviewRenderer(device, showCam);
     var html = renderTemplatePreview(device, showCam, S.tpl, S.cfg);
-    html += new PreviewRenderer(device, showCam).renderElements(S.elements, S.uploadedFiles, S.selIdx);
+    html += renderer.renderElements(S.elements, S.uploadedFiles, S.selIdx);
+    if (document.getElementById('showSafeZone').checked) {
+      html += renderer.safeZoneOverlay();
+    }
     if (S.cfg.bgImage) {
       html = '<div style="position:absolute;inset:0;background-image:url(\'' + S.cfg.bgImage.replace(/'/g, "\\'") + '\');background-size:cover;background-position:center;z-index:-1"></div>' + html;
     }
@@ -14382,6 +14916,24 @@ function setupEvents() {
       else S.elements[idx][prop] = t.value;
       S.setDirty(true);
     }
+    // Gradient stop color
+    if (t.dataset.gradientStopColor !== undefined) {
+      var gsi = Number(t.dataset.idx);
+      var gstopi = Number(t.dataset.gradientStopColor);
+      if (gsi >= 0 && gsi < S.elements.length && S.elements[gsi].gradientStops && S.elements[gsi].gradientStops[gstopi]) {
+        S.elements[gsi].gradientStops[gstopi].color = t.value;
+        S.setDirty(true);
+      }
+    }
+    // Gradient stop position
+    if (t.dataset.gradientStopPos !== undefined) {
+      var gpi = Number(t.dataset.idx);
+      var gpstopi = Number(t.dataset.gradientStopPos);
+      if (gpi >= 0 && gpi < S.elements.length && S.elements[gpi].gradientStops && S.elements[gpi].gradientStops[gpstopi]) {
+        S.elements[gpi].gradientStops[gpstopi].pos = Math.max(0, Math.min(100, Number(t.value)));
+        S.setDirty(true);
+      }
+    }
     _autoPreview(); autoSave();
   });
 
@@ -14463,6 +15015,53 @@ function setupEvents() {
       if (ri >= 0 && ri < S.elements.length) {
         captureState('设置旋转 ' + rv + '°');
         S.elements[ri].rotation = rv;
+        S.setDirty(true);
+        renderConfig(getTemplateMAML);
+        _autoPreview();
+      }
+      return;
+    }
+
+    // Gradient stop color change
+    var stopColorInput = e.target.closest('[data-gradient-stop-color]');
+    if (stopColorInput) {
+      // handled by input event below
+    }
+
+    // Add gradient stop
+    var addStopBtn = e.target.closest('[data-add-gradient-stop]');
+    if (addStopBtn) {
+      e.stopPropagation();
+      var asi = Number(addStopBtn.dataset.idx);
+      if (asi >= 0 && asi < S.elements.length) {
+        captureState('添加色标');
+        var ael = S.elements[asi];
+        if (!ael.gradientStops) ael.gradientStops = [{ color: ael.color, pos: 0 }, { color: ael.fillColor2 || '#ffffff', pos: 100 }];
+        // Add in the middle of the largest gap
+        var maxGap = 0, insertPos = 50;
+        for (var agi = 0; agi < ael.gradientStops.length - 1; agi++) {
+          var gap = ael.gradientStops[agi + 1].pos - ael.gradientStops[agi].pos;
+          if (gap > maxGap) { maxGap = gap; insertPos = Math.round(ael.gradientStops[agi].pos + gap / 2); }
+        }
+        var midColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+        ael.gradientStops.push({ color: midColor, pos: insertPos });
+        ael.gradientStops.sort(function (a, b) { return a.pos - b.pos; });
+        S.setDirty(true);
+        renderConfig(getTemplateMAML);
+        _autoPreview();
+      }
+      return;
+    }
+
+    // Remove gradient stop
+    var removeStopBtn = e.target.closest('[data-remove-gradient-stop]');
+    if (removeStopBtn) {
+      e.stopPropagation();
+      var rsi = Number(removeStopBtn.dataset.idx);
+      var rstopi = Number(removeStopBtn.dataset.removeGradientStop);
+      if (rsi >= 0 && rsi < S.elements.length && S.elements[rsi].gradientStops && S.elements[rsi].gradientStops.length > 2) {
+        captureState('删除色标');
+        S.elements[rsi].gradientStops.splice(rstopi, 1);
         S.setDirty(true);
         renderConfig(getTemplateMAML);
         _autoPreview();
@@ -14970,6 +15569,7 @@ function setupEvents() {
     if (isLayerPanelVisible()) renderLayerPanel();
   });
   document.getElementById('showCamera').addEventListener('change', function () { renderPreview(); });
+  document.getElementById('showSafeZone').addEventListener('change', function () { renderPreview(); });
   document.getElementById('cfgDeviceSelect').addEventListener('change', function () {
     syncDeviceSelect('toPreview');
     // Apply constraints for new device
@@ -15300,6 +15900,11 @@ Object.assign(window.JCM, {
     toast(on ? '📏 标尺已开启' : '📏 标尺已关闭', 'info');
   },
   pickColor: pickColor,
+  showGistBackup: showGistBackupModal,
+  showGistTokenInput: showGistTokenInput,
+  gistBackup: gistBackup,
+  gistRestore: gistRestore,
+  gistRestoreById: gistRestoreById,
   arrangeGrid: function (cols, gapH, gapV) { arrangeGrid(cols, gapH, gapV); renderConfig(getTemplateMAML); },
   renderConfig: function () { renderConfig(getTemplateMAML); },
   toggleMoreMenu: toggleMoreMenu,

@@ -240,6 +240,32 @@ function renderAnimationSection(el, idx) {
   html += fieldHtml('延迟 (ms)', '<input type="number" value="' + (el.animationDelay || 0) + '" data-prop="animationDelay" data-idx="' + idx + '" min="0" max="3000" step="100">');
   html += fieldHtml('重复', '<input type="number" value="' + (el.animationRepeat || 1) + '" data-prop="animationRepeat" data-idx="' + idx + '" min="1" max="99">');
   html += fieldHtml('无限循环', '<label class="toggle-switch"><input type="checkbox" data-prop="animationInfinite" data-idx="' + idx + '"' + (el.animationInfinite ? ' checked' : '') + '><span class="toggle-slider"></span></label>');
+
+  // 时间轴可视化
+  if (el.animationName && el.animationName !== 'none') {
+    var dur = el.animationDuration || 500;
+    var delay = el.animationDelay || 0;
+    var total = dur + delay + 200; // padding
+    var delayPct = (delay / total * 100);
+    var durPct = (dur / total * 100);
+    html += '<div style="margin-top:8px"><div style="font-size:10px;color:var(--text3);margin-bottom:4px">⏱️ 时间轴</div>';
+    html += '<div style="position:relative;height:28px;background:var(--surface3);border-radius:6px;overflow:hidden;border:1px solid var(--border)">';
+    // 延迟区
+    if (delay > 0) {
+      html += '<div style="position:absolute;left:0;top:0;width:' + delayPct + '%;height:100%;background:repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(124,109,240,0.1) 3px,rgba(124,109,240,0.1) 4px);display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--text3)">延迟 ' + delay + 'ms</div>';
+    }
+    // 动画区
+    html += '<div style="position:absolute;left:' + delayPct + '%;top:0;width:' + durPct + '%;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:' + (delay > 0 ? '0 6px 6px 0' : '6px') + ';display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:600;text-shadow:0 1px 2px rgba(0,0,0,.3)">' + el.animationName + ' ' + dur + 'ms</div>';
+    // 循环标记
+    if (el.animationInfinite) {
+      html += '<div style="position:absolute;right:4px;top:2px;font-size:8px;color:var(--accent)">∞</div>';
+    }
+    html += '</div>';
+    // 时间刻度
+    html += '<div style="display:flex;justify-content:space-between;font-size:8px;color:var(--text3);margin-top:2px"><span>0ms</span><span>' + Math.round(total / 2) + 'ms</span><span>' + total + 'ms</span></div>';
+    html += '</div>';
+  }
+
   return html;
 }
 

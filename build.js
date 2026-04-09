@@ -91,6 +91,7 @@ const JS_FILES = [
   'js/ui/layer-panel.js',
   'js/ui/ruler.js',
   'js/ui/eyedropper.js',
+  'js/ui/gist-backup.js',
   'js/ui/binding-wizard.js',
   'js/ui/command-palette.js',
   'js/ui/linter-tools.js',

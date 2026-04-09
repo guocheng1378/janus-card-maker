@@ -40,6 +40,7 @@ import { showADBPush, exportGIF, exportPDF } from './export-adb.js';
 import { renderLayerPanel, toggleLayerPanel, isLayerPanelVisible, initLayerPanel } from './layer-panel.js';
 import { initRuler, toggleRuler, isRulerEnabled } from './ruler.js';
 import { pickColor } from './eyedropper.js';
+import { showGistBackupModal, showGistTokenInput, gistBackup, gistRestore, gistRestoreById } from './gist-backup.js';
 import { isMockMode, toggleMockMode, openExprDebugger, closeExprDebugger, insertVar, evalExpr, insertExprPreset, openPerfDashboard, toggleTemplateCompare, cancelCompare, initDevTools } from './dev-tools.js';
 
 // re-export from export.js, transcode.js, storage.js (loaded as ES modules)
@@ -129,8 +130,12 @@ function renderPreview() {
     renderMultiDevicePreview(showCam);
   } else {
     // 单机型预览
+    var renderer = new PreviewRenderer(device, showCam);
     var html = renderTemplatePreview(device, showCam, S.tpl, S.cfg);
-    html += new PreviewRenderer(device, showCam).renderElements(S.elements, S.uploadedFiles, S.selIdx);
+    html += renderer.renderElements(S.elements, S.uploadedFiles, S.selIdx);
+    if (document.getElementById('showSafeZone').checked) {
+      html += renderer.safeZoneOverlay();
+    }
     if (S.cfg.bgImage) {
       html = '<div style="position:absolute;inset:0;background-image:url(\'' + S.cfg.bgImage.replace(/'/g, "\\'") + '\');background-size:cover;background-position:center;z-index:-1"></div>' + html;
     }
@@ -650,6 +655,24 @@ function setupEvents() {
       else S.elements[idx][prop] = t.value;
       S.setDirty(true);
     }
+    // Gradient stop color
+    if (t.dataset.gradientStopColor !== undefined) {
+      var gsi = Number(t.dataset.idx);
+      var gstopi = Number(t.dataset.gradientStopColor);
+      if (gsi >= 0 && gsi < S.elements.length && S.elements[gsi].gradientStops && S.elements[gsi].gradientStops[gstopi]) {
+        S.elements[gsi].gradientStops[gstopi].color = t.value;
+        S.setDirty(true);
+      }
+    }
+    // Gradient stop position
+    if (t.dataset.gradientStopPos !== undefined) {
+      var gpi = Number(t.dataset.idx);
+      var gpstopi = Number(t.dataset.gradientStopPos);
+      if (gpi >= 0 && gpi < S.elements.length && S.elements[gpi].gradientStops && S.elements[gpi].gradientStops[gpstopi]) {
+        S.elements[gpi].gradientStops[gpstopi].pos = Math.max(0, Math.min(100, Number(t.value)));
+        S.setDirty(true);
+      }
+    }
     _autoPreview(); autoSave();
   });
 
@@ -731,6 +754,53 @@ function setupEvents() {
       if (ri >= 0 && ri < S.elements.length) {
         captureState('设置旋转 ' + rv + '°');
         S.elements[ri].rotation = rv;
+        S.setDirty(true);
+        renderConfig(getTemplateMAML);
+        _autoPreview();
+      }
+      return;
+    }
+
+    // Gradient stop color change
+    var stopColorInput = e.target.closest('[data-gradient-stop-color]');
+    if (stopColorInput) {
+      // handled by input event below
+    }
+
+    // Add gradient stop
+    var addStopBtn = e.target.closest('[data-add-gradient-stop]');
+    if (addStopBtn) {
+      e.stopPropagation();
+      var asi = Number(addStopBtn.dataset.idx);
+      if (asi >= 0 && asi < S.elements.length) {
+        captureState('添加色标');
+        var ael = S.elements[asi];
+        if (!ael.gradientStops) ael.gradientStops = [{ color: ael.color, pos: 0 }, { color: ael.fillColor2 || '#ffffff', pos: 100 }];
+        // Add in the middle of the largest gap
+        var maxGap = 0, insertPos = 50;
+        for (var agi = 0; agi < ael.gradientStops.length - 1; agi++) {
+          var gap = ael.gradientStops[agi + 1].pos - ael.gradientStops[agi].pos;
+          if (gap > maxGap) { maxGap = gap; insertPos = Math.round(ael.gradientStops[agi].pos + gap / 2); }
+        }
+        var midColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+        ael.gradientStops.push({ color: midColor, pos: insertPos });
+        ael.gradientStops.sort(function (a, b) { return a.pos - b.pos; });
+        S.setDirty(true);
+        renderConfig(getTemplateMAML);
+        _autoPreview();
+      }
+      return;
+    }
+
+    // Remove gradient stop
+    var removeStopBtn = e.target.closest('[data-remove-gradient-stop]');
+    if (removeStopBtn) {
+      e.stopPropagation();
+      var rsi = Number(removeStopBtn.dataset.idx);
+      var rstopi = Number(removeStopBtn.dataset.removeGradientStop);
+      if (rsi >= 0 && rsi < S.elements.length && S.elements[rsi].gradientStops && S.elements[rsi].gradientStops.length > 2) {
+        captureState('删除色标');
+        S.elements[rsi].gradientStops.splice(rstopi, 1);
         S.setDirty(true);
         renderConfig(getTemplateMAML);
         _autoPreview();
@@ -1239,6 +1309,7 @@ function setupEvents() {
     if (isLayerPanelVisible()) renderLayerPanel();
   });
   document.getElementById('showCamera').addEventListener('change', function () { renderPreview(); });
+  document.getElementById('showSafeZone').addEventListener('change', function () { renderPreview(); });
   document.getElementById('cfgDeviceSelect').addEventListener('change', function () {
     syncDeviceSelect('toPreview');
     // Apply constraints for new device
@@ -1570,6 +1641,11 @@ Object.assign(window.JCM, {
     toast(on ? '📏 标尺已开启' : '📏 标尺已关闭', 'info');
   },
   pickColor: pickColor,
+  showGistBackup: showGistBackupModal,
+  showGistTokenInput: showGistTokenInput,
+  gistBackup: gistBackup,
+  gistRestore: gistRestore,
+  gistRestoreById: gistRestoreById,
   arrangeGrid: function (cols, gapH, gapV) { arrangeGrid(cols, gapH, gapV); renderConfig(getTemplateMAML); },
   renderConfig: function () { renderConfig(getTemplateMAML); },
   toggleMoreMenu: toggleMoreMenu,

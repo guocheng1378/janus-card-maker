@@ -31,7 +31,7 @@ function getActiveScreen() {
   return document.querySelector('#page2 .preview-screen');
 }
 
-// ─── Smart Align ──────────────────────────────────────────────────
+// ─── Smart Align + Equal Spacing Detection ────────────────────────
 function applySmartAlign(nx, ny) {
   var el = S.elements[dragging.idx];
   var elW = el.w || (el.r ? el.r * 2 : 0) || 50;
@@ -66,6 +66,36 @@ function applySmartAlign(nx, ny) {
     if (Math.abs(ny + elH - (other.y + oH)) < snapThreshold) { ny = other.y + oH - elH; guides.push({ type: 'h', pos: other.y + oH }); }
     if (Math.abs(elCY - oCY) < snapThreshold) { ny = Math.round(oCY - elH / 2); guides.push({ type: 'h', pos: oCY }); }
   }
+
+  // 等间距检测: 检查拖动元素与其他元素是否等距
+  if (S.elements.length >= 3) {
+    var others = [];
+    for (var j = 0; j < S.elements.length; j++) {
+      if (j === dragging.idx) continue;
+      others.push({ x: S.elements[j].x, y: S.elements[j].y, w: S.elements[j].w || 50, h: S.elements[j].h || 30 });
+    }
+    // 水平等间距检测
+    others.sort(function (a, b) { return a.x - b.x; });
+    var curGaps = [];
+    for (var g = 1; g < others.length; g++) {
+      curGaps.push(others[g].x - (others[g - 1].x + others[g - 1].w));
+    }
+    // Check if inserting the dragged element creates equal spacing
+    for (var ci = 0; ci <= others.length; ci++) {
+      var leftEdge = ci > 0 ? others[ci - 1].x + others[ci - 1].w : -999;
+      var rightEdge = ci < others.length ? others[ci].x : 9999;
+      var gap = rightEdge - leftEdge - elW;
+      if (gap > 0 && curGaps.length >= 1) {
+        var refGap = curGaps[0];
+        if (Math.abs(gap - refGap) < 4) {
+          // Snap to equal spacing!
+          nx = ci > 0 ? others[ci - 1].x + others[ci - 1].w + refGap : others[ci].x - elW - refGap;
+          guides.push({ type: 'equal-h', pos: nx, label: '≈' + refGap + 'px' });
+        }
+      }
+    }
+  }
+
   return { x: nx, y: ny, guides: guides };
 }
 
@@ -76,9 +106,15 @@ function renderGuideLines(guides, scale) {
   screen.querySelectorAll('.align-guide').forEach(function (g) { g.remove(); });
   guides.forEach(function (g) {
     var div = document.createElement('div');
-    div.className = 'align-guide ' + (g.type === 'h' ? 'align-guide-h' : 'align-guide-v');
-    if (g.type === 'h') div.style.top = (g.pos * scale) + 'px';
-    else div.style.left = (g.pos * scale) + 'px';
+    if (g.type === 'equal-h') {
+      div.className = 'align-guide align-guide-v align-guide-equal';
+      div.style.left = (g.pos * scale) + 'px';
+      if (g.label) div.setAttribute('data-label', g.label);
+    } else {
+      div.className = 'align-guide ' + (g.type === 'h' ? 'align-guide-h' : 'align-guide-v');
+      if (g.type === 'h') div.style.top = (g.pos * scale) + 'px';
+      else div.style.left = (g.pos * scale) + 'px';
+    }
     screen.appendChild(div);
   });
 }
