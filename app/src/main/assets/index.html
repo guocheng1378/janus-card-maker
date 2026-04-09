@@ -1881,11 +1881,7 @@ input[type=range]::-moz-range-track{
         <div class="config-live-device-row">
           <label data-i18n="cfg.device">机型</label>
           <select id="cfgDeviceSelect">
-            <option value="auto">🔄 自动适配 — 全机型</option>
             <option value="p2">Pro Max — 976×596</option>
-            <option value="q200">Pro — 904×572</option>
-            <option value="q100">标准版 — 840×520</option>
-            <option value="ultra">Ultra — 1020×620</option>
           </select>
           <label class="check-label">
             <input type="checkbox" id="cfgShowCamera" checked> 摄像头
@@ -2237,19 +2233,15 @@ function setClipboard(v) { clipboard = v; }
 // ─── Devices: 设备参数 ─────────────────────────────────────────────
 
 const DEVICES = {
-  auto:  { id: 'auto',  label: '🔄 自动适配 — 976×596(基准)', width: 976, height: 596, cameraZoneRatio: 0.30, isAuto: true },
-  q200:  { id: 'q200',  label: 'Pro — 904×572',       width: 904,  height: 572,  cameraZoneRatio: 0.30 },
-  p2:    { id: 'p2',    label: 'Pro Max — 976×596',    width: 976,  height: 596,  cameraZoneRatio: 0.30 },
-  q100:  { id: 'q100',  label: '标准版 — 840×520',     width: 840,  height: 520,  cameraZoneRatio: 0.28 },
-  ultra: { id: 'ultra', label: 'Ultra — 1020×620',     width: 1020, height: 620,  cameraZoneRatio: 0.32 },
+  p2: { id: 'p2', label: 'Pro Max — 976×596', width: 976, height: 596, cameraZoneRatio: 0.30 },
 };
 
 function getDevice(id) {
-  return DEVICES[id] || DEVICES.auto;
+  return DEVICES[id] || DEVICES.p2;
 }
 
 function isAutoDevice(device) {
-  return device && device.isAuto === true;
+  return false;
 }
 
 function cameraZoneWidth(device) {
@@ -2258,26 +2250,16 @@ function cameraZoneWidth(device) {
 
 function generateAutoDetectMAML() {
   return [
-    '  <!-- 自动检测设备：通过屏幕宽高判断机型 -->',
-    '  <Var name="isQ100" type="number" expression="ifelse((#view_width <= 860), 1, 0)" />',
-    '  <Var name="isQ200" type="number" expression="ifelse(((#view_width > 860) &amp;&amp; (#view_width <= 940)), 1, 0)" />',
-    '  <Var name="isP2" type="number" expression="ifelse(((#view_width > 940) &amp;&amp; (#view_width <= 998)), 1, 0)" />',
-    '  <Var name="isUltra" type="number" expression="ifelse((#view_width > 998), 1, 0)" />',
-    '',
-    '  <!-- 摄像头避让边距（各机型比例不同） -->',
-    '  <Var name="marginL" type="number" expression="(#isQ100 * (#view_width * 0.28) + #isQ200 * (#view_width * 0.30) + #isP2 * (#view_width * 0.30) + #isUltra * (#view_width * 0.32))" />',
-    '',
-    '  <!-- 缩放比例（相对 Pro Max 基准 976×596） -->',
+    '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
     '  <Var name="scaleX" type="number" expression="(#view_width / 976.0)" />',
     '  <Var name="scaleY" type="number" expression="(#view_height / 596.0)" />',
-    '',
-    '  <!-- 可用区域宽度 -->',
     '  <Var name="safeW" type="number" expression="(#view_width - #marginL - 20)" />',
   ].join("\n");
 }
 
 // ─── js/maml.js ───
 // ─── MAML: XML 生成 + 转义 + 校验 ──────────────────────────────────
+// v2: NumberImage, Mask, Slider, Button, Animation, Variable, Trigger, Expression 全面支持
 
 function escXml(s) {
   return String(s)
@@ -2295,6 +2277,10 @@ function alphaAttr(el) {
     : '';
 }
 
+function visibilityAttr(el) {
+  return el.visibility ? ' visibility="' + el.visibility + '"' : '';
+}
+
 // ── MAML 框架标签白名单（原样透传） ──
 var FRAMEWORK_TAGS = {
   'Var': true, 'Variable': true, 'Permanence': true,
@@ -2308,10 +2294,47 @@ var FRAMEWORK_TAGS = {
   'LottieCommand': true, 'FrameRateCommand': true,
   'ExternalCommand': true, 'ExternalCommands': true,
   'Trigger': true, 'Triggers': true,
-  'Layer': true,
+  'Layer': true, 'VariableArray': true, 'Item': true,
+  'ContentProvider': true, 'Content': true,
 };
 
-// 递归渲染子元素（支持 Group/Layer/MusicControl 嵌套）
+// ── 动画渲染：生成子动画标签 ──
+function renderAnimations(el, files, indent) {
+  var p = indent || '    ';
+  var lines = [];
+  var anims = el.animations || {};
+  var animTypes = {
+    position: 'PositionAnimation',
+    size: 'SizeAnimation',
+    rotation: 'RotationAnimation',
+    alpha: 'AlphaAnimation',
+    src: 'SrcAnimation'
+  };
+
+  for (var type in anims) {
+    if (!anims[type] || anims[type].length === 0) continue;
+    var tag = animTypes[type] || type;
+    var aDelay = anims.delay ? ' delay="' + anims.delay + '"' : '';
+    var aRepeat = anims.repeat !== undefined ? ' repeat="' + anims.repeat + '"' : '';
+    var aName = anims.name ? ' name="' + escXml(anims.name) + '"' : '';
+    lines.push(p + '  <' + tag + aDelay + aRepeat + aName + '>');
+    anims[type].forEach(function (kf) {
+      var attrs = ' time="' + kf.time + '"';
+      if (kf.x !== undefined) attrs += ' x="' + kf.x + '"';
+      if (kf.y !== undefined) attrs += ' y="' + kf.y + '"';
+      if (kf.w !== undefined) attrs += ' w="' + kf.w + '"';
+      if (kf.h !== undefined) attrs += ' h="' + kf.h + '"';
+      if (kf.rotation !== undefined) attrs += ' rotation="' + kf.rotation + '"';
+      if (kf.alpha !== undefined) attrs += ' alpha="' + kf.alpha + '"';
+      if (kf.src) attrs += ' src="' + escXml(kf.src) + '"';
+      lines.push(p + '    <A' + attrs + ' />');
+    });
+    lines.push(p + '  </' + tag + '>');
+  }
+  return lines.join('\n');
+}
+
+// ── 渲染子元素（支持 Group/Layer/MusicControl/Slider/Button 嵌套）──
 function renderChildren(children, files, indent) {
   var lines = [];
   children.forEach(function (child) {
@@ -2320,26 +2343,64 @@ function renderChildren(children, files, indent) {
   return lines.filter(Boolean).join('\n');
 }
 
+// ── 通用容器属性（Group/Slider/Button 共用）──
+function containerAttrs(el) {
+  var attrs = '';
+  if (el.name) attrs += ' name="' + escXml(el.name) + '"';
+  if (el.x !== undefined) attrs += ' x="' + el.x + '"';
+  if (el.y !== undefined) attrs += ' y="' + el.y + '"';
+  if (el.w !== undefined) attrs += ' w="' + el.w + '"';
+  if (el.h !== undefined) attrs += ' h="' + el.h + '"';
+  if (el.alpha !== undefined && el.alpha !== 1) attrs += ' alpha="' + el.alpha + '"';
+  if (el.visibility) attrs += ' visibility="' + el.visibility + '"';
+  if (el.align) attrs += ' align="' + el.align + '"';
+  if (el.alignV) attrs += ' alignV="' + el.alignV + '"';
+  return attrs;
+}
+
+// ── 渲染单个元素 ──
 function renderEl(el, files, indent) {
   var p = indent || '    ';
 
-  // ── 框架标签：从 Group 的 children 中透传 ──
+  // ── 框架标签：从 children 中透传 ──
   if (el._rawXml) {
     return p + el._rawXml;
   }
 
+  // ── MAML 框架标签名透传 ──
+  if (el.type === 'framework' && el.tag && FRAMEWORK_TAGS[el.tag]) {
+    var rawAttrs = '';
+    if (el.attrs) {
+      for (var k in el.attrs) {
+        rawAttrs += ' ' + k + '="' + escXml(el.attrs[k]) + '"';
+      }
+    }
+    var rawChildren = (el.children && el.children.length > 0)
+      ? '\n' + renderChildren(el.children, files, p + '  ') + '\n' + p
+      : '';
+    return p + '<' + el.tag + rawAttrs + '>' + rawChildren + '</' + el.tag + '>';
+  }
+
   switch (el.type) {
+
+    // ════════════════════════════════════════
+    //  Text 文字
+    // ════════════════════════════════════════
     case 'text': {
       var t = el.expression ? 'textExp="' + el.expression + '"' : 'text="' + escXml(el.text || '') + '"';
       var a = el.textAlign && el.textAlign !== 'left' ? ' textAlign="' + el.textAlign + '"' : '';
       var ml = el.multiLine ? ' multiLine="true"' : '';
-      var w = el.multiLine || (el.textAlign && el.textAlign !== 'left') ? ' w="' + (el.w || 200) + '"' : '';
+      var w = el.multiLine || (el.textAlign && el.textAlign !== 'left') || el.marqueeSpeed ? ' w="' + (el.w || 200) + '"' : '';
       var b = el.bold ? ' bold="true"' : '';
       var ff = el.fontFamily && el.fontFamily !== 'default' ? ' fontFamily="' + el.fontFamily + '"' : '';
+
+      // 阴影
       var sh = '';
       if (el.shadow === 'light') sh = ' shadow="1" shadowColor="#000000"';
       else if (el.shadow === 'dark') sh = ' shadow="3" shadowColor="#000000"';
       else if (el.shadow === 'glow') sh = ' shadow="4" shadowColor="' + (el.color || '#ffffff') + '"';
+
+      // 文字渐变
       var tg = '';
       if (el.textGradient && el.textGradient !== 'none') {
         var gradColors = { sunset: '#ff6b6b,#feca57', ocean: '#0984e3,#00cec9', neon: '#ff00ff,#00ffff', gold: '#f39c12,#fdcb6e', aurora: '#6c5ce7,#00b894' };
@@ -2347,39 +2408,107 @@ function renderEl(el, files, indent) {
         var textGradOri = el.gradientOrientation && el.gradientOrientation !== 'top_bottom' ? el.gradientOrientation : 'top_bottom';
         tg = ' gradientColors="' + gc + '" gradientOrientation="' + textGradOri + '"';
       }
+
+      // 文字描边
       var ts = '';
       if (el.textStroke && el.textStroke > 0) {
         ts = ' stroke="' + el.textStroke + '" strokeColor="' + (el.textStrokeColor || '#000000') + '"';
       }
+
+      // 旋转（支持 3D）
       var rot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
+      if (el.rotationX) rot += ' rotationX="' + el.rotationX + '"';
+      if (el.rotationY) rot += ' rotationY="' + el.rotationY + '"';
+      if (el.rotationZ) rot += ' rotationZ="' + el.rotationZ + '"';
+
+      // 多行间距
       var lh = el.multiLine && el.lineHeight && el.lineHeight !== 1.4 ? ' lineHeight="' + el.lineHeight + '"' : '';
-      return p + '<Text ' + t + ' x="' + el.x + '" y="' + el.y + '" size="' + el.size + '" color="' + el.color + '"' + w + a + ml + b + ff + alphaAttr(el) + sh + tg + ts + rot + lh + ' />';
+      var sm = el.multiLine && el.spacingMult ? ' spacingMult="' + el.spacingMult + '"' : '';
+      var sa = el.multiLine && el.spacingAdd ? ' spacingAdd="' + el.spacingAdd + '"' : '';
+
+      // 跑马灯
+      var mq = el.marqueeSpeed ? ' marqueeSpeed="' + el.marqueeSpeed + '"' : '';
+      var mg = el.marqueeSpeed && el.marqueeGap ? ' marqueeGap="' + el.marqueeGap + '"' : '';
+
+      // format + paras
+      var fmt = el.format ? ' format="' + escXml(el.format) + '"' : '';
+      var prs = el.paras ? ' paras="' + escXml(el.paras) + '"' : '';
+
+      var textXml = p + '<Text ' + t + ' x="' + el.x + '" y="' + el.y + '" size="' + el.size + '" color="' + el.color + '"' + w + a + ml + b + ff + alphaAttr(el) + sh + tg + ts + rot + lh + sm + sa + mq + mg + fmt + prs + ' />';
+      var animXml = renderAnimations(el, files, p);
+      return animXml ? textXml.replace(/ \/>$/, '>\n' + animXml + '\n' + p + '</Text>') : textXml;
     }
+
+    // ════════════════════════════════════════
+    //  Rectangle 矩形
+    // ════════════════════════════════════════
     case 'rectangle': {
       var rectRot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
       var blur = el.blur ? ' blur="' + el.blur + '"' : '';
       var rectStroke = el.strokeWidth > 0 ? ' stroke="' + el.strokeWidth + '" strokeColor="' + (el.strokeColor || '#ffffff') + '"' : '';
+
       if (el.fillColor2) {
         var gradOri = el.gradientOrientation && el.gradientOrientation !== 'top_bottom' ? ' gradientOrientation="' + el.gradientOrientation + '"' : '';
-        return p + '<Rectangle x="' + el.x + '" y="' + el.y + '" w="' + el.w + '" h="' + el.h + '" fillColor="' + el.color + '" fillColor2="' + el.fillColor2 + '"' + (el.radius ? ' cornerRadius="' + el.radius + '"' : '') + alphaAttr(el) + rectRot + blur + rectStroke + gradOri + ' />';
+        var gradColors2 = el.gradientColors ? ' gradientColors="' + escXml(el.gradientColors) + '"' : '';
+        var rectXml = p + '<Rectangle x="' + el.x + '" y="' + el.y + '" w="' + el.w + '" h="' + el.h + '" fillColor="' + el.color + '" fillColor2="' + el.fillColor2 + '"' + (el.radius ? ' cornerRadius="' + el.radius + '"' : '') + alphaAttr(el) + rectRot + blur + rectStroke + gradOri + gradColors2 + ' />';
+        var animXml = renderAnimations(el, files, p);
+        return animXml ? rectXml.replace(/ \/>$/, '>\n' + animXml + '\n' + p + '</Rectangle>') : rectXml;
       }
-      return p + '<Rectangle x="' + el.x + '" y="' + el.y + '" w="' + el.w + '" h="' + el.h + '" fillColor="' + el.color + '"' + (el.radius ? ' cornerRadius="' + el.radius + '"' : '') + alphaAttr(el) + rectRot + blur + rectStroke + ' />';
+      var rectXml = p + '<Rectangle x="' + el.x + '" y="' + el.y + '" w="' + el.w + '" h="' + el.h + '" fillColor="' + el.color + '"' + (el.radius ? ' cornerRadius="' + el.radius + '"' : '') + alphaAttr(el) + rectRot + blur + rectStroke + ' />';
+      var animXml = renderAnimations(el, files, p);
+      return animXml ? rectXml.replace(/ \/>$/, '>\n' + animXml + '\n' + p + '</Rectangle>') : rectXml;
     }
+
+    // ════════════════════════════════════════
+    //  Circle 圆形
+    // ════════════════════════════════════════
     case 'circle': {
-      return p + '<Circle x="' + el.x + '" y="' + el.y + '" r="' + el.r + '" fillColor="' + el.color + '"' + alphaAttr(el) + ' />';
+      var cRot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
+      var cXml = p + '<Circle x="' + el.x + '" y="' + el.y + '" r="' + el.r + '" fillColor="' + el.color + '"' + alphaAttr(el) + cRot + ' />';
+      var animXml = renderAnimations(el, files, p);
+      return animXml ? cXml.replace(/ \/>$/, '>\n' + animXml + '\n' + p + '</Circle>') : cXml;
     }
+
+    // ════════════════════════════════════════
+    //  Image 图片
+    // ════════════════════════════════════════
     case 'image': {
       var srcFile = el.src || el.fileName || '';
       var folder = srcFile && files[srcFile] && files[srcFile].mimeType.indexOf('video/') === 0 ? 'videos' : 'images';
       var fitAttr = el.fit && el.fit !== 'cover' ? ' fitMode="' + el.fit + '"' : '';
       var imgRadius = el.radius ? ' cornerRadius="' + el.radius + '"' : '';
-      return p + '<Image src="' + folder + '/' + escXml(srcFile) + '" x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 100) + '" h="' + (el.h || 100) + '"' + fitAttr + imgRadius + alphaAttr(el) + ' />';
+      var imgPivot = (el.pivotX ? ' pivotX="' + el.pivotX + '"' : '') + (el.pivotY ? ' pivotY="' + el.pivotY + '"' : '');
+      var imgRot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
+      var imgAlign = el.align ? ' align="' + el.align + '"' : '';
+      var imgAlignV = el.alignV ? ' alignV="' + el.alignV + '"' : '';
+      var imgAnti = el.antiAlias ? ' antiAlias="true"' : '';
+      var imgSrcId = el.srcid !== undefined ? ' srcid="' + el.srcid + '"' : '';
+      var imgSrcExp = el.srcExp ? ' srcExp="' + escXml(el.srcExp) + '"' : '';
+      var imgSrcFmt = el.srcFormat ? ' srcFormat="' + escXml(el.srcFormat) + '"' : '';
+      var imgSrcFmtExp = el.srcFormatExp ? ' srcFormatExp="' + escXml(el.srcFormatExp) + '"' : '';
+      var imgSrcParas = el.srcParas ? ' srcParas="' + escXml(el.srcParas) + '"' : '';
+
+      var imgXml = p + '<Image src="' + folder + '/' + escXml(srcFile) + '" x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 100) + '" h="' + (el.h || 100) + '"' + fitAttr + imgRadius + alphaAttr(el) + imgPivot + imgRot + imgAlign + imgAlignV + imgAnti + imgSrcId + imgSrcExp + imgSrcFmt + imgSrcFmtExp + imgSrcParas + ' />';
+      var animXml = renderAnimations(el, files, p);
+      return animXml ? imgXml.replace(/ \/>$/, '>\n' + animXml + '\n' + p + '</Image>') : imgXml;
     }
+
+    // ════════════════════════════════════════
+    //  Video 视频
+    // ════════════════════════════════════════
     case 'video':
       return p + '<Video src="videos/' + escXml(el.src || el.fileName || '') + '" x="' + el.x + '" y="' + el.y + '" w="' + (el.w || 240) + '" h="' + (el.h || 135) + '" autoPlay="true" loop="true" />';
+
+    // ════════════════════════════════════════
+    //  Arc 弧形（模拟）
+    // ════════════════════════════════════════
     case 'arc':
       return p + '<!-- Arc: MAML 不原生支持 <Arc>，用 Circle 模拟 -->\n' +
         p + '<Circle x="' + el.x + '" y="' + el.y + '" r="' + (el.r || 40) + '" fillColor="' + el.color + '" />';
+
+    // ════════════════════════════════════════
+    //  Progress 进度条（模拟）
+    // ════════════════════════════════════════
     case 'progress': {
       var pw = el.w || 200;
       var ph = el.h || 8;
@@ -2389,8 +2518,11 @@ function renderEl(el, files, indent) {
       return p + '<Rectangle x="' + el.x + '" y="' + el.y + '" w="' + pw + '" h="' + ph + '" fillColor="' + (el.bgColor || '#333333') + '" cornerRadius="' + pr + '" />\n' +
         p + '<Rectangle x="' + el.x + '" y="' + el.y + '" w="' + barW + '" h="' + ph + '" fillColor="' + el.color + '" cornerRadius="' + pr + '" />';
     }
+
+    // ════════════════════════════════════════
+    //  Lottie 动画
+    // ════════════════════════════════════════
     case 'lottie': {
-      // MAML 原生支持 <Lottie> 标签
       var lottieSrc = el.src || el.fileName || '';
       var lottieName = el.name || '';
       var lottieAlign = el.align || 'center';
@@ -2404,23 +2536,90 @@ function renderEl(el, files, indent) {
       return p + '<Lottie src="' + escXml(lottieSrc) + '"' + lottieX + lottieY + lottieW + lottieH + ' align="' + lottieAlign + '" autoplay="' + lottieAuto + '" loop="' + lottieLoop + '"' + lottieNameAttr + ' />';
     }
 
-    // ── Group：容器元素，支持递归子元素 ──
+    // ════════════════════════════════════════
+    //  NumberImage 数字图片（NEW）
+    // ════════════════════════════════════════
+    case 'numberimage': {
+      var niNum = el.expression ? ' numberExp="' + escXml(el.expression) + '"' : ' number="' + (el.number || '0') + '"';
+      var niSrc = ' src="' + escXml(el.src || 'number') + '"';
+      var niX = ' x="' + el.x + '"';
+      var niY = ' y="' + el.y + '"';
+      var niW = ' w="' + (el.w || 30) + '"';
+      var niH = ' h="' + (el.h || 50) + '"';
+      var niSpace = el.space !== undefined ? ' space="' + el.space + '"' : '';
+      var niAlign = el.align ? ' align="' + el.align + '"' : '';
+      var niAlignV = el.alignV ? ' alignV="' + el.alignV + '"' : '';
+      var niXml = p + '<Number' + niNum + niSrc + niX + niY + niW + niH + niSpace + niAlign + niAlignV + alphaAttr(el) + ' />';
+      var animXml = renderAnimations(el, files, p);
+      return animXml ? niXml.replace(/ \/>$/, '>\n' + animXml + '\n' + p + '</Number>') : niXml;
+    }
+
+    // ════════════════════════════════════════
+    //  Mask 图片遮罩（NEW）
+    // ════════════════════════════════════════
+    case 'mask': {
+      var mSrc = ' src="' + escXml(el.src || '') + '"';
+      var mX = ' x="' + (el.x || 0) + '"';
+      var mY = ' y="' + (el.y || 0) + '"';
+      var mAlign = el.align ? ' align="' + el.align + '"' : '';
+      return p + '<Mask' + mSrc + mX + mY + mAlign + ' />';
+    }
+
+    // ════════════════════════════════════════
+    //  Slider 滑动控件（NEW）
+    // ════════════════════════════════════════
+    case 'slider': {
+      var slAttrs = '';
+      if (el.name) slAttrs += ' name="' + escXml(el.name) + '"';
+      if (el.bounceInitSpeed) slAttrs += ' bounceInitSpeed="' + el.bounceInitSpeed + '"';
+      if (el.bounceAccelation) slAttrs += ' bounceAccelation="' + el.bounceAccelation + '"';
+      if (el.alwaysShow) slAttrs += ' alwaysShow="true"';
+
+      var slChildren = [];
+      // 起始点
+      if (el.startPoint && el.startPoint.length > 0) {
+        slChildren.push(p + '  <StartPoint>');
+        slChildren.push(renderChildren(el.startPoint, files, p + '    '));
+        slChildren.push(p + '  </StartPoint>');
+      }
+      // 目标点
+      if (el.endPoint) {
+        var ep = el.endPoint;
+        slChildren.push(p + '  <EndPoint x="' + (ep.x || 0) + '" y="' + (ep.y || 0) + '" w="' + (ep.w || 100) + '" h="' + (ep.h || 100) + '" />');
+      }
+      // 触发器
+      if (el.triggers && el.triggers.length > 0) {
+        slChildren.push(renderChildren(el.triggers, files, p + '  '));
+      }
+
+      var slBody = slChildren.length > 0 ? '\n' + slChildren.join('\n') + '\n' + p : '';
+      return p + '<Slider' + slAttrs + '>' + slBody + '</Slider>';
+    }
+
+    // ════════════════════════════════════════
+    //  Button 按钮控件（NEW）
+    // ════════════════════════════════════════
+    case 'button': {
+      var btAttrs = containerAttrs(el);
+      if (el.interceptTouch) btAttrs += ' interceptTouch="true"';
+      if (el.touchable) btAttrs += ' touchable="true"';
+
+      var btChildren = (el.children && el.children.length > 0)
+        ? '\n' + renderChildren(el.children, files, p + '  ') + '\n' + p
+        : '';
+      return p + '<Button' + btAttrs + '>' + btChildren + '</Button>';
+    }
+
+    // ════════════════════════════════════════
+    //  Group 容器
+    // ════════════════════════════════════════
     case 'group': {
-      var attrs = '';
-      if (el.name) attrs += ' name="' + escXml(el.name) + '"';
-      if (el.x !== undefined) attrs += ' x="' + el.x + '"';
-      if (el.y !== undefined) attrs += ' y="' + el.y + '"';
-      if (el.w !== undefined) attrs += ' w="' + el.w + '"';
-      if (el.h !== undefined) attrs += ' h="' + el.h + '"';
-      if (el.alpha !== undefined) attrs += ' alpha="' + el.alpha + '"';
-      if (el.visibility) attrs += ' visibility="' + el.visibility + '"';
+      var attrs = containerAttrs(el);
       if (el.folmeMode) attrs += ' folmeMode="true"';
-      if (el.align) attrs += ' align="' + el.align + '"';
-      if (el.alignV) attrs += ' alignV="' + el.alignV + '"';
       if (el.contentDescription) attrs += ' contentDescriptionExp="' + escXml(el.contentDescription) + '"';
       if (el.interceptTouch) attrs += ' interceptTouch="true"';
       if (el.touchable) attrs += ' touchable="true"';
-      if (!attrs) attrs = '';
+      if (el.frameRate !== undefined) attrs += ' frameRate="' + el.frameRate + '"';
 
       var children = (el.children && el.children.length > 0)
         ? '\n' + renderChildren(el.children, files, p + '  ') + '\n' + p
@@ -2428,7 +2627,9 @@ function renderEl(el, files, indent) {
       return p + '<Group' + attrs + '>' + children + '</Group>';
     }
 
-    // ── Layer：超级材质层 ──
+    // ════════════════════════════════════════
+    //  Layer 超级材质层
+    // ════════════════════════════════════════
     case 'layer': {
       var layerAttrs = '';
       if (el.name) layerAttrs += ' name="' + escXml(el.name) + '"';
@@ -2449,7 +2650,9 @@ function renderEl(el, files, indent) {
       return p + '<Layer' + layerAttrs + '>' + layerChildren + '</Layer>';
     }
 
-    // ── MusicControl：音乐控件 ──
+    // ════════════════════════════════════════
+    //  MusicControl 音乐控件
+    // ════════════════════════════════════════
     case 'musiccontrol': {
       var mcAttrs = '';
       if (el.name) mcAttrs += ' name="' + escXml(el.name) + '"';
@@ -2468,18 +2671,190 @@ function renderEl(el, files, indent) {
       return p + '<MusicControl' + mcAttrs + '>' + mcChildren + '</MusicControl>';
     }
 
+    // ════════════════════════════════════════
+    //  Variable 变量定义（NEW）
+    // ════════════════════════════════════════
+    case 'variable': {
+      var vAttrs = ' name="' + escXml(el.name || '') + '"';
+      vAttrs += ' expression="' + escXml(el.expression || '') + '"';
+      if (el.varType) vAttrs += ' type="' + el.varType + '"';
+      if (el.const) vAttrs += ' const="true"';
+      if (el.threshold !== undefined) vAttrs += ' threshold="' + el.threshold + '"';
+      if (el.persist) vAttrs += ' persist="true"';
+      return p + '<Var' + vAttrs + ' />';
+    }
+
+    // ════════════════════════════════════════
+    //  VariableArray 数组变量（NEW）
+    // ════════════════════════════════════════
+    case 'variablearray': {
+      var vaAttrs = ' name="' + escXml(el.name || '') + '"';
+      var vaItems = '';
+      if (el.items && el.items.length > 0) {
+        vaItems = '\n';
+        el.items.forEach(function (item) {
+          if (item.expression) {
+            vaItems += p + '  <Item expression="' + escXml(item.expression) + '" />\n';
+          } else {
+            vaItems += p + '  <Item value="' + escXml(item.value || '') + '" />\n';
+          }
+        });
+        vaItems += p;
+      }
+      return p + '<VariableArray' + vaAttrs + '>' + vaItems + '</VariableArray>';
+    }
+
+    // ════════════════════════════════════════
+    //  Trigger 触发器（NEW）
+    // ════════════════════════════════════════
+    case 'trigger': {
+      var trAttrs = el.action ? ' action="' + el.action + '"' : '';
+      var trChildren = (el.children && el.children.length > 0)
+        ? '\n' + renderChildren(el.children, files, p + '  ') + '\n' + p
+        : '';
+      return p + '<Trigger' + trAttrs + '>' + trChildren + '</Trigger>';
+    }
+
+    // ════════════════════════════════════════
+    //  各类 Command（NEW）
+    // ════════════════════════════════════════
+    case 'variablecommand': {
+      var vcAttrs = '';
+      if (el.target) vcAttrs += ' target="' + escXml(el.target) + '"';
+      if (el.value) vcAttrs += ' value="' + escXml(el.value) + '"';
+      if (el.expression) vcAttrs += ' expression="' + escXml(el.expression) + '"';
+      return p + '<VariableCommand' + vcAttrs + ' />';
+    }
+    case 'bindercommand': {
+      var bcAttrs = '';
+      if (el.target) bcAttrs += ' target="' + escXml(el.target) + '"';
+      if (el.value) bcAttrs += ' value="' + escXml(el.value) + '"';
+      return p + '<BinderCommand' + bcAttrs + ' />';
+    }
+    case 'musiccommand': {
+      var mcmdAttrs = '';
+      if (el.action) mcmdAttrs += ' action="' + el.action + '"';
+      return p + '<MusicCommand' + mcmdAttrs + ' />';
+    }
+    case 'frameratecommand': {
+      var frcAttrs = '';
+      if (el.target) frcAttrs += ' target="' + escXml(el.target) + '"';
+      if (el.frameRate !== undefined) frcAttrs += ' frameRate="' + el.frameRate + '"';
+      return p + '<FrameRateCommand' + frcAttrs + ' />';
+    }
+    case 'multicommand': {
+      var mcCh = (el.children && el.children.length > 0)
+        ? '\n' + renderChildren(el.children, files, p + '  ') + '\n' + p
+        : '';
+      return p + '<MultiCommand>' + mcCh + '</MultiCommand>';
+    }
+
+    // ════════════════════════════════════════
+    //  IfCommand 条件分支（NEW）
+    // ════════════════════════════════════════
+    case 'ifcommand': {
+      var ifAttrs = el.condition ? ' condition="' + escXml(el.condition) + '"' : '';
+      var ifBody = '';
+      if (el.consequent && el.consequent.length > 0) {
+        ifBody += '\n' + p + '  <Consequent>\n';
+        ifBody += renderChildren(el.consequent, files, p + '    ') + '\n';
+        ifBody += p + '  </Consequent>';
+      }
+      if (el.alternate && el.alternate.length > 0) {
+        ifBody += '\n' + p + '  <Alternate>\n';
+        ifBody += renderChildren(el.alternate, files, p + '    ') + '\n';
+        ifBody += p + '  </Alternate>';
+      }
+      if (ifBody) ifBody += '\n' + p;
+      return p + '<IfCommand' + ifAttrs + '>' + ifBody + '</IfCommand>';
+    }
+
+    // ════════════════════════════════════════
+    //  VariableBinders / ContentProvider（NEW）
+    // ════════════════════════════════════════
+    case 'variablebinders': {
+      var vbChildren = (el.children && el.children.length > 0)
+        ? '\n' + renderChildren(el.children, files, p + '  ') + '\n' + p
+        : '';
+      return p + '<VariableBinders>' + vbChildren + '</VariableBinders>';
+    }
+    case 'contentprovider': {
+      var cpAttrs = '';
+      if (el.uri) cpAttrs += ' uri="' + escXml(el.uri) + '"';
+      if (el.projection) cpAttrs += ' projection="' + escXml(el.projection) + '"';
+      if (el.selection) cpAttrs += ' selection="' + escXml(el.selection) + '"';
+      if (el.sortOrder) cpAttrs += ' sortOrder="' + escXml(el.sortOrder) + '"';
+      var cpChildren = (el.children && el.children.length > 0)
+        ? '\n' + renderChildren(el.children, files, p + '  ') + '\n' + p
+        : '';
+      return p + '<ContentProvider' + cpAttrs + '>' + cpChildren + '</ContentProvider>';
+    }
+    case 'contentbinding': {
+      var cbAttrs = '';
+      if (el.name) cbAttrs += ' name="' + escXml(el.name) + '"';
+      if (el.column) cbAttrs += ' column="' + escXml(el.column) + '"';
+      return p + '<Content' + cbAttrs + ' />';
+    }
+
+    // ════════════════════════════════════════
+    //  Permanence 持久化（NEW）
+    // ════════════════════════════════════════
+    case 'permanence': {
+      var pmAttrs = '';
+      if (el.name) pmAttrs += ' name="' + escXml(el.name) + '"';
+      if (el.expression) pmAttrs += ' expression="' + escXml(el.expression) + '"';
+      if (el.default !== undefined) pmAttrs += ' default="' + escXml(el.default) + '"';
+      return p + '<Permanence' + pmAttrs + ' />';
+    }
+
+    // ════════════════════════════════════════
+    //  FolmeState / FolmeConfig（NEW）
+    // ════════════════════════════════════════
+    case 'folmestate': {
+      var fsAttrs = '';
+      if (el.name) fsAttrs += ' name="' + escXml(el.name) + '"';
+      var fsChildren = (el.children && el.children.length > 0)
+        ? '\n' + renderChildren(el.children, files, p + '  ') + '\n' + p
+        : '';
+      return p + '<FolmeState' + fsAttrs + '>' + fsChildren + '</FolmeState>';
+    }
+    case 'folmeconfig': {
+      var fcChildren = (el.children && el.children.length > 0)
+        ? '\n' + renderChildren(el.children, files, p + '  ') + '\n' + p
+        : '';
+      return p + '<FolmeConfig>' + fcChildren + '</FolmeConfig>';
+    }
+
+    // ════════════════════════════════════════
+    //  MiPaletteBinder 主题色绑定（NEW）
+    // ════════════════════════════════════════
+    case 'mipalettebinder': {
+      var mpChildren = (el.children && el.children.length > 0)
+        ? '\n' + renderChildren(el.children, files, p + '  ') + '\n' + p
+        : '';
+      return p + '<MiPaletteBinder>' + mpChildren + '</MiPaletteBinder>';
+    }
+
+    // ════════════════════════════════════════
+    //  Wallpaper 壁纸引用（NEW）
+    // ════════════════════════════════════════
+    case 'wallpaper': {
+      var wpAttrs = ' x="0" y="0" w="#view_width" h="#view_height"';
+      var wpXml = p + '<Wallpaper' + wpAttrs + alphaAttr(el) + ' />';
+      var animXml = renderAnimations(el, files, p);
+      return animXml ? wpXml.replace(/ \/>$/, '>\n' + animXml + '\n' + p + '</Wallpaper>') : wpXml;
+    }
+
     default:
       return '';
   }
 }
 
 // ── 响应式渲染: 将硬编码坐标转为 MAML 表达式，自动适配各机型 ──
-// REF_W / REF_H = 基准机型尺寸 (Pro Max: 976×596)
 var REF_W = 976, REF_H = 596;
 
 function respX(val) {
   if (val <= 0) return '0';
-  // 如果在摄像头区域右边，用 #marginL + offset
   var marginL = Math.round(REF_W * 0.30);
   if (val > marginL) {
     var offset = val - marginL;
@@ -2508,16 +2883,58 @@ function respSize(val) {
   return 'round(' + val + ' * #scaleX)';
 }
 
+// 响应式动画渲染
+function renderAnimationsResponsive(el, files, indent) {
+  var p = indent || '    ';
+  var lines = [];
+  var anims = el.animations || {};
+  var animTypes = {
+    position: 'PositionAnimation',
+    size: 'SizeAnimation',
+    rotation: 'RotationAnimation',
+    alpha: 'AlphaAnimation',
+    src: 'SrcAnimation'
+  };
+
+  for (var type in anims) {
+    if (!anims[type] || anims[type].length === 0) continue;
+    var tag = animTypes[type] || type;
+    var aDelay = anims.delay ? ' delay="' + anims.delay + '"' : '';
+    var aRepeat = anims.repeat !== undefined ? ' repeat="' + anims.repeat + '"' : '';
+    var aName = anims.name ? ' name="' + escXml(anims.name) + '"' : '';
+    lines.push(p + '  <' + tag + aDelay + aRepeat + aName + '>');
+    anims[type].forEach(function (kf) {
+      var attrs = ' time="' + kf.time + '"';
+      if (kf.x !== undefined) attrs += ' x="' + (type === 'position' ? respX(kf.x) : kf.x) + '"';
+      if (kf.y !== undefined) attrs += ' y="' + (type === 'position' ? respY(kf.y) : kf.y) + '"';
+      if (kf.w !== undefined) attrs += ' w="' + (type === 'size' ? respW(kf.w) : kf.w) + '"';
+      if (kf.h !== undefined) attrs += ' h="' + (type === 'size' ? respH(kf.h) : kf.h) + '"';
+      if (kf.rotation !== undefined) attrs += ' rotation="' + kf.rotation + '"';
+      if (kf.alpha !== undefined) attrs += ' alpha="' + kf.alpha + '"';
+      if (kf.src) attrs += ' src="' + escXml(kf.src) + '"';
+      lines.push(p + '    <A' + attrs + ' />');
+    });
+    lines.push(p + '  </' + tag + '>');
+  }
+  return lines.join('\n');
+}
+
 function renderElResponsive(el, files, indent) {
   var p = indent || '    ';
   if (el._rawXml) return p + el._rawXml;
 
+  // 框架标签透传
+  if (el.type === 'framework' && el.tag && FRAMEWORK_TAGS[el.tag]) {
+    return renderEl(el, files, indent);
+  }
+
   switch (el.type) {
+
     case 'text': {
       var t = el.expression ? 'textExp="' + el.expression + '"' : 'text="' + escXml(el.text || '') + '"';
       var a = el.textAlign && el.textAlign !== 'left' ? ' textAlign="' + el.textAlign + '"' : '';
       var ml = el.multiLine ? ' multiLine="true"' : '';
-      var rw = el.multiLine || (el.textAlign && el.textAlign !== 'left') ? ' w="' + respW(el.w || 200) + '"' : '';
+      var rw = el.multiLine || (el.textAlign && el.textAlign !== 'left') || el.marqueeSpeed ? ' w="' + respW(el.w || 200) + '"' : '';
       var b = el.bold ? ' bold="true"' : '';
       var ff = el.fontFamily && el.fontFamily !== 'default' ? ' fontFamily="' + el.fontFamily + '"' : '';
       var sh = '';
@@ -2534,28 +2951,63 @@ function renderElResponsive(el, files, indent) {
       var ts = '';
       if (el.textStroke && el.textStroke > 0) ts = ' stroke="' + el.textStroke + '" strokeColor="' + (el.textStrokeColor || '#000000') + '"';
       var rot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
+      if (el.rotationX) rot += ' rotationX="' + el.rotationX + '"';
+      if (el.rotationY) rot += ' rotationY="' + el.rotationY + '"';
+      if (el.rotationZ) rot += ' rotationZ="' + el.rotationZ + '"';
       var lh = el.multiLine && el.lineHeight && el.lineHeight !== 1.4 ? ' lineHeight="' + el.lineHeight + '"' : '';
-      return p + '<Text ' + t + ' x="' + respX(el.x) + '" y="' + respY(el.y) + '" size="' + respSize(el.size) + '" color="' + el.color + '"' + rw + a + ml + b + ff + alphaAttr(el) + sh + tg + ts + rot + lh + ' />';
+      var sm = el.multiLine && el.spacingMult ? ' spacingMult="' + el.spacingMult + '"' : '';
+      var sa = el.multiLine && el.spacingAdd ? ' spacingAdd="' + el.spacingAdd + '"' : '';
+      var mq = el.marqueeSpeed ? ' marqueeSpeed="' + el.marqueeSpeed + '"' : '';
+      var mg = el.marqueeSpeed && el.marqueeGap ? ' marqueeGap="' + el.marqueeGap + '"' : '';
+      var fmt = el.format ? ' format="' + escXml(el.format) + '"' : '';
+      var prs = el.paras ? ' paras="' + escXml(el.paras) + '"' : '';
+      var textXml = p + '<Text ' + t + ' x="' + respX(el.x) + '" y="' + respY(el.y) + '" size="' + respSize(el.size) + '" color="' + el.color + '"' + rw + a + ml + b + ff + alphaAttr(el) + sh + tg + ts + rot + lh + sm + sa + mq + mg + fmt + prs + ' />';
+      var animXml = renderAnimationsResponsive(el, files, p);
+      return animXml ? textXml.replace(/ \/>$/, '>\n' + animXml + '\n' + p + '</Text>') : textXml;
     }
+
     case 'rectangle': {
       var rectRot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
       var blur = el.blur ? ' blur="' + el.blur + '"' : '';
       var rectStroke = el.strokeWidth > 0 ? ' stroke="' + el.strokeWidth + '" strokeColor="' + (el.strokeColor || '#ffffff') + '"' : '';
       var gradOri = (el.fillColor2 && el.gradientOrientation && el.gradientOrientation !== 'top_bottom') ? ' gradientOrientation="' + el.gradientOrientation + '"' : '';
       var fillColor2 = el.fillColor2 ? ' fillColor2="' + el.fillColor2 + '"' : '';
-      return p + '<Rectangle x="' + respX(el.x) + '" y="' + respY(el.y) + '" w="' + respW(el.w) + '" h="' + respH(el.h) + '" fillColor="' + el.color + '"' + fillColor2 + (el.radius ? ' cornerRadius="' + el.radius + '"' : '') + alphaAttr(el) + rectRot + blur + rectStroke + gradOri + ' />';
+      var gradColors2 = el.gradientColors ? ' gradientColors="' + escXml(el.gradientColors) + '"' : '';
+      var rectXml = p + '<Rectangle x="' + respX(el.x) + '" y="' + respY(el.y) + '" w="' + respW(el.w) + '" h="' + respH(el.h) + '" fillColor="' + el.color + '"' + fillColor2 + (el.radius ? ' cornerRadius="' + el.radius + '"' : '') + alphaAttr(el) + rectRot + blur + rectStroke + gradOri + gradColors2 + ' />';
+      var animXml = renderAnimationsResponsive(el, files, p);
+      return animXml ? rectXml.replace(/ \/>$/, '>\n' + animXml + '\n' + p + '</Rectangle>') : rectXml;
     }
-    case 'circle':
-      return p + '<Circle x="' + respX(el.x) + '" y="' + respY(el.y) + '" r="' + respW(el.r) + '" fillColor="' + el.color + '"' + alphaAttr(el) + ' />';
+
+    case 'circle': {
+      var cRot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
+      var cXml = p + '<Circle x="' + respX(el.x) + '" y="' + respY(el.y) + '" r="' + respW(el.r) + '" fillColor="' + el.color + '"' + alphaAttr(el) + cRot + ' />';
+      var animXml = renderAnimationsResponsive(el, files, p);
+      return animXml ? cXml.replace(/ \/>$/, '>\n' + animXml + '\n' + p + '</Circle>') : cXml;
+    }
+
     case 'image': {
       var srcFile = el.src || el.fileName || '';
       var folder = srcFile && files[srcFile] && files[srcFile].mimeType.indexOf('video/') === 0 ? 'videos' : 'images';
       var fitAttr = el.fit && el.fit !== 'cover' ? ' fitMode="' + el.fit + '"' : '';
       var imgRadius = el.radius ? ' cornerRadius="' + el.radius + '"' : '';
-      return p + '<Image src="' + folder + '/' + escXml(srcFile) + '" x="' + respX(el.x) + '" y="' + respY(el.y) + '" w="' + respW(el.w || 100) + '" h="' + respH(el.h || 100) + '"' + fitAttr + imgRadius + alphaAttr(el) + ' />';
+      var imgPivot = (el.pivotX ? ' pivotX="' + el.pivotX + '"' : '') + (el.pivotY ? ' pivotY="' + el.pivotY + '"' : '');
+      var imgRot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
+      var imgAlign = el.align ? ' align="' + el.align + '"' : '';
+      var imgAlignV = el.alignV ? ' alignV="' + el.alignV + '"' : '';
+      var imgAnti = el.antiAlias ? ' antiAlias="true"' : '';
+      var imgSrcId = el.srcid !== undefined ? ' srcid="' + el.srcid + '"' : '';
+      var imgSrcExp = el.srcExp ? ' srcExp="' + escXml(el.srcExp) + '"' : '';
+      var imgSrcFmt = el.srcFormat ? ' srcFormat="' + escXml(el.srcFormat) + '"' : '';
+      var imgSrcFmtExp = el.srcFormatExp ? ' srcFormatExp="' + escXml(el.srcFormatExp) + '"' : '';
+      var imgSrcParas = el.srcParas ? ' srcParas="' + escXml(el.srcParas) + '"' : '';
+      var imgXml = p + '<Image src="' + folder + '/' + escXml(srcFile) + '" x="' + respX(el.x) + '" y="' + respY(el.y) + '" w="' + respW(el.w || 100) + '" h="' + respH(el.h || 100) + '"' + fitAttr + imgRadius + alphaAttr(el) + imgPivot + imgRot + imgAlign + imgAlignV + imgAnti + imgSrcId + imgSrcExp + imgSrcFmt + imgSrcFmtExp + imgSrcParas + ' />';
+      var animXml = renderAnimationsResponsive(el, files, p);
+      return animXml ? imgXml.replace(/ \/>$/, '>\n' + animXml + '\n' + p + '</Image>') : imgXml;
     }
+
     case 'video':
       return p + '<Video src="videos/' + escXml(el.src || el.fileName || '') + '" x="' + respX(el.x) + '" y="' + respY(el.y) + '" w="' + respW(el.w || 240) + '" h="' + respH(el.h || 135) + '" autoPlay="true" loop="true" />';
+
     case 'progress': {
       var pw = respW(el.w || 200);
       var ph = respH(el.h || 8);
@@ -2565,18 +3017,75 @@ function renderElResponsive(el, files, indent) {
       return p + '<Rectangle x="' + respX(el.x) + '" y="' + respY(el.y) + '" w="' + pw + '" h="' + ph + '" fillColor="' + (el.bgColor || '#333333') + '" cornerRadius="' + pr + '" />\n' +
         p + '<Rectangle x="' + respX(el.x) + '" y="' + respY(el.y) + '" w="' + barW + '" h="' + ph + '" fillColor="' + el.color + '" cornerRadius="' + pr + '" />';
     }
+
+    case 'numberimage': {
+      var niNum = el.expression ? ' numberExp="' + escXml(el.expression) + '"' : ' number="' + (el.number || '0') + '"';
+      var niSrc = ' src="' + escXml(el.src || 'number') + '"';
+      var niXml = p + '<Number' + niNum + niSrc + ' x="' + respX(el.x) + '" y="' + respY(el.y) + '" w="' + respW(el.w || 30) + '" h="' + respH(el.h || 50) + '"' + (el.space !== undefined ? ' space="' + respW(el.space) + '"' : '') + (el.align ? ' align="' + el.align + '"' : '') + (el.alignV ? ' alignV="' + el.alignV + '"' : '') + alphaAttr(el) + ' />';
+      var animXml = renderAnimationsResponsive(el, files, p);
+      return animXml ? niXml.replace(/ \/>$/, '>\n' + animXml + '\n' + p + '</Number>') : niXml;
+    }
+
+    case 'slider':
+    case 'button':
+    case 'group':
+    case 'layer':
+    case 'musiccontrol':
+    case 'variable':
+    case 'variablearray':
+    case 'trigger':
+    case 'variablecommand':
+    case 'bindercommand':
+    case 'musiccommand':
+    case 'frameratecommand':
+    case 'multicommand':
+    case 'ifcommand':
+    case 'variablebinders':
+    case 'contentprovider':
+    case 'contentbinding':
+    case 'permanence':
+    case 'folmestate':
+    case 'folmeconfig':
+    case 'mipalettebinder':
+    case 'wallpaper':
+    case 'mask':
+    case 'lottie':
+    case 'arc':
+      // 非坐标类元素或不需要响应式变换的元素，直接用静态渲染
+      return renderEl(el, files, indent);
+
     default:
-      return renderEl(el, files, indent); // fallback to static
+      return '';
   }
 }
 
+// ── 生成完整 MAML XML ──
 function generateMAML(opts) {
   var lines = [];
+
+  // Widget 根标签
   var attrs = 'screenWidth="' + opts.device.width + '" frameRate="0" scaleByDensity="false"';
   if (opts.updater) attrs += ' useVariableUpdater="' + opts.updater + '"';
   attrs += ' name="' + escXml(opts.cardName) + '"';
   lines.push('<Widget ' + attrs + '>');
 
+  // 变量定义（放在最前面）
+  if (opts.variables && opts.variables.length > 0) {
+    opts.variables.forEach(function (v) {
+      lines.push('  <Var name="' + escXml(v.name) + '" expression="' + escXml(v.expression) + '"' + (v.varType ? ' type="' + v.varType + '"' : '') + (v.const ? ' const="true"' : '') + (v.threshold !== undefined ? ' threshold="' + v.threshold + '"' : '') + (v.persist ? ' persist="true"' : '') + ' />');
+    });
+  }
+
+  // VariableBinders（ContentProvider 绑定）
+  if (opts.variableBinders && opts.variableBinders.length > 0) {
+    lines.push('  <VariableBinders>');
+    opts.variableBinders.forEach(function (binder) {
+      lines.push(renderEl(binder, opts.uploadedFiles, '    '));
+    });
+    lines.push('  </VariableBinders>');
+  }
+
+  // 背景图
   var innerXml = opts.innerXml;
   if (opts.bgImage) {
     var bgImgLine = '  <Image src="' + escXml(opts.bgImage) + '" x="0" y="0" w="#view_width" h="#view_height" />';
@@ -2586,9 +3095,11 @@ function generateMAML(opts) {
       innerXml = bgImgLine + '\n' + innerXml;
     }
   }
+
   lines.push(innerXml);
 
-  if (opts.extraElements.length > 0) {
+  // 额外元素
+  if (opts.extraElements && opts.extraElements.length > 0) {
     lines.push('  <Group x="#marginL" y="0">');
     opts.extraElements.forEach(function (el) {
       lines.push(renderEl(el, opts.uploadedFiles));
@@ -2600,8 +3111,8 @@ function generateMAML(opts) {
   return lines.join('\n');
 }
 
+// ── MAML 校验 ──
 function validateMAML(xml) {
-  // MAML 不是严格 XML（表达式含 <=, >= 等），只用正则校验
   return validateMAMLRegex(xml);
 }
 
@@ -5640,6 +6151,513 @@ var pixel_clock = {
   },
 };
 
+// ─── js/templates/animated_clock.js ───
+
+var animated_clock = {
+  id: 'animated_clock', icon: '🕐', name: '动画时钟', desc: '带弹跳动画的极简时钟',
+  updater: 'DateTime.Second',
+  config: [
+    { group: '基本', fields: [
+      { key: 'cardName', label: '卡片名称', type: 'text', default: '动画时钟' },
+      { key: 'bgColor', label: '背景颜色', type: 'color', default: '#0a0a1a' },
+    ]},
+    { group: '样式', fields: [
+      { key: 'timeColor', label: '时间颜色', type: 'color', default: '#ffffff' },
+      { key: 'accentColor', label: '强调色', type: 'color', default: '#ff6b6b' },
+      { key: 'timeSize', label: '时间字号', type: 'range', min: 48, max: 96, default: 72 },
+    ]},
+  ],
+  elements(c) {
+    var ts = Number(c.timeSize) || 72;
+    return [
+      { type: 'rectangle', x: 0, y: 0, w: 976, h: 596, color: c.bgColor, locked: true },
+      { type: 'text', expression: "formatDate('HH:mm', #time_sys)", text: '12:34', x: 40, y: 120, size: ts, color: c.timeColor, bold: true, fontFamily: 'mipro-demibold',
+        animations: { position: [{ time: 0, x: 40, y: 120 }, { time: 300, x: 40, y: 112 }, { time: 600, x: 40, y: 120 }], repeat: -1 } },
+      { type: 'text', expression: "formatDate('ss', #time_sys)", text: '00', x: 40, y: 120 + Math.round(ts * 0.9), size: Math.round(ts * 0.35), color: c.accentColor, opacity: 70,
+        animations: { alpha: [{ time: 0, alpha: 0.7 }, { time: 500, alpha: 1.0 }, { time: 1000, alpha: 0.7 }], repeat: -1 } },
+      { type: 'rectangle', x: 40, y: 120 + Math.round(ts * 0.9) + 30, w: 40, h: 3, color: c.accentColor, radius: 1.5,
+        animations: { size: [{ time: 0, w: 40, h: 3 }, { time: 500, w: 60, h: 3 }, { time: 1000, w: 40, h: 3 }], repeat: -1 } },
+      { type: 'text', expression: "formatDate('EEEE MM/dd', #time_sys)", text: '星期五 04/04', x: 40, y: 120 + Math.round(ts * 0.9) + 45, size: 16, color: '#666666' },
+    ];
+  },
+  rawXml(c) {
+    var ts = Number(c.timeSize) || 72;
+    var secY = 120 + Math.round(ts * 0.9);
+    var barY = secY + 30;
+    var dateY = barY + 15;
+    return [
+      '<Widget screenWidth="976" frameRate="30" scaleByDensity="false" useVariableUpdater="DateTime.Second" name="' + escXml(c.cardName || '动画时钟') + '">',
+      '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+      '',
+      '  <!-- 背景 -->',
+      '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
+      '',
+      '  <!-- 时钟内容 -->',
+      '  <Group name="clock_anim" x="#marginL" y="0">',
+      '    <!-- 时间：带弹跳动画 -->',
+      '    <Text x="0" y="120" size="' + ts + '" color="' + c.timeColor + '" textExp="formatDate(\'HH:mm\', #time_sys)" bold="true" fontFamily="mipro-demibold">',
+      '      <PositionAnimation repeat="-1">',
+      '        <A time="0" x="0" y="120" />',
+      '        <A time="300" x="0" y="112" />',
+      '        <A time="600" x="0" y="120" />',
+      '      </PositionAnimation>',
+      '    </Text>',
+      '',
+      '    <!-- 秒数：闪烁动画 -->',
+      '    <Text x="0" y="' + secY + '" size="' + Math.round(ts * 0.35) + '" color="' + c.accentColor + '" textExp="formatDate(\'ss\', #time_sys)">',
+      '      <AlphaAnimation repeat="-1">',
+      '        <A time="0" alpha="0.7" />',
+      '        <A time="500" alpha="1.0" />',
+      '        <A time="1000" alpha="0.7" />',
+      '      </AlphaAnimation>',
+      '    </Text>',
+      '',
+      '    <!-- 强调线：伸缩动画 -->',
+      '    <Rectangle x="0" y="' + barY + '" w="40" h="3" fillColor="' + c.accentColor + '" cornerRadius="1.5">',
+      '      <SizeAnimation repeat="-1">',
+      '        <A time="0" w="40" />',
+      '        <A time="500" w="60" />',
+      '        <A time="1000" w="40" />',
+      '      </SizeAnimation>',
+      '    </Rectangle>',
+      '',
+      '    <!-- 日期 -->',
+      '    <Text x="0" y="' + dateY + '" size="16" color="#666666" textExp="formatDate(\'EEEE MM/dd\', #time_sys)" />',
+      '  </Group>',
+      '</Widget>',
+    ].join('\n');
+  },
+};
+
+// ─── js/templates/slide_unlock.js ───
+
+var slide_unlock = {
+  id: 'slide_unlock', icon: '🔓', name: '滑动解锁', desc: '滑动解锁卡片，支持 Trigger 交互',
+  updater: 'DateTime.Minute',
+  config: [
+    { group: '基本', fields: [
+      { key: 'cardName', label: '卡片名称', type: 'text', default: '滑动解锁' },
+      { key: 'bgColor', label: '背景颜色', type: 'color', default: '#0a0a1a' },
+    ]},
+    { group: '样式', fields: [
+      { key: 'trackColor', label: '滑轨颜色', type: 'color', default: '#1a1a2e' },
+      { key: 'thumbColor', label: '滑块颜色', type: 'color', default: '#6c5ce7' },
+      { key: 'textColor', label: '文字颜色', type: 'color', default: '#555555' },
+      { key: 'hintText', label: '提示文字', type: 'text', default: '← 滑动解锁' },
+    ]},
+  ],
+  elements(c) {
+    return [
+      { type: 'rectangle', x: 0, y: 0, w: 976, h: 596, color: c.bgColor, locked: true },
+      { type: 'rectangle', x: 30, y: 240, w: 260, h: 56, color: c.trackColor, radius: 28, locked: false },
+      { type: 'rectangle', x: 36, y: 246, w: 44, h: 44, color: c.thumbColor, radius: 22, locked: false },
+      { type: 'text', text: c.hintText, x: 96, y: 258, size: 14, color: c.textColor, locked: false },
+      { type: 'text', expression: "formatDate('HH:mm', #time_sys)", text: '12:34', x: 30, y: 100, size: 48, color: '#ffffff', bold: true, fontFamily: 'mipro-demibold', locked: false },
+    ];
+  },
+  rawXml(c) {
+    return [
+      '<Widget screenWidth="976" frameRate="0" scaleByDensity="false" useVariableUpdater="DateTime.Minute" name="' + escXml(c.cardName || '滑动解锁') + '">',
+      '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+      '',
+      '  <!-- 背景 -->',
+      '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
+      '',
+      '  <!-- 时间 -->',
+      '  <Group x="#marginL" y="0">',
+      '    <Text x="0" y="100" size="48" color="#ffffff" textExp="formatDate(\'HH:mm\', #time_sys)" bold="true" fontFamily="mipro-demibold" />',
+      '',
+      '    <!-- 滑动解锁条 -->',
+      '    <Slider name="unlock_slider" bounceInitSpeed="800" bounceAccelation="1200">',
+      '      <!-- 滑轨背景 -->',
+      '      <Rectangle x="0" y="140" w="260" h="56" fillColor="' + c.trackColor + '" cornerRadius="28" />',
+      '      <!-- 提示文字 -->',
+      '      <Text x="66" y="152" size="14" color="' + c.textColor + '" text="' + escXml(c.hintText) + '" />',
+      '',
+      '      <StartPoint>',
+      '        <!-- 滑块 -->',
+      '        <Rectangle x="6" y="146" w="44" h="44" fillColor="' + c.thumbColor + '" cornerRadius="22" />',
+      '        <Text x="14" y="160" size="16" color="#ffffff" text="→" />',
+      '      </StartPoint>',
+      '',
+      '      <!-- 目标区域（滑轨最右端） -->',
+      '      <EndPoint x="200" y="140" w="60" h="56" />',
+      '',
+      '      <!-- 触发：到达目标时执行 -->',
+      '      <Trigger action="slider_reached">',
+      '        <VariableCommand target="unlock_slider" value="1" />',
+      '      </Trigger>',
+      '    </Slider>',
+      '',
+      '    <!-- 底部提示 -->',
+      '    <Text x="0" y="220" size="11" color="#333333" text="滑到右端解锁" />',
+      '  </Group>',
+      '</Widget>',
+    ].join('\n');
+  },
+};
+
+// ─── js/templates/smart_battery.js ───
+
+var smart_battery = {
+  id: 'smart_battery', icon: '🔋', name: '智能电池', desc: '根据电量条件切换显示样式',
+  updater: 'Battery',
+  config: [
+    { group: '基本', fields: [
+      { key: 'cardName', label: '卡片名称', type: 'text', default: '智能电池' },
+      { key: 'bgColor', label: '背景颜色', type: 'color', default: '#0a1a0a' },
+    ]},
+    { group: '阈值', fields: [
+      { key: 'lowThreshold', label: '低电阈值', type: 'range', min: 5, max: 30, default: 20 },
+      { key: 'highThreshold', label: '高电阈值', type: 'range', min: 70, max: 95, default: 80 },
+    ]},
+    { group: '颜色', fields: [
+      { key: 'lowColor', label: '低电颜色', type: 'color', default: '#ff4444' },
+      { key: 'midColor', label: '正常颜色', type: 'color', default: '#ffffff' },
+      { key: 'highColor', label: '高电颜色', type: 'color', default: '#00e676' },
+    ]},
+  ],
+  elements(c) {
+    return [
+      { type: 'rectangle', x: 0, y: 0, w: 976, h: 596, color: c.bgColor, locked: true },
+      { type: 'text', expression: '#battery_level + "%"', text: '85%', x: 30, y: 80, size: 64, color: c.midColor, bold: true, fontFamily: 'mipro-demibold' },
+      { type: 'progress', x: 30, y: 170, w: 240, h: 6, value: 85, color: c.midColor, bgColor: '#333333', radius: 3 },
+      { type: 'text', text: '电量', x: 30, y: 190, size: 14, color: '#666666' },
+    ];
+  },
+  rawXml(c) {
+    var lowT = c.lowThreshold || 20;
+    var highT = c.highThreshold || 80;
+    return [
+      '<Widget screenWidth="976" frameRate="0" scaleByDensity="false" useVariableUpdater="Battery" name="' + escXml(c.cardName || '智能电池') + '">',
+      '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+      '  <Var name="lvl" type="number" expression="#battery_level" />',
+      '',
+      '  <!-- 背景 -->',
+      '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
+      '',
+      '  <Group x="#marginL" y="0">',
+      '    <!-- 条件：低电警告 -->',
+      '    <IfCommand condition="#lvl < ' + lowT + '">',
+      '      <Consequent>',
+      '        <Text x="0" y="70" size="64" color="' + c.lowColor + '" textExp="#battery_level + &quot;%&quot;" bold="true" fontFamily="mipro-demibold">',
+      '          <AlphaAnimation repeat="-1">',
+      '            <A time="0" alpha="1.0" />',
+      '            <A time="500" alpha="0.3" />',
+      '            <A time="1000" alpha="1.0" />',
+      '          </AlphaAnimation>',
+      '        </Text>',
+      '        <Text x="0" y="140" size="14" color="' + c.lowColor + '" text="⚠️ 电量不足，请充电" />',
+      '      </Consequent>',
+      '      <Alternate>',
+      '        <!-- 条件：高电 -->',
+      '        <IfCommand condition="#lvl >= ' + highT + '">',
+      '          <Consequent>',
+      '            <Text x="0" y="70" size="64" color="' + c.highColor + '" textExp="#battery_level + &quot;%&quot;" bold="true" fontFamily="mipro-demibold" />',
+      '            <Text x="0" y="140" size="14" color="' + c.highColor + '" text="✅ 电量充足" />',
+      '          </Consequent>',
+      '          <Alternate>',
+      '            <Text x="0" y="70" size="64" color="' + c.midColor + '" textExp="#battery_level + &quot;%&quot;" bold="true" fontFamily="mipro-demibold" />',
+      '          </Alternate>',
+      '        </IfCommand>',
+      '      </Alternate>',
+      '    </IfCommand>',
+      '',
+      '    <!-- 进度条 -->',
+      '    <Rectangle x="0" y="160" w="240" h="6" fillColor="#333333" cornerRadius="3" />',
+      '    <Rectangle x="0" y="160" w="0" h="6" fillColor="' + c.midColor + '" cornerRadius="3">',
+      '      <!-- 进度条宽度随电量变化 -->',
+      '    </Rectangle>',
+      '    <Text x="0" y="178" size="12" color="#666666" textExp="(ge(#battery_state, 1) ? (eq(#battery_state, 3) ? &quot;已充满&quot; : &quot;充电中&quot;) : &quot;电量&quot;)" />',
+      '',
+      '    <!-- 底部信息 -->',
+      '    <Text x="0" y="210" size="11" color="#444444" text="智能电池监控" />',
+      '  </Group>',
+      '</Widget>',
+    ].join('\n');
+  },
+};
+
+// ─── js/templates/action_buttons.js ───
+
+var action_buttons = {
+  id: 'quick_actions', icon: '⚡', name: '快捷按钮', desc: 'Button 交互面板，可触发命令',
+  updater: 'DateTime.Minute',
+  config: [
+    { group: '基本', fields: [
+      { key: 'cardName', label: '卡片名称', type: 'text', default: '快捷按钮' },
+      { key: 'bgColor', label: '背景颜色', type: 'color', default: '#0d1117' },
+    ]},
+    { group: '样式', fields: [
+      { key: 'btnColor', label: '按钮颜色', type: 'color', default: '#1a1a2e' },
+      { key: 'accentColor', label: '强调色', type: 'color', default: '#6c5ce7' },
+      { key: 'textColor', label: '文字颜色', type: 'color', default: '#ffffff' },
+    ]},
+  ],
+  elements(c) {
+    return [
+      { type: 'rectangle', x: 0, y: 0, w: 976, h: 596, color: c.bgColor, locked: true },
+      { type: 'text', text: '快捷操作', x: 30, y: 30, size: 18, color: c.textColor, bold: true, locked: true },
+      { type: 'rectangle', x: 30, y: 70, w: 100, h: 44, color: c.btnColor, radius: 10, locked: false },
+      { type: 'text', text: '🔊 音量', x: 46, y: 82, size: 13, color: c.textColor, locked: false },
+      { type: 'rectangle', x: 140, y: 70, w: 100, h: 44, color: c.btnColor, radius: 10, locked: false },
+      { type: 'text', text: '📶 WiFi', x: 158, y: 82, size: 13, color: c.textColor, locked: false },
+      { type: 'rectangle', x: 30, y: 124, w: 100, h: 44, color: c.btnColor, radius: 10, locked: false },
+      { type: 'text', text: '🔵 蓝牙', x: 46, y: 136, size: 13, color: c.textColor, locked: false },
+      { type: 'rectangle', x: 140, y: 124, w: 100, h: 44, color: c.btnColor, radius: 10, locked: false },
+      { type: 'text', text: '🔆 亮度', x: 158, y: 136, size: 13, color: c.textColor, locked: false },
+    ];
+  },
+  rawXml(c) {
+    return [
+      '<Widget screenWidth="976" frameRate="0" scaleByDensity="false" useVariableUpdater="DateTime.Minute" name="' + escXml(c.cardName || '快捷按钮') + '">',
+      '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+      '',
+      '  <!-- 背景 -->',
+      '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
+      '',
+      '  <Group x="#marginL" y="0">',
+      '    <Text x="0" y="30" size="18" color="' + c.textColor + '" text="快捷操作" bold="true" />',
+      '',
+      '    <!-- 按钮 1: 音量 -->',
+      '    <Button name="btn_volume" x="0" y="70" w="100" h="44">',
+      '      <Rectangle x="0" y="0" w="100" h="44" fillColor="' + c.btnColor + '" cornerRadius="10" />',
+      '      <Text x="16" y="12" size="13" color="' + c.textColor + '" text="🔊 音量" />',
+      '      <Trigger action="click">',
+      '        <VariableCommand target="#volume_type" value="3" />',
+      '      </Trigger>',
+      '    </Button>',
+      '',
+      '    <!-- 按钮 2: WiFi -->',
+      '    <Button name="btn_wifi" x="110" y="70" w="100" h="44">',
+      '      <Rectangle x="0" y="0" w="100" h="44" fillColor="' + c.btnColor + '" cornerRadius="10" />',
+      '      <Text x="16" y="12" size="13" color="' + c.textColor + '" text="📶 WiFi" />',
+      '      <Trigger action="click">',
+      '        <VariableCommand target="#wifi_state" value="1" />',
+      '      </Trigger>',
+      '    </Button>',
+      '',
+      '    <!-- 按钮 3: 蓝牙 -->',
+      '    <Button name="btn_bt" x="0" y="124" w="100" h="44">',
+      '      <Rectangle x="0" y="0" w="100" h="44" fillColor="' + c.btnColor + '" cornerRadius="10" />',
+      '      <Text x="16" y="12" size="13" color="' + c.textColor + '" text="🔵 蓝牙" />',
+      '      <Trigger action="click">',
+      '        <VariableCommand target="#bluetooth_state" value="1" />',
+      '      </Trigger>',
+      '    </Button>',
+      '',
+      '    <!-- 按钮 4: 亮度 -->',
+      '    <Button name="btn_brightness" x="110" y="124" w="100" h="44">',
+      '      <Rectangle x="0" y="0" w="100" h="44" fillColor="' + c.btnColor + '" cornerRadius="10" />',
+      '      <Text x="16" y="12" size="13" color="' + c.textColor + '" text="🔆 亮度" />',
+      '      <Trigger action="click">',
+      '        <VariableCommand target="brightness_mode" value="auto" />',
+      '      </Trigger>',
+      '    </Button>',
+      '',
+      '    <!-- 底部提示 -->',
+      '    <Text x="0" y="190" size="10" color="#444444" text="点击按钮触发快捷操作" />',
+      '  </Group>',
+      '</Widget>',
+    ].join('\n');
+  },
+};
+
+// ─── js/templates/number_clock.js ───
+
+var number_clock = {
+  id: 'number_clock', icon: '🔢', name: '数字时钟', desc: '用 Number 图片序列显示时间',
+  updater: 'DateTime.Minute',
+  config: [
+    { group: '基本', fields: [
+      { key: 'cardName', label: '卡片名称', type: 'text', default: '数字时钟' },
+      { key: 'bgColor', label: '背景颜色', type: 'color', default: '#0a0a0a' },
+    ]},
+    { group: '样式', fields: [
+      { key: 'digitColor', label: '数字颜色', type: 'color', default: '#00ff88' },
+      { key: 'dateColor', label: '日期颜色', type: 'color', default: '#666666' },
+      { key: 'digitSize', label: '数字大小', type: 'range', min: 30, max: 80, default: 50 },
+      { key: 'digitPrefix', label: '图片前缀', type: 'text', default: 'time', desc: '数字图片文件名前缀，如 time_0.png ~ time_9.png' },
+    ]},
+  ],
+  elements(c) {
+    var ds = Number(c.digitSize) || 50;
+    return [
+      { type: 'rectangle', x: 0, y: 0, w: 976, h: 596, color: c.bgColor, locked: true },
+      { type: 'text', expression: "formatDate('HH:mm', #time_sys)", text: '12:34', x: 30, y: 100, size: ds, color: c.digitColor, bold: true, fontFamily: 'monospace' },
+      { type: 'text', expression: "formatDate('yyyy/MM/dd EEEE', #time_sys)", text: '2026/04/04 星期五', x: 30, y: 100 + ds + 10, size: 16, color: c.dateColor },
+    ];
+  },
+  rawXml(c) {
+    var ds = Number(c.digitSize) || 50;
+    var prefix = escXml(c.digitPrefix || 'time');
+    var dateY = 100 + ds + 10;
+    return [
+      '<Widget screenWidth="976" frameRate="0" scaleByDensity="false" useVariableUpdater="DateTime.Minute" name="' + escXml(c.cardName || '数字时钟') + '">',
+      '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+      '  <Var name="hour" type="number" expression="#hour24" />',
+      '  <Var name="min" type="number" expression="#minute" />',
+      '',
+      '  <!-- 背景 -->',
+      '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
+      '',
+      '  <Group x="#marginL" y="0">',
+      '    <!-- 小时十位 -->',
+      '    <Number numberExp="int(#hour / 10)" src="' + prefix + '" x="0" y="100" w="' + ds + '" h="' + Math.round(ds * 1.3) + '" space="2" />',
+      '    <!-- 小时个位 -->',
+      '    <Number numberExp="int(mod(#hour, 10))" src="' + prefix + '" x="' + (ds + 4) + '" y="100" w="' + ds + '" h="' + Math.round(ds * 1.3) + '" space="2" />',
+      '    <!-- 冒号 -->',
+      '    <Text x="' + (ds * 2 + 10) + '" y="100" size="' + ds + '" color="' + c.digitColor + '" text=":" bold="true" />',
+      '    <!-- 分钟十位 -->',
+      '    <Number numberExp="int(#min / 10)" src="' + prefix + '" x="' + (ds * 2 + 20) + '" y="100" w="' + ds + '" h="' + Math.round(ds * 1.3) + '" space="2" />',
+      '    <!-- 分钟个位 -->',
+      '    <Number numberExp="int(mod(#min, 10))" src="' + prefix + '" x="' + (ds * 3 + 24) + '" y="100" w="' + ds + '" h="' + Math.round(ds * 1.3) + '" space="2" />',
+      '',
+      '    <!-- 日期 -->',
+      '    <Text x="0" y="' + dateY + '" size="16" color="' + c.dateColor + '" textExp="formatDate(\'yyyy/MM/dd EEEE\', #time_sys)" />',
+      '  </Group>',
+      '</Widget>',
+    ].join('\n');
+  },
+};
+
+// ─── js/templates/weather_cp.js ───
+
+var weather_cp = {
+  id: 'weather_cp', icon: '🌤️', name: '天气CP绑定', desc: '用 ContentProvider 直接绑定系统天气数据',
+  updater: 'DateTime.Hour',
+  config: [
+    { group: '基本', fields: [
+      { key: 'cardName', label: '卡片名称', type: 'text', default: '天气卡片' },
+      { key: 'bgColor', label: '背景颜色', type: 'color', default: '#0a1628' },
+    ]},
+    { group: '样式', fields: [
+      { key: 'tempColor', label: '温度颜色', type: 'color', default: '#ffffff' },
+      { key: 'descColor', label: '描述颜色', type: 'color', default: '#88aacc' },
+      { key: 'accentColor', label: '强调色', type: 'color', default: '#4fc3f7' },
+    ]},
+  ],
+  elements(c) {
+    return [
+      { type: 'rectangle', x: 0, y: 0, w: 976, h: 596, color: c.bgColor, locked: true },
+      { type: 'text', text: '天气', x: 30, y: 40, size: 14, color: c.descColor, locked: true },
+      { type: 'text', text: '24°C', x: 30, y: 70, size: 56, color: c.tempColor, bold: true, locked: false },
+      { type: 'text', text: '多云 · 北京', x: 30, y: 140, size: 16, color: c.descColor, locked: false },
+    ];
+  },
+  rawXml(c) {
+    return [
+      '<Widget screenWidth="976" frameRate="0" scaleByDensity="false" useVariableUpdater="DateTime.Hour" name="' + escXml(c.cardName || '天气卡片') + '">',
+      '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+      '',
+      '  <!-- ContentProvider 绑定天气数据 -->',
+      '  <VariableBinders>',
+      '    <ContentProvider uri="content://weather" sortOrder="date desc">',
+      '      <Content name="temperature" column="temperature" />',
+      '      <Content name="weather_desc" column="weatherDescription" />',
+      '      <Content name="city" column="city" />',
+      '      <Content name="humidity" column="humidity" />',
+      '      <Content name="wind" column="windSpeed" />',
+      '    </ContentProvider>',
+      '  </VariableBinders>',
+      '',
+      '  <!-- 背景 -->',
+      '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
+      '',
+      '  <Group x="#marginL" y="0">',
+      '    <!-- 标题 -->',
+      '    <Text x="0" y="30" size="14" color="' + c.descColor + '" text="天气" />',
+      '',
+      '    <!-- 温度 -->',
+      '    <Text x="0" y="60" size="56" color="' + c.tempColor + '" textExp="#temperature + &quot;°C&quot;" bold="true" fontFamily="mipro-demibold" />',
+      '',
+      '    <!-- 天气描述 + 城市 -->',
+      '    <Text x="0" y="130" size="16" color="' + c.descColor + '" textExp="#weather_desc + &quot; · &quot; + #city" />',
+      '',
+      '    <!-- 分隔线 -->',
+      '    <Rectangle x="0" y="158" w="40" h="2" fillColor="' + c.accentColor + '" cornerRadius="1" />',
+      '',
+      '    <!-- 湿度 -->',
+      '    <Text x="0" y="174" size="12" color="' + c.descColor + '" textExp="&quot;湿度 &quot; + #humidity + &quot;%&quot;" />',
+      '',
+      '    <!-- 风速 -->',
+      '    <Text x="0" y="196" size="12" color="' + c.descColor + '" textExp="&quot;风速 &quot; + #wind + &quot; km/h&quot;" />',
+      '  </Group>',
+      '</Widget>',
+    ].join('\n');
+  },
+};
+
+// ─── js/templates/persistent_counter.js ───
+
+var persistent_counter = {
+  id: 'persistent_counter', icon: '📊', name: '持久计数器', desc: '使用 Permanence 跨重启保存数据',
+  updater: 'DateTime.Minute',
+  config: [
+    { group: '基本', fields: [
+      { key: 'cardName', label: '卡片名称', type: 'text', default: '计数器' },
+      { key: 'bgColor', label: '背景颜色', type: 'color', default: '#0d1117' },
+    ]},
+    { group: '样式', fields: [
+      { key: 'numColor', label: '数字颜色', type: 'color', default: '#58a6ff' },
+      { key: 'labelColor', label: '标签颜色', type: 'color', default: '#8b949e' },
+      { key: 'accentColor', label: '强调色', type: 'color', default: '#238636' },
+      { key: 'label', label: '标签文字', type: 'text', default: '今日点击' },
+    ]},
+  ],
+  elements(c) {
+    return [
+      { type: 'rectangle', x: 0, y: 0, w: 976, h: 596, color: c.bgColor, locked: true },
+      { type: 'text', text: c.label, x: 30, y: 60, size: 16, color: c.labelColor, locked: true },
+      { type: 'text', text: '0', x: 30, y: 90, size: 72, color: c.numColor, bold: true, fontFamily: 'mipro-demibold', locked: false },
+      { type: 'rectangle', x: 30, y: 180, w: 200, h: 4, color: c.accentColor, radius: 2, locked: false },
+    ];
+  },
+  rawXml(c) {
+    return [
+      '<Widget screenWidth="976" frameRate="0" scaleByDensity="false" useVariableUpdater="DateTime.Minute" name="' + escXml(c.cardName || '计数器') + '">',
+      '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+      '',
+      '  <!-- 持久化变量：跨重启保存 -->',
+      '  <Permanence name="click_count" expression="0" />',
+      '',
+      '  <!-- 背景 -->',
+      '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',
+      '',
+      '  <Group x="#marginL" y="0">',
+      '    <!-- 标签 -->',
+      '    <Text x="0" y="60" size="16" color="' + c.labelColor + '" text="' + escXml(c.label || '今日点击') + '" />',
+      '',
+      '    <!-- 计数显示 -->',
+      '    <Text x="0" y="90" size="72" color="' + c.numColor + '" textExp="#click_count" bold="true" fontFamily="mipro-demibold" />',
+      '',
+      '    <!-- 进度条 -->',
+      '    <Rectangle x="0" y="180" w="200" h="4" fillColor="#1a1a2e" cornerRadius="2" />',
+      '    <Rectangle x="0" y="180" w="0" h="4" fillColor="' + c.accentColor + '" cornerRadius="2" />',
+      '',
+      '    <!-- 点击按钮（增加计数） -->',
+      '    <Button name="btn_inc" x="0" y="200" w="60" h="32">',
+      '      <Rectangle x="0" y="0" w="60" h="32" fillColor="' + c.accentColor + '" cornerRadius="6" />',
+      '      <Text x="16" y="8" size="14" color="#ffffff" text="+1" bold="true" />',
+      '      <Trigger action="click">',
+      '        <VariableCommand target="click_count" expression="#click_count + 1" />',
+      '      </Trigger>',
+      '    </Button>',
+      '',
+      '    <!-- 重置按钮 -->',
+      '    <Button name="btn_reset" x="70" y="200" w="60" h="32">',
+      '      <Rectangle x="0" y="0" w="60" h="32" fillColor="#333333" cornerRadius="6" />',
+      '      <Text x="14" y="8" size="12" color="#888888" text="重置" />',
+      '      <Trigger action="click">',
+      '        <VariableCommand target="click_count" value="0" />',
+      '      </Trigger>',
+      '    </Button>',
+      '  </Group>',
+      '</Widget>',
+    ].join('\n');
+  },
+};
+
 // ─── js/templates/index.js ───
 // ─── Templates: 模板注册表 ────────────────────────────────────────
 // 每个模板一个文件，新增模板只需在此 import + 加到数组
@@ -5656,6 +6674,8 @@ var pixel_clock = {
 
 // ── 新增模板: 互动类 ──
 
+// -- 新增模板: MAML v2 功能展示 --
+
 const TEMPLATES = [
   // 原有 22 个
   clock, quote, battery, countdown, gradient,
@@ -5668,6 +6688,9 @@ const TEMPLATES = [
   torch, screen_time, storage, signal,
   hitokoto, news, exchange_rate, bilibili,
   dice, flip_clock, breathing, pixel_clock,
+  // MAML v2 新功能模板
+  animated_clock, slide_unlock, smart_battery, action_buttons,
+  number_clock, weather_cp, persistent_counter,
 ];
 
 const TPL_CATEGORIES = [
@@ -5697,6 +6720,9 @@ const TPL_CATEGORY_MAP = {
   hitokoto: 'network', news: 'network', exchange_rate: 'network', bilibili: 'network',
   // 趣味
   dice: 'fun',
+  animated_clock: 'general', slide_unlock: 'general', smart_battery: 'general',
+  action_buttons: 'tool', number_clock: 'general', weather_cp: 'device',
+  persistent_counter: 'tool',
 };
 
 // ─── js/live-preview.js ───
@@ -6107,6 +7133,61 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
       }
       case 'musiccontrol': {
         return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 200) * self.scale + 'px;height:' + (el.h || 120) * self.scale + 'px;background:rgba(46,204,113,0.1);border:1px dashed rgba(46,204,113,0.4);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;color:#2ecc71;gap:4px;' + dc + '">🎵<span style="font-size:8px;opacity:0.7">MusicControl</span></div>' + sizeLabel;
+      }
+      case 'numberimage': {
+        var niText = el.expression ? '~' + (el.number || '12') : (el.number || '12');
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + (el.w || 30) * self.scale + 'px;height:' + (el.h || 50) * self.scale + 'px;background:rgba(255,193,7,0.1);border:1px dashed rgba(255,193,7,0.4);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:' + (el.h || 50) * self.scale * 0.6 + 'px;color:#ffc107;' + dc + '">#' + self.esc(niText) + '</div>' + sizeLabel;
+      }
+      case 'mask': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:60px;height:60px;background:rgba(255,152,0,0.15);border:1px dashed rgba(255,152,0,0.5);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#ff9800;' + dc + '">🎭 Mask</div>' + sizeLabel;
+      }
+      case 'slider': {
+        var slW = (el.w || 280) * self.scale, slH = (el.h || 60) * self.scale;
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + slW + 'px;height:' + slH + 'px;background:rgba(0,150,136,0.1);border:1px dashed rgba(0,150,136,0.4);border-radius:8px;display:flex;align-items:center;justify-content:space-between;padding:0 8px;font-size:10px;color:#009688;' + dc + '">👆<div style="flex:1;height:2px;background:rgba(0,150,136,0.3);margin:0 6px;border-radius:1px"></div>🎯<span style="font-size:8px;opacity:0.7;margin-left:4px">Slider: ' + self.esc(el.name || '') + '</span></div>' + sizeLabel;
+      }
+      case 'button': {
+        var btW = (el.w || 100) * self.scale, btH = (el.h || 40) * self.scale;
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + btW + 'px;height:' + btH + 'px;background:rgba(33,150,243,0.15);border:1px dashed rgba(33,150,243,0.5);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#2196f3;' + dc + '">🔘 Button' + (el.name ? ': ' + self.esc(el.name) : '') + '</div>' + sizeLabel;
+      }
+      case 'variable': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:4px;top:' + py + 'px;font-size:8px;color:rgba(156,39,176,0.6);white-space:nowrap;pointer-events:none">📦 Var: ' + self.esc(el.name || '?') + '</div>';
+      }
+      case 'variablearray': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:4px;top:' + py + 'px;font-size:8px;color:rgba(156,39,176,0.6);white-space:nowrap;pointer-events:none">📦 VarArray: ' + self.esc(el.name || '?') + '</div>';
+      }
+      case 'trigger': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:4px;top:' + py + 'px;font-size:8px;color:rgba(244,67,54,0.6);white-space:nowrap;pointer-events:none">⚡ Trigger: ' + self.esc(el.action || 'click') + '</div>';
+      }
+      case 'variablecommand':
+      case 'bindercommand':
+      case 'musiccommand':
+      case 'frameratecommand':
+      case 'multicommand': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:8px;top:' + py + 'px;font-size:8px;color:rgba(96,125,139,0.5);white-space:nowrap;pointer-events:none">⚙️ ' + self.esc(el.type) + '</div>';
+      }
+      case 'ifcommand': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:4px;top:' + py + 'px;font-size:8px;color:rgba(255,152,0,0.6);white-space:nowrap;pointer-events:none">❓ IfCommand</div>';
+      }
+      case 'variablebinders': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:4px;top:' + py + 'px;font-size:8px;color:rgba(33,150,243,0.6);white-space:nowrap;pointer-events:none">🔗 VariableBinders</div>';
+      }
+      case 'contentprovider': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:4px;top:' + py + 'px;font-size:8px;color:rgba(33,150,243,0.6);white-space:nowrap;pointer-events:none">📊 ContentProvider</div>';
+      }
+      case 'permanence': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:4px;top:' + py + 'px;font-size:8px;color:rgba(76,175,80,0.6);white-space:nowrap;pointer-events:none">💾 Permanence: ' + self.esc(el.name || '?') + '</div>';
+      }
+      case 'folmestate': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:4px;top:' + py + 'px;font-size:8px;color:rgba(233,30,99,0.6);white-space:nowrap;pointer-events:none">✨ FolmeState</div>';
+      }
+      case 'folmeconfig': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:4px;top:' + py + 'px;font-size:8px;color:rgba(233,30,99,0.6);white-space:nowrap;pointer-events:none">✨ FolmeConfig</div>';
+      }
+      case 'mipalettebinder': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:4px;top:' + py + 'px;font-size:8px;color:rgba(255,87,34,0.6);white-space:nowrap;pointer-events:none">🎨 MiPaletteBinder</div>';
+      }
+      case 'wallpaper': {
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:0;top:0;width:100%;height:100%;background:rgba(158,158,158,0.08);border:1px dashed rgba(158,158,158,0.3);display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(158,158,158,0.5);' + dc + '">🖼 Wallpaper</div>';
       }
       default: return sizeLabel;
     }
