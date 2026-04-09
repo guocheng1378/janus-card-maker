@@ -60,6 +60,14 @@ const JS_FILES = [
   'js/templates/flip_clock.js',
   'js/templates/breathing.js',
   'js/templates/pixel_clock.js',
+  // MAML v2 新模板
+  'js/templates/animated_clock.js',
+  'js/templates/slide_unlock.js',
+  'js/templates/smart_battery.js',
+  'js/templates/action_buttons.js',
+  'js/templates/number_clock.js',
+  'js/templates/weather_cp.js',
+  'js/templates/persistent_counter.js',
   'js/templates/index.js',  // 汇总所有模板
   // Core
   'js/live-preview.js',
