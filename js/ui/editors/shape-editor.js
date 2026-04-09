@@ -22,6 +22,18 @@ export function renderRectangleEditor(el, idx) {
     (el.fillColor2 ? '<button class="el-btn" data-clear-fill2 data-idx="' + idx + '" style="font-size:10px;padding:3px 6px">✕</button>' : '') +
     '</div>');
 
+  // 渐变方向
+  if (el.fillColor2) {
+    var gradOpts = [
+      { v: 'top_bottom', l: '⬇ 上→下' }, { v: 'left_right', l: '➡ 左→右' },
+      { v: 'tl_br', l: '↘ 左上→右下' }, { v: 'tr_bl', l: '↙ 右上→左下' },
+    ];
+    html += fieldHtml('渐变方向', '<select data-prop="gradientOrientation" data-idx="' + idx + '">' +
+      gradOpts.map(function (o) {
+        return '<option value="' + o.v + '"' + ((el.gradientOrientation || 'top_bottom') === o.v ? ' selected' : '') + '>' + o.l + '</option>';
+      }).join('') + '</select>');
+  }
+
   // 渐变预设
   html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:8px">';
   GRAD_PRESETS.forEach(function (p) {

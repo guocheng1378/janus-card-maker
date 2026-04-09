@@ -37,6 +37,7 @@ import { lintMAML, showLintResults, analyzePerformance, showPerfResults, checkAc
 import { autoSnapshot, showSnapshotsModal } from './version-snapshots.js';
 import { showADBPush, exportGIF, exportPDF } from './export-adb.js';
 import { renderLayerPanel, toggleLayerPanel, isLayerPanelVisible, initLayerPanel } from './layer-panel.js';
+import { initRuler, toggleRuler, isRulerEnabled } from './ruler.js';
 import { isMockMode, toggleMockMode, openExprDebugger, closeExprDebugger, insertVar, evalExpr, insertExprPreset, openPerfDashboard, toggleTemplateCompare, cancelCompare, initDevTools } from './dev-tools.js';
 
 // re-export from export.js, transcode.js, storage.js (loaded as ES modules)
@@ -647,6 +648,23 @@ function setupEvents() {
         S.elements[li].locked = !S.elements[li].locked;
         renderConfig(getTemplateMAML);
         toast(S.elements[li].locked ? '🔒 已锁定' : '🔓 已解锁', 'info');
+      }
+      return;
+    }
+
+    // Position nudge (+/-) buttons
+    var nudgeBtn = e.target.closest('[data-nudge-prop]');
+    if (nudgeBtn) {
+      e.stopPropagation();
+      var ni = Number(nudgeBtn.dataset.nudgeIdx);
+      var np = nudgeBtn.dataset.nudgeProp;
+      var nd = Number(nudgeBtn.dataset.nudgeDelta);
+      if (ni >= 0 && ni < S.elements.length) {
+        captureState('微调 ' + np.toUpperCase());
+        S.elements[ni][np] = Math.max(0, (S.elements[ni][np] || 0) + nd);
+        S.setDirty(true);
+        renderConfig(getTemplateMAML);
+        _autoPreview();
       }
       return;
     }
@@ -1295,6 +1313,9 @@ export function initUI() {
     renderLivePreview: renderLivePreview,
   });
 
+  // Init ruler + coordinate display
+  initRuler();
+
   // Init dev tools
   initDevTools();
 
@@ -1393,6 +1414,10 @@ document.addEventListener('click', function(e) {
 
 Object.assign(window.JCM, {
   toggleLayerPanel: toggleLayerPanel,
+  toggleRuler: function () {
+    var on = toggleRuler();
+    toast(on ? '📏 标尺已开启' : '📏 标尺已关闭', 'info');
+  },
   toggleMoreMenu: toggleMoreMenu,
   undo: function () {
     var r = undo();

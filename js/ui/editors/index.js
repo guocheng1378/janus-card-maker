@@ -116,13 +116,48 @@ function renderHeader(el, idx) {
   return html;
 }
 
+function nudgeBtn(prop, idx, delta, label) {
+  return '<button class="el-nudge-btn" data-nudge-prop="' + prop + '" data-nudge-idx="' + idx + '" data-nudge-delta="' + delta + '" title="' + (delta > 0 ? '+' : '') + delta + '">' + label + '</button>';
+}
+
 function renderPositionSection(el, idx) {
   var html = '<div class="config-grid">';
-  html += fieldHtml('X', '<input type="number" value="' + el.x + '" data-prop="x" data-idx="' + idx + '">');
-  html += fieldHtml('Y', '<input type="number" value="' + el.y + '" data-prop="y" data-idx="' + idx + '">');
-  if (el.w !== undefined) html += fieldHtml('宽', '<input type="number" value="' + (el.w || 100) + '" data-prop="w" data-idx="' + idx + '" min="1" max="9999">');
-  if (el.h !== undefined) html += fieldHtml('高', '<input type="number" value="' + (el.h || 100) + '" data-prop="h" data-idx="' + idx + '" min="1" max="9999">');
-  if (el.r !== undefined) html += fieldHtml('半径', '<input type="number" value="' + (el.r || 30) + '" data-prop="r" data-idx="' + idx + '" min="1" max="999">');
+
+  // X with +/- buttons
+  html += '<div class="field"><label>X</label><div class="el-nudge-wrap">' +
+    nudgeBtn('x', idx, -1, '−') +
+    '<input type="number" value="' + el.x + '" data-prop="x" data-idx="' + idx + '">' +
+    nudgeBtn('x', idx, 1, '+') +
+    '</div></div>';
+
+  // Y with +/- buttons
+  html += '<div class="field"><label>Y</label><div class="el-nudge-wrap">' +
+    nudgeBtn('y', idx, -1, '−') +
+    '<input type="number" value="' + el.y + '" data-prop="y" data-idx="' + idx + '">' +
+    nudgeBtn('y', idx, 1, '+') +
+    '</div></div>';
+
+  if (el.w !== undefined) {
+    html += '<div class="field"><label>宽</label><div class="el-nudge-wrap">' +
+      nudgeBtn('w', idx, -1, '−') +
+      '<input type="number" value="' + (el.w || 100) + '" data-prop="w" data-idx="' + idx + '" min="1" max="9999">' +
+      nudgeBtn('w', idx, 1, '+') +
+      '</div></div>';
+  }
+  if (el.h !== undefined) {
+    html += '<div class="field"><label>高</label><div class="el-nudge-wrap">' +
+      nudgeBtn('h', idx, -1, '−') +
+      '<input type="number" value="' + (el.h || 100) + '" data-prop="h" data-idx="' + idx + '" min="1" max="9999">' +
+      nudgeBtn('h', idx, 1, '+') +
+      '</div></div>';
+  }
+  if (el.r !== undefined) {
+    html += '<div class="field"><label>半径</label><div class="el-nudge-wrap">' +
+      nudgeBtn('r', idx, -1, '−') +
+      '<input type="number" value="' + (el.r || 30) + '" data-prop="r" data-idx="' + idx + '" min="1" max="999">' +
+      nudgeBtn('r', idx, 1, '+') +
+      '</div></div>';
+  }
   html += '</div>';
 
   // 对齐按钮

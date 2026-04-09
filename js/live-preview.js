@@ -226,7 +226,9 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
         if (el.textGradient && el.textGradient !== 'none') {
           var gradColors = { sunset: '#ff6b6b,#feca57', ocean: '#0984e3,#00cec9', neon: '#ff00ff,#00ffff', gold: '#f39c12,#fdcb6e', aurora: '#6c5ce7,#00b894' };
           var gc = el.textGradient === 'custom' ? (el.color || '#ffffff') + ',' + (el.gradientColor2 || '#ff6b6b') : gradColors[el.textGradient] || gradColors.sunset;
-          gradStyle = 'background:linear-gradient(135deg,' + gc + ');-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;';
+          var gradAngle = { top_bottom: '180deg', left_right: '90deg', tl_br: '135deg', tr_bl: '225deg' };
+          var ga = gradAngle[el.gradientOrientation] || '180deg';
+          gradStyle = 'background:linear-gradient(' + ga + ',' + gc + ');-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;';
         }
         var strokeStyle = '';
         if (el.textStroke && el.textStroke > 0) {
@@ -237,7 +239,9 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
         return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;font-size:' + el.size * self.scale + 'px;color:' + el.color + ';' + ff + w + ta + fw + lh + sh + op + rot + gradStyle + strokeStyle + tDeco + lSpace + dc + '">' + textContent + '</div>';
       }
       case 'rectangle':
-        var rectBg = el.fillColor2 ? 'background:linear-gradient(135deg,' + el.color + ',' + el.fillColor2 + ')' : 'background:' + el.color;
+        var gradAngles = { top_bottom: '180deg', left_right: '90deg', tl_br: '135deg', tr_bl: '225deg' };
+        var rga = gradAngles[el.gradientOrientation] || '180deg';
+        var rectBg = el.fillColor2 ? 'background:linear-gradient(' + rga + ',' + el.color + ',' + el.fillColor2 + ')' : 'background:' + el.color;
         var rectBorder = el.strokeWidth > 0 ? 'border:' + (el.strokeWidth * self.scale) + 'px solid ' + (el.strokeColor || '#ffffff') + ';' : '';
         var rectFilter = buildFilter(el);
         return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + el.w * self.scale + 'px;height:' + el.h * self.scale + 'px;' + rectBg + ';border-radius:' + (el.radius || 0) * self.scale + 'px;' + op + rot + rectBorder + rectFilter + dc + '"></div>' + rh + sizeLabel;

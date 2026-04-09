@@ -75,6 +75,15 @@ function renderTextGradient(el, idx) {
   html += '<div class="field field-color" style="flex:1"><label>起始色</label><input type="color" value="' + gc1 + '" data-prop="color" data-idx="' + idx + '"><span class="color-val">' + gc1 + '</span></div>';
   html += '<div class="field field-color" style="flex:1"><label>结束色</label><input type="color" value="' + gc2 + '" data-prop="gradientColor2" data-idx="' + idx + '"><span class="color-val">' + gc2 + '</span></div>';
   html += '</div>';
+  // 渐变方向
+  var gradOpts = [
+    { v: 'top_bottom', l: '⬇ 上→下' }, { v: 'left_right', l: '➡ 左→右' },
+    { v: 'tl_br', l: '↘ 左上→右下' }, { v: 'tr_bl', l: '↙ 右上→左下' },
+  ];
+  html += '<div class="field"><label>方向</label><select data-prop="gradientOrientation" data-idx="' + idx + '">' +
+    gradOpts.map(function (o) {
+      return '<option value="' + o.v + '"' + ((el.gradientOrientation || 'top_bottom') === o.v ? ' selected' : '') + '>' + o.l + '</option>';
+    }).join('') + '</select></div>';
   html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">';
   GRAD_PRESETS.forEach(function (p) {
     html += '<div class="grad-preset" data-gp-c1="' + p.c1 + '" data-gp-c2="' + p.c2 + '" data-gp-idx="' + idx + '" data-gp-type="text" style="height:28px;border-radius:5px;background:linear-gradient(135deg,' + p.c1 + ',' + p.c2 + ');cursor:pointer;position:relative" title="' + p.name + '"><span style="position:absolute;bottom:1px;left:0;right:0;text-align:center;font-size:8px;color:rgba(255,255,255,.8);text-shadow:0 1px 2px rgba(0,0,0,.5)">' + p.name + '</span></div>';

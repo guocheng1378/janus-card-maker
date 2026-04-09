@@ -65,7 +65,8 @@ export function renderEl(el, files, indent) {
       if (el.textGradient && el.textGradient !== 'none') {
         var gradColors = { sunset: '#ff6b6b,#feca57', ocean: '#0984e3,#00cec9', neon: '#ff00ff,#00ffff', gold: '#f39c12,#fdcb6e', aurora: '#6c5ce7,#00b894' };
         var gc = el.textGradient === 'custom' ? (el.color || '#ffffff') + ',' + (el.gradientColor2 || '#ff6b6b') : gradColors[el.textGradient] || gradColors.sunset;
-        tg = ' gradientColors="' + gc + '" gradientOrientation="top_bottom"';
+        var textGradOri = el.gradientOrientation && el.gradientOrientation !== 'top_bottom' ? el.gradientOrientation : 'top_bottom';
+        tg = ' gradientColors="' + gc + '" gradientOrientation="' + textGradOri + '"';
       }
       var ts = '';
       if (el.textStroke && el.textStroke > 0) {
@@ -80,7 +81,8 @@ export function renderEl(el, files, indent) {
       var blur = el.blur ? ' blur="' + el.blur + '"' : '';
       var rectStroke = el.strokeWidth > 0 ? ' stroke="' + el.strokeWidth + '" strokeColor="' + (el.strokeColor || '#ffffff') + '"' : '';
       if (el.fillColor2) {
-        return p + '<Rectangle x="' + el.x + '" y="' + el.y + '" w="' + el.w + '" h="' + el.h + '" fillColor="' + el.color + '" fillColor2="' + el.fillColor2 + '"' + (el.radius ? ' cornerRadius="' + el.radius + '"' : '') + alphaAttr(el) + rectRot + blur + rectStroke + ' />';
+        var gradOri = el.gradientOrientation && el.gradientOrientation !== 'top_bottom' ? ' gradientOrientation="' + el.gradientOrientation + '"' : '';
+        return p + '<Rectangle x="' + el.x + '" y="' + el.y + '" w="' + el.w + '" h="' + el.h + '" fillColor="' + el.color + '" fillColor2="' + el.fillColor2 + '"' + (el.radius ? ' cornerRadius="' + el.radius + '"' : '') + alphaAttr(el) + rectRot + blur + rectStroke + gradOri + ' />';
       }
       return p + '<Rectangle x="' + el.x + '" y="' + el.y + '" w="' + el.w + '" h="' + el.h + '" fillColor="' + el.color + '"' + (el.radius ? ' cornerRadius="' + el.radius + '"' : '') + alphaAttr(el) + rectRot + blur + rectStroke + ' />';
     }

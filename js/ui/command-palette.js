@@ -27,6 +27,7 @@ var COMMANDS = [
   { id: 'toggleTheme', icon: '🌙', label: '切换亮色/暗色主题', shortcut: '', category: '视图', fn: function (c) { c.toggleTheme(); } },
   { id: 'toggleGrid', icon: '⊞', label: '切换网格', shortcut: '', category: '视图', fn: function (c) { var cb = document.getElementById('showGrid'); if (cb) { cb.checked = !cb.checked; c.toggleGrid(); } } },
   { id: 'toggleFullscreen', icon: '⛶', label: '全屏预览', shortcut: '', category: '视图', fn: function (c) { c.toggleFullscreen(); } },
+  { id: 'toggleRuler', icon: '📏', label: '切换标尺坐标', shortcut: '', category: '视图', fn: function (c) { c.toggleRuler(); } },
   { id: 'zoomIn', icon: '🔍', label: '放大预览', shortcut: '', category: '视图', fn: function (c) { c.zoomIn(); } },
   { id: 'zoomOut', icon: '🔍', label: '缩小预览', shortcut: '', category: '视图', fn: function (c) { c.zoomOut(); } },
   { id: 'zoomReset', icon: '↺', label: '重置缩放', shortcut: '', category: '视图', fn: function (c) { c.zoomReset(); } },
