@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 596 596">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a0a0a"/>
+      <stop offset="100%" style="stop-color:#2a1a0a"/>
+    </linearGradient>
+    <filter id="fire"><feGaussianBlur stdDeviation="3"/></filter>
+  </defs>
+  <rect width="596" height="596" rx="24" fill="url(#bg)"/>
+  <!-- Fire glow -->
+  <circle cx="120" cy="120" r="80" fill="#ff6b35" opacity="0.08" filter="url(#fire)"/>
+  <!-- Fire icon -->
+  <text x="60" y="80" font-size="48">🔥</text>
+  <!-- Habit name -->
+  <text x="125" y="78" font-family="sans-serif" font-size="20" fill="#888888">早起</text>
+  <!-- Streak number -->
+  <text x="60" y="190" font-family="'SF Pro Display',sans-serif" font-size="120" font-weight="800" fill="#ff6b35">42</text>
+  <!-- "天连续" -->
+  <text x="60" y="245" font-family="sans-serif" font-size="28" fill="#ffffff">天连续</text>
+  <!-- Divider -->
+  <rect x="60" y="275" width="380" height="1" fill="#333333"/>
+  <!-- Week title -->
+  <text x="60" y="315" font-family="sans-serif" font-size="16" fill="#888888">本周</text>
+  <!-- Week dots - done -->
+  <circle cx="95" cy="355" r="18" fill="#00e676"/>
+  <text x="95" y="361" text-anchor="middle" font-size="16">✓</text>
+  <circle cx="155" cy="355" r="18" fill="#00e676"/>
+  <text x="155" y="361" text-anchor="middle" font-size="16">✓</text>
+  <circle cx="215" cy="355" r="18" fill="#00e676"/>
+  <text x="215" y="361" text-anchor="middle" font-size="16">✓</text>
+  <circle cx="275" cy="355" r="18" fill="#00e676"/>
+  <text x="275" y="361" text-anchor="middle" font-size="16">✓</text>
+  <!-- Today - active -->
+  <circle cx="335" cy="355" r="18" fill="#ff6b35" opacity="0.3" stroke="#ff6b35" stroke-width="2"/>
+  <text x="335" y="361" text-anchor="middle" font-size="14" fill="#ff6b35">●</text>
+  <!-- Future -->
+  <circle cx="395" cy="355" r="18" fill="#333333"/>
+  <circle cx="455" cy="355" r="18" fill="#333333"/>
+  <!-- Day labels -->
+  <text x="60" y="400" font-family="monospace" font-size="12" fill="#555555">日   一   二   三   四   五   六</text>
+  <!-- Check-in button -->
+  <rect x="60" y="430" width="120" height="40" rx="8" fill="#ff6b35"/>
+  <text x="120" y="456" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="600" fill="#ffffff">✅ 打卡</text>
+  <!-- Label -->
+  <rect x="60" y="500" width="130" height="36" rx="18" fill="#ff6b35" fill-opacity="0.15"/>
+  <text x="125" y="524" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="600" fill="#ff6b35">🔥 打卡追踪</text>
+</svg>
