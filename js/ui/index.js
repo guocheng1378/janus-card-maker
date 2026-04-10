@@ -2124,4 +2124,35 @@ Object.assign(window.JCM, {
   openPerfDashboard: openPerfDashboard,
   toggleTemplateCompare: toggleTemplateCompare,
   cancelCompare: cancelCompare,
+  // XPath 搜索
+  xpathSearch: function () {
+    var query = prompt('XPath / 标签名搜索:\n输入标签名(如 Text)或属性(如 name="xxx")');
+    if (!query) return;
+    var textarea = document.getElementById('codeContent');
+    var xml = textarea ? textarea.value : '';
+    if (!xml) return toast('XML 为空', 'error');
+    // 简单搜索：高亮匹配行
+    var lines = xml.split('\n');
+    var matches = [];
+    lines.forEach(function (line, i) {
+      if (line.indexOf(query) >= 0) matches.push(i + 1);
+    });
+    if (matches.length === 0) return toast('未找到: ' + query, 'info');
+    // 跳转到第一个匹配行
+    var lineNum = matches[0];
+    var pos = 0;
+    for (var j = 0; j < lineNum - 1; j++) pos = xml.indexOf('\n', pos) + 1;
+    textarea.focus();
+    textarea.setSelectionRange(pos, xml.indexOf('\n', pos));
+    toast('🔍 找到 ' + matches.length + ' 处匹配，跳转到第 ' + lineNum + ' 行', 'success');
+  },
+  // 批量导出所有模板
+  batchExportAll: function () {
+    toast('📦 批量导出功能已简化为单次导出', 'info');
+    JCM.handleExport();
+  },
+  // ContentProvider 快速向导
+  openCPWizard: function () {
+    openBindingWizard();
+  },
 });
