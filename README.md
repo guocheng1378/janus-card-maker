@@ -1,8 +1,33 @@
-# REAREye 卡片制作器 v4
+# REAREye 卡片制作器 v5
+
+![REAREye 卡片制作器](preview/hero-banner.svg)
 
 为小米背屏（SubScreen）制作 MAML 卡片模板的工具。
 
 > 🌐 **在线使用**：[https://guocheng1378.github.io/rear-eye-card-maker/](https://guocheng1378.github.io/rear-eye-card-maker/)
+
+## ✨ v5 新增 · 7 个全新模板
+
+![v5 模板总览](preview/v5-gallery.svg)
+
+| 预览 | 模板 | 说明 | 动态更新 |
+|------|------|------|----------|
+| ![倒计时](preview/countdown.svg) | ⏳ **倒计时** | 生日/节日/纪念日倒计时天数 | DateTime.Day |
+| ![步数计](preview/step_counter.svg) | 🚶 **步数计** | 今日步数 + 目标进度条 + 百分比 | Sensor |
+| ![世界时钟](preview/world_clock.svg) | 🌍 **世界时钟** | 3 个可配置时区，UTC 偏移可调 | DateTime.Minute |
+| ![月历](preview/calendar_mini.svg) | 📅 **月历** | 当月日历网格 + 事件标记 + 今日高亮 | DateTime.Day |
+| ![打卡追踪](preview/streak_tracker.svg) | 🔥 **打卡追踪** | 连续天数 + 本周完成圆点 + 打卡按钮 | DateTime.Day |
+| ![二维码](preview/qr_display.svg) | 📱 **二维码** | 展示收款码/WiFi 码，支持自定义内容 | 静态 |
+| ![目标进度](preview/progress_ring.svg) | 🎯 **目标进度** | 环形进度条 + 百分比 + 剩余提示 | DateTime.Day |
+
+### 模板特性
+
+所有新模板均支持：
+- ⚙️ **配置面板**：颜色、文字、数值全部可调
+- 👁️ **实时预览**：配置即所见
+- 📐 **MAML 输出**：标准 `<Widget>` XML，兼容 REAREye
+- 💾 **持久化**：打卡天数、目标进度等数据跨重启保持
+- 🔘 **按钮交互**：打卡、倒计时重置等支持点击操作
 
 ## v4 新增
 
@@ -52,7 +77,7 @@ rear-eye-card-maker/
 │   ├── transcode.js        ← FFmpeg.wasm 视频转码
 │   ├── changelog.js        ← 更新日志
 │   ├── i18n.js             ← 国际化
-│   ├── templates/          ← 预设模板定义（20 个）
+│   ├── templates/          ← 预设模板定义（27 个）
 │   └── ui/                 ← UI 子模块
 │       ├── index.js        ← UI 入口 + 事件 + JCM 全局接口
 │       ├── toast.js        ← Toast 通知
@@ -63,6 +88,7 @@ rear-eye-card-maker/
 │       ├── share.js        ← 模板分享
 │       ├── editors/        ← 各类型元素编辑器
 │       └── ...             ← 更多 UI 模块
+├── preview/                ← SVG 预览图（模板缩略图）
 ├── lib/jszip.min.js        ← JSZip（本地化）
 ├── manifest.json           ← PWA 清单
 ├── sw.js                   ← Service Worker
@@ -112,7 +138,7 @@ npm run build
 
 ## 模板
 
-### 预设模板（20 个）
+### 预设模板（27 个）
 
 | 模板 | 类别 | 动态更新 |
 |------|------|----------|
@@ -136,11 +162,20 @@ npm run build
 | ⏱️ 速览时钟 | 时钟 | DateTime.Minute |
 | 📖 每日一句 | 通用 | DateTime.Day |
 | 📟 迷你状态栏 | 设备 | DateTime.Minute |
+| ⏳ **倒计时** ⭐ | 通用 | DateTime.Day |
+| 🚶 **步数计** ⭐ | 健康 | Sensor |
+| 🌍 **世界时钟** ⭐ | 时钟 | DateTime.Minute |
+| 📅 **月历** ⭐ | 工具 | DateTime.Day |
+| 🔥 **打卡追踪** ⭐ | 健康 | DateTime.Day |
+| 📱 **二维码** ⭐ | 工具 | 静态 |
+| 🎯 **目标进度** ⭐ | 通用 | DateTime.Day |
+
+⭐ = v5 新增
 
 ## 功能清单
 
 ### 编辑
-- 🎨 20 个预设模板
+- 🎨 27 个预设模板
 - 🛠️ 自定义模式：文字、矩形、圆形、线条、图片、视频
 - 🔤 字体选择（8 种）
 - 🌈 文字渐变（6 种预设 + 自定义）
