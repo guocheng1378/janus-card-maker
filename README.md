@@ -13,7 +13,7 @@
 - 🖼️ **模板缩略图**：选择页显示 CSS mini 预览
 - 📝 **XML 直接编辑**：textarea 可手动修改 MAML 代码
 - 📋 **复制 XML**：一键复制到剪贴板
-- 📱 **通用卡片导出**：一份 MAML 自动适配 4 款机型
+- 📱 **通用卡片导出**：一份 MAML 自动适配机型
 - ⛶ **全屏预览**：浏览器 Fullscreen API
 - 📲 **PWA 离线支持**：安装到桌面 + 断网可用
 - 🤖 **APK 在线构建**：网页触发 GitHub Actions
@@ -41,7 +41,7 @@ rear-eye-card-maker/
 │   ├── main.js             ← 入口 + PWA 注册
 │   ├── state.js            ← 响应式状态 + 公共工具
 │   ├── utils.js            ← 通用工具函数
-│   ├── devices.js          ← 设备参数（4 款机型 + 自动检测）
+│   ├── devices.js          ← 设备参数（Pro Max）
 │   ├── maml.js             ← XML 生成 + 转义 + 校验
 │   ├── live-preview.js     ← 预览渲染器
 │   ├── history.js          ← 撤销/重做
@@ -106,7 +106,7 @@ npm run build
 
 ### 前提
 
-- 小米 17 Pro / Pro Max
+- 小米 17 Pro Max
 - 已安装 LSPosed + [REAREye](https://github.com/killerprojecte/REAREye)
 - REAREye 作用域包含 `com.xiaomi.subscreencenter`
 
@@ -154,7 +154,7 @@ npm run build
 - 📱 拖拽移动 + 缩放（支持触摸）
 
 ### 预览
-- 📱 4 款机型实时预览（Pro / Pro Max / 标准版 / Ultra）
+- 📱 Pro Max 实时预览（976×596）
 - ⛶ 全屏预览
 - 🔄 暗色/浅色主题
 - 🔍 缩放控制（50% ~ 200%）
@@ -162,8 +162,6 @@ npm run build
 ### 导出
 - 📦 MAML ZIP 导出（含 XML 校验）
 - 🖼️ PNG 预览截图
-- 📱 通用卡片导出（一份适配所有机型）
-- 📦 全部机型 ZIP 批量导出
 
 ### 视频
 - 🎬 自动转码：非 MP4 格式自动转为 H.264
@@ -201,9 +199,6 @@ npm run build
 | 设备 | 分辨率 | 摄像头区域 |
 |------|--------|-----------|
 | Pro Max | 976×596 | 30% |
-| Pro | 904×572 | 30% |
-| 标准版 | 840×520 | 28% |
-| Ultra | 1020×620 | 32% |
 
 ## License
 
