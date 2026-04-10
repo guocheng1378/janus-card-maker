@@ -34,7 +34,7 @@ export default {
     var dateY = barY + 15;
     return [
       '<Widget screenWidth="976" frameRate="30" scaleByDensity="false" useVariableUpdater="DateTime.Second" name="' + escXml(c.cardName || '动画时钟') + '">',
-      '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+      '  <Var name="marginL" type="number" expression="(#view_width * 0.25)" />',
       '',
       '  <!-- 背景 -->',
       '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',

@@ -47,7 +47,7 @@ export default {
     var isCircle = c.frameStyle === 'circle';
     var lines = [
       '<Widget screenWidth="976" frameRate="0" scaleByDensity="false" name="' + escXml(c.cardName || '相框卡片') + '">',
-      '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+      '  <Var name="marginL" type="number" expression="(#view_width * 0.25)" />',
       '',
       '  <!-- 背景 -->',
       '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',

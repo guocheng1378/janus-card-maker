@@ -25,7 +25,7 @@ export default {
   rawXml(c) {
     return [
       '<Widget screenWidth="976" frameRate="0" scaleByDensity="false" useVariableUpdater="DateTime.Hour" name="' + escXml(c.cardName || '天气卡片') + '">',
-      '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+      '  <Var name="marginL" type="number" expression="(#view_width * 0.25)" />',
       '',
       '  <!-- ContentProvider 绑定天气数据 -->',
       '  <VariableBinders>',

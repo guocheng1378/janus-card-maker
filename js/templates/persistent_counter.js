@@ -26,7 +26,7 @@ export default {
   rawXml(c) {
     return [
       '<Widget screenWidth="976" frameRate="0" scaleByDensity="false" useVariableUpdater="DateTime.Minute" name="' + escXml(c.cardName || '计数器') + '">',
-      '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+      '  <Var name="marginL" type="number" expression="(#view_width * 0.25)" />',
       '',
       '  <!-- 持久化变量：跨重启保存 -->',
       '  <Permanence name="click_count" expression="0" />',

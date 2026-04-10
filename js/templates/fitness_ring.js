@@ -41,7 +41,7 @@ export default {
     var distG = c.distGoal || 5;
     return [
       '<Widget screenWidth="976" frameRate="0" scaleByDensity="false" useVariableUpdater="Sensor" name="' + escXml(c.cardName || '健身圆环') + '">',
-      '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+      '  <Var name="marginL" type="number" expression="(#view_width * 0.25)" />',
       '',
       '  <!-- 背景 -->',
       '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',

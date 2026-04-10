@@ -29,7 +29,7 @@ export default {
     var dateY = 100 + ds + 10;
     return [
       '<Widget screenWidth="976" frameRate="0" scaleByDensity="false" useVariableUpdater="DateTime.Minute" name="' + escXml(c.cardName || '数字时钟') + '">',
-      '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+      '  <Var name="marginL" type="number" expression="(#view_width * 0.25)" />',
       '  <Var name="hour" type="number" expression="#hour24" />',
       '  <Var name="min" type="number" expression="#minute" />',
       '',

@@ -25,7 +25,7 @@ export function generateTplThumbnail(tpl) {
   tpl.config.forEach(function (g) { g.fields.forEach(function (f) { cfg[f.key] = f.default; }); });
   var s = 0.22, w = 420 * s, h = 252 * s;
   try {
-    var device = { width: 976, height: 596, cameraZoneRatio: 0.3 };
+    var device = { width: 976, height: 596, cameraZoneRatio: 0.25 };
     var html = renderTemplatePreview(device, false, tpl, cfg);
     // For templates with elements(), render them in the thumbnail
     if (tpl.elements) {

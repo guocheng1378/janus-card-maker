@@ -37,7 +37,7 @@ export default {
     var lines = [c.line1, c.line2, c.line3, c.line4].filter(Boolean);
     var xml = [
       '<Widget screenWidth="976" frameRate="0" scaleByDensity="false" useVariableUpdater="DateTime.Minute" name="' + escXml(c.cardName || '快捷便签') + '">',
-      '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+      '  <Var name="marginL" type="number" expression="(#view_width * 0.25)" />',
       '',
       '  <!-- 背景 -->',
       '  <Rectangle w="#view_width" h="#view_height" fillColor="' + c.bgColor + '" />',

@@ -37,7 +37,7 @@ export default {
     var totalSec = wm * 60;
     return [
       '<Widget screenWidth="976" frameRate="1" scaleByDensity="false" useVariableUpdater="DateTime.Second" name="' + escXml(c.cardName || '番茄钟') + '">',
-      '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+      '  <Var name="marginL" type="number" expression="(#view_width * 0.25)" />',
       '',
       '  <!-- 持久化状态 -->',
       '  <Permanence name="pomodoro_state" expression="0" />',

@@ -31,7 +31,7 @@ export default {
     var highT = c.highThreshold || 80;
     return [
       '<Widget screenWidth="976" frameRate="0" scaleByDensity="false" useVariableUpdater="Battery" name="' + escXml(c.cardName || '智能电池') + '">',
-      '  <Var name="marginL" type="number" expression="(#view_width * 0.30)" />',
+      '  <Var name="marginL" type="number" expression="(#view_width * 0.25)" />',
       '  <Var name="lvl" type="number" expression="#battery_level" />',
       '',
       '  <!-- 背景 -->',

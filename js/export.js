@@ -590,7 +590,7 @@ export function exportSVG(cardName, cfg, elements, uploadedFiles, getDeviceFn) {
   if (!elements || elements.length === 0) {
     return Promise.reject(new Error('没有可导出的元素'));
   }
-  var device = getDeviceFn ? getDeviceFn() : { width: 976, height: 596, cameraZoneRatio: 0.3 };
+  var device = getDeviceFn ? getDeviceFn() : { width: 976, height: 596, cameraZoneRatio: 0.25 };
   var svgParts = [];
   var gradId = 0;
   var defs = [];

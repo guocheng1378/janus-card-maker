@@ -597,7 +597,7 @@ var REF_W = 976, REF_H = 596;
 
 function respX(val) {
   if (val <= 0) return '0';
-  var marginL = Math.round(REF_W * 0.30);
+  var marginL = Math.round(REF_W * 0.25);
   if (val > marginL) {
     var offset = val - marginL;
     return '(#marginL + round(' + offset + ' * #scaleX))';
