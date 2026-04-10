@@ -277,15 +277,150 @@ function handleImportZip() {
 function importMAMLFromXml(xmlString) {
   var data = importMAML(xmlString);
   S.setTpl(TEMPLATES.find(function (t) { return t.id === 'custom'; }));
-  S.setCfg({ cardName: data.cardName, bgColor: data.bgColor });
-  S.setElements(data.elements);
+
+  var cfg = { cardName: data.cardName, bgColor: data.bgColor };
+  if (data.updater) cfg.updater = data.updater;
+  S.setCfg(cfg);
+
+  // 合并 variables 和 variableBinders 到元素列表开头
+  var allElements = [];
+  if (data.variables && data.variables.length > 0) {
+    data.variables.forEach(function (v) { allElements.push(v); });
+  }
+  if (data.variableBinders && data.variableBinders.length > 0) {
+    data.variableBinders.forEach(function (vb) { allElements.push(vb); });
+  }
+  allElements = allElements.concat(data.elements);
+
+  S.setElements(allElements);
   S.setUploadedFiles({});
   S.setSelIdx(-1);
   S.setDirty(true);
   resetHistory();
   renderTplGrid();
   goStep(1, stepCallbacks);
-  toast('✅ MAML 已导入 (' + data.elements.length + ' 个元素)', 'success');
+
+  // 统计各类型元素
+  var stats = {};
+  allElements.forEach(function (el) { stats[el.type] = (stats[el.type] || 0) + 1; });
+  var statsStr = Object.keys(stats).map(function (t) { return t + ':' + stats[t]; }).join(', ');
+  toast('✅ MAML 已导入 (' + allElements.length + ' 个元素: ' + statsStr + ')', 'success');
+}
+
+// ─── 增强 MAML 导入 UI（粘贴 + 文件）─────────────────────────
+function showMAMLImportModal() {
+  var existing = document.getElementById('mamlImportModal');
+  if (existing) existing.remove();
+
+  var overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'mamlImportModal';
+  overlay.style.display = '';
+  overlay.onclick = function () { overlay.remove(); };
+
+  var modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.maxWidth = '600px';
+  modal.style.maxHeight = '80vh';
+  modal.onclick = function (e) { e.stopPropagation(); };
+
+  var html = '<div class="modal-header"><h3>📄 导入 MAML XML</h3><button class="modal-close" onclick="document.getElementById(\'mamlImportModal\').remove()">✕</button></div>';
+  html += '<div class="modal-body" style="max-height:60vh;overflow-y:auto;padding:16px">';
+
+  // 方式一：粘贴 XML
+  html += '<div style="margin-bottom:16px">';
+  html += '<div style="font-size:13px;font-weight:600;margin-bottom:8px">📋 粘贴 MAML XML 代码</div>';
+  html += '<div style="font-size:11px;color:var(--text3);margin-bottom:8px">支持任意第三方 MAML 模板，自动解析为可编辑元素。不支持的标签会保留为原始 XML。</div>';
+  html += '<textarea id="mamlPasteInput" rows="10" placeholder="粘贴 &lt;Widget ...&gt;...&lt;/Widget&gt; XML 代码..." style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:monospace;font-size:12px;resize:vertical;outline:none"></textarea>';
+  html += '<button class="btn btn-primary" id="mamlPasteImport" style="width:100%;margin-top:8px;font-size:13px">📥 解析并导入</button>';
+  html += '</div>';
+
+  // 方式二：从文件导入
+  html += '<div style="margin-bottom:16px;padding:12px;background:var(--surface2);border-radius:8px">';
+  html += '<div style="font-size:13px;font-weight:600;margin-bottom:8px">📁 从文件导入</div>';
+  html += '<div style="display:flex;gap:8px">';
+  html += '<button class="btn btn-secondary" id="mamlFileImport" style="flex:1;font-size:12px">📄 导入 .xml 文件</button>';
+  html += '<button class="btn btn-secondary" id="mamlZipImport" style="flex:1;font-size:12px">📦 导入 .zip 文件</button>';
+  html += '</div></div>';
+
+  // 解析结果预览
+  html += '<div id="mamlParseResult" style="display:none"></div>';
+
+  // 支持的标签说明
+  html += '<div style="padding:10px;background:rgba(124,109,240,0.06);border-radius:8px;font-size:11px;color:var(--text3);line-height:1.6">';
+  html += '<div style="font-weight:600;margin-bottom:4px">✅ 支持解析的 MAML 标签：</div>';
+  html += 'Text · Rectangle · Circle · Image · Video · Lottie · Group · Layer · MusicControl<br>';
+  html += 'Slider · Button · Number · Mask · Wallpaper · Var · VariableArray · Trigger<br>';
+  html += 'VariableCommand · MusicCommand · MultiCommand · IfCommand · VariableBinders<br>';
+  html += 'ContentProvider · Permanence · FolmeState · FolmeConfig · MiPaletteBinder<br>';
+  html += '<div style="margin-top:4px;font-style:italic">其他标签（Function、ExternalCommand 等）会保留为原始 XML 注释</div>';
+  html += '</div>';
+
+  html += '</div>';
+
+  modal.innerHTML = html;
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  // 粘贴导入
+  overlay.querySelector('#mamlPasteImport').onclick = function () {
+    var xml = overlay.querySelector('#mamlPasteInput').value.trim();
+    if (!xml) return toast('请粘贴 MAML XML 代码', 'warning');
+    if (xml.indexOf('<Widget') < 0 && xml.indexOf('<widget') < 0) {
+      return toast('未找到 <Widget> 根标签，请确认是有效的 MAML 文件', 'error');
+    }
+    try {
+      overlay.remove();
+      importMAMLFromXml(xml);
+    } catch (err) {
+      toast('❌ 解析失败: ' + err.message, 'error');
+    }
+  };
+
+  // 文件导入
+  overlay.querySelector('#mamlFileImport').onclick = function () {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.xml,.maml';
+    input.onchange = function () {
+      if (!input.files || !input.files[0]) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        try {
+          overlay.remove();
+          importMAMLFromXml(reader.result);
+        } catch (err) {
+          toast('❌ 导入失败: ' + err.message, 'error');
+        }
+      };
+      reader.readAsText(input.files[0]);
+    };
+    input.click();
+  };
+
+  // ZIP 导入
+  overlay.querySelector('#mamlZipImport').onclick = function () {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.zip';
+    input.onchange = function () {
+      if (!input.files || !input.files[0]) return;
+      overlay.remove();
+      importZip(input.files[0]).then(function (data) {
+        S.setTpl(TEMPLATES.find(function (t) { return t.id === 'custom'; }));
+        S.setCfg({ cardName: data.cardName, bgColor: data.bgColor, bgImage: data.bgImage });
+        S.setElements(data.elements);
+        S.setUploadedFiles(data.files || {});
+        S.setSelIdx(-1);
+        S.setDirty(true);
+        resetHistory();
+        renderTplGrid();
+        goStep(1, stepCallbacks);
+        toast('✅ ZIP 已导入 (' + data.elements.length + ' 个元素)', 'success');
+      }).catch(function (e) { toast('❌ ' + e.message, 'error'); });
+    };
+    input.click();
+  };
 }
 
 // ─── File Handling ────────────────────────────────────────────────
@@ -831,6 +966,7 @@ function setupEvents() {
       var a = actionBtn.dataset.action;
       if (a === 'importZip') handleImportZip();
       else if (a === 'importMAML') { /* handled by separate listener below */ }
+      else if (a === 'showMAMLImport') { showMAMLImportModal(); return; }
       else if (a === 'shareTemplate') shareTemplate();
       else if (a === 'shareQR') JCM.showQR();
       else if (a === 'exportTemplate') { exportTemplateJSON(S.tpl ? S.tpl.id : 'custom', S.cfg, S.elements); toast('✅ 配置已导出', 'success'); }
@@ -2042,6 +2178,7 @@ Object.assign(window.JCM, {
     navigator.clipboard.writeText(text).then(function () { toast('📋 XML 已复制到剪贴板', 'success'); }).catch(function () { toast('复制失败，请手动选择复制', 'error'); });
   },
   formatXML: function () { formatXML(); toast('🔧 XML 已格式化', 'success'); },
+  showMAMLImportModal: showMAMLImportModal,
   toggleFullscreen: function () {
     var el = document.querySelector('#page2 .preview-phone');
     if (!el) return;

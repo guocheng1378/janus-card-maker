@@ -771,8 +771,451 @@ export function importRearEyeFormat(file) {
 }
 
 // ─── MAML XML 导入 ──────────────────────────────────────────
+// ─── 全面的 MAML XML 解析器 ─────────────────────────────────
+// 支持所有已知 MAML 标签，未知标签保留为 _rawXml
+
+var KNOWN_MAML_TAGS = {
+  'Text': 'text', 'Rectangle': 'rectangle', 'Circle': 'circle',
+  'Image': 'image', 'Video': 'video', 'Lottie': 'lottie',
+  'Group': 'group', 'Layer': 'layer', 'MusicControl': 'musiccontrol',
+  'Slider': 'slider', 'Button': 'button', 'Number': 'numberimage',
+  'Mask': 'mask', 'Wallpaper': 'wallpaper',
+  'Var': 'variable', 'VariableArray': 'variablearray',
+  'Trigger': 'trigger', 'VariableCommand': 'variablecommand',
+  'BinderCommand': 'bindercommand', 'MusicCommand': 'musiccommand',
+  'FrameRateCommand': 'frameratecommand', 'MultiCommand': 'multicommand',
+  'IfCommand': 'ifcommand', 'VariableBinders': 'variablebinders',
+  'ContentProviderBinder': 'contentprovider', 'Content': 'contentbinding',
+  'Permanence': 'permanence', 'FolmeState': 'folmestate',
+  'FolmeConfig': 'folmeconfig', 'MiPaletteBinder': 'mipalettebinder',
+  'Function': 'framework', 'FunctionCommand': 'framework',
+  'ExternalCommand': 'framework', 'ExternalCommands': 'framework',
+  'Triggers': 'framework', 'Item': 'framework',
+};
+
+function parseNodeGeneric(node) {
+  var tag = node.tagName;
+  if (!tag) return null;
+  var a = function (name) { return node.getAttribute(name) || ''; };
+
+  // Helper: parse children recursively
+  function parseChildren() {
+    var ch = [];
+    for (var i = 0; i < node.childNodes.length; i++) {
+      var c = node.childNodes[i];
+      if (c.nodeType === 1 && c.tagName) {
+        var p = parseNodeGeneric(c);
+        if (p) ch.push(p);
+      }
+    }
+    return ch;
+  }
+
+  // Helper: parse Consequent/Alternate children
+  function parseConditionalChildren(tagName) {
+    var sub = node.querySelector(':scope > ' + tagName);
+    if (!sub) return [];
+    var ch = [];
+    for (var i = 0; i < sub.childNodes.length; i++) {
+      var c = sub.childNodes[i];
+      if (c.nodeType === 1 && c.tagName) {
+        var p = parseNodeGeneric(c);
+        if (p) ch.push(p);
+      }
+    }
+    return ch;
+  }
+
+  // Known mapped types
+  var mappedType = KNOWN_MAML_TAGS[tag];
+  if (!mappedType) return null;
+
+  switch (tag) {
+    case 'Text': {
+      var hasAnim = false;
+      var anims = {};
+      for (var ai = 0; ai < node.childNodes.length; ai++) {
+        var an = node.childNodes[ai];
+        if (an.nodeType === 1 && an.tagName && an.tagName.indexOf('Animation') > 0) {
+          hasAnim = true;
+          break;
+        }
+      }
+      return {
+        type: 'text', text: a('text') || a('textExp') || '', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+        size: Number(a('size')) || 24, color: a('color') || '#ffffff',
+        textAlign: a('textAlign') || 'left', bold: a('bold') === 'true',
+        multiLine: a('multiLine') === 'true', w: Number(a('w')) || 200,
+        opacity: a('alpha') ? Math.round(parseFloat(a('alpha')) * 100) : 100,
+        rotation: Number(a('rotation')) || 0,
+        fontFamily: a('fontFamily') || 'default',
+        expression: a('textExp') || '',
+        textGradient: a('gradientColors') ? 'custom' : 'none',
+        gradientColor2: a('gradientColors') ? a('gradientColors').split(',')[1] || '#ff6b6b' : '#ff6b6b',
+        textStroke: Number(a('stroke')) || 0,
+        textStrokeColor: a('strokeColor') || '#000000',
+        shadow: a('shadow') === '1' ? 'light' : a('shadow') === '3' ? 'dark' : a('shadow') === '4' ? 'glow' : 'none',
+        marqueeSpeed: Number(a('marqueeSpeed')) || 0,
+        marqueeGap: Number(a('marqueeGap')) || 0,
+        format: a('format') || '',
+        paras: a('paras') || '',
+        lineHeight: Number(a('lineHeight')) || 1.4,
+      };
+    }
+    case 'Rectangle': {
+      return {
+        type: 'rectangle', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+        w: Number(a('w')) || 100, h: Number(a('h')) || 40,
+        color: a('fillColor') || '#333333', radius: Number(a('cornerRadius')) || 0,
+        opacity: a('alpha') ? Math.round(parseFloat(a('alpha')) * 100) : 100,
+        rotation: Number(a('rotation')) || 0,
+        fillColor2: a('fillColor2') || '',
+        gradientColors: a('gradientColors') || '',
+        gradientOrientation: a('gradientOrientation') || 'top_bottom',
+        blur: Number(a('blur')) || 0,
+        strokeWidth: Number(a('stroke')) || 0,
+        strokeColor: a('strokeColor') || '#ffffff',
+      };
+    }
+    case 'Circle': {
+      return {
+        type: 'circle', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+        r: Number(a('r')) || 30, color: a('fillColor') || '#6c5ce7',
+        opacity: a('alpha') ? Math.round(parseFloat(a('alpha')) * 100) : 100,
+        rotation: Number(a('rotation')) || 0,
+        strokeWidth: Number(a('stroke')) || 0,
+        strokeColor: a('strokeColor') || '#ffffff',
+      };
+    }
+    case 'Image': {
+      var imgSrc = (a('src') || '').replace(/^(images|videos)\//, '');
+      return {
+        type: 'image', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+        w: Number(a('w')) || 100, h: Number(a('h')) || 100,
+        fileName: imgSrc, src: imgSrc,
+        fit: a('fitMode') || 'cover',
+        radius: Number(a('cornerRadius')) || 0,
+        opacity: a('alpha') ? Math.round(parseFloat(a('alpha')) * 100) : 100,
+        rotation: Number(a('rotation')) || 0,
+        align: a('align') || '', alignV: a('alignV') || '',
+        antiAlias: a('antiAlias') === 'true',
+      };
+    }
+    case 'Video': {
+      var vidSrc = (a('src') || '').replace(/^videos\//, '');
+      return {
+        type: 'video', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+        w: Number(a('w')) || 240, h: Number(a('h')) || 135,
+        fileName: vidSrc, src: vidSrc,
+      };
+    }
+    case 'Lottie': {
+      return {
+        type: 'lottie', x: Number(a('x')) || 50, y: Number(a('y')) || 50,
+        w: Number(a('w')) || 120, h: Number(a('h')) || 120,
+        src: a('src') || '', name: a('name') || '',
+        align: a('align') || 'center',
+        loop: Number(a('loop')) || 0,
+        autoplay: a('autoplay') !== 'false',
+      };
+    }
+    case 'Group': {
+      return {
+        type: 'group', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+        w: Number(a('w')) || 200, h: Number(a('h')) || 200,
+        name: a('name') || '',
+        alpha: a('alpha') ? Number(a('alpha')) : 1,
+        visibility: a('visibility') || '',
+        folmeMode: a('folmeMode') === 'true',
+        align: a('align') || '', alignV: a('alignV') || '',
+        contentDescription: a('contentDescriptionExp') || '',
+        interceptTouch: a('interceptTouch') === 'true',
+        touchable: a('touchable') === 'true',
+        frameRate: a('frameRate') ? Number(a('frameRate')) : undefined,
+        children: parseChildren(),
+      };
+    }
+    case 'Layer': {
+      return {
+        type: 'layer', name: a('name') || '',
+        alpha: a('alpha') ? Number(a('alpha')) : 1,
+        visibility: a('visibility') || '',
+        layerType: a('layerType') || 'bottom',
+        blurRadius: Number(a('blurRadius')) || 0,
+        blurColors: a('blurColors') || '',
+        colorModes: Number(a('colorModes')) || 0,
+        frameRate: a('frameRate') ? Number(a('frameRate')) : -1,
+        updatePosition: a('updatePosition') !== 'false',
+        updateSize: a('updateSize') !== 'false',
+        updateTranslation: a('updateTranslation') !== 'false',
+        children: parseChildren(),
+      };
+    }
+    case 'MusicControl': {
+      return {
+        type: 'musiccontrol', name: a('name') || 'music_control',
+        w: Number(a('w')) || 0, h: Number(a('h')) || 0,
+        x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+        autoShow: a('autoShow') !== 'false',
+        autoRefresh: a('autoRefresh') !== 'false',
+        enableLyric: a('enableLyric') === 'true',
+        updateLyricInterval: Number(a('updateLyricInterval')) || 100,
+        children: parseChildren(),
+      };
+    }
+    case 'Slider': {
+      var slChildren = parseChildren();
+      var startPoint = [], endPoint = null, triggers = [];
+      slChildren.forEach(function (ch) {
+        // Slider children are parsed as-is; startPoint/endPoint are structural
+        // We'll store them as generic children for round-trip
+      });
+      return {
+        type: 'slider', name: a('name') || '',
+        x: 0, y: 0, w: 280, h: 60,
+        bounceInitSpeed: Number(a('bounceInitSpeed')) || 0,
+        bounceAccelation: Number(a('bounceAccelation')) || 0,
+        alwaysShow: a('alwaysShow') === 'true',
+        children: slChildren,
+      };
+    }
+    case 'Button': {
+      // Detect onclick trigger
+      var btChildren = parseChildren();
+      var onClickAction = 'none', onClickTarget = '', onClickValue = '', onClickCommands = [];
+      btChildren.forEach(function (ch) {
+        if (ch.type === 'trigger' && ch.action === 'click' && ch.children) {
+          ch.children.forEach(function (cmd) {
+            if (cmd.type === 'variablecommand') {
+              if (cmd.expression && cmd.expression.indexOf('!#') === 0) {
+                onClickAction = 'toggle_visibility';
+                onClickTarget = cmd.target;
+              } else {
+                onClickAction = 'set_variable';
+                onClickTarget = cmd.target;
+                onClickValue = cmd.value || cmd.expression || '';
+              }
+            } else if (cmd.type === 'musiccommand') {
+              var actMap = { play: 'music_play', pause: 'music_pause', toggle: 'music_toggle', next: 'music_next', prev: 'music_prev' };
+              onClickAction = actMap[cmd.action] || 'music_toggle';
+            }
+          });
+        }
+      });
+      // Filter out trigger children for display
+      var btDisplayChildren = btChildren.filter(function (ch) { return ch.type !== 'trigger'; });
+      return {
+        type: 'button', name: a('name') || '',
+        x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+        w: Number(a('w')) || 120, h: Number(a('h')) || 48,
+        alpha: a('alpha') ? Number(a('alpha')) : 1,
+        visibility: a('visibility') || '',
+        align: a('align') || '', alignV: a('alignV') || '',
+        interceptTouch: a('interceptTouch') === 'true',
+        touchable: a('touchable') !== 'false',
+        onClickAction: onClickAction,
+        onClickTarget: onClickTarget,
+        onClickValue: onClickValue,
+        onClickCommands: onClickCommands,
+        children: btDisplayChildren,
+      };
+    }
+    case 'Number': {
+      return {
+        type: 'numberimage',
+        x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+        w: Number(a('w')) || 30, h: Number(a('h')) || 50,
+        number: a('number') || '0',
+        expression: a('numberExp') || '',
+        src: a('src') || 'number',
+        space: a('space') ? Number(a('space')) : undefined,
+        align: a('align') || '', alignV: a('alignV') || '',
+        opacity: a('alpha') ? Math.round(parseFloat(a('alpha')) * 100) : 100,
+      };
+    }
+    case 'Mask': {
+      return {
+        type: 'mask',
+        src: a('src') || '',
+        x: Number(a('x')) || 0, y: Number(a('y')) || 0,
+        align: a('align') || '',
+      };
+    }
+    case 'Wallpaper': {
+      return {
+        type: 'wallpaper',
+        x: 0, y: 0, w: 0, h: 0,
+        opacity: a('alpha') ? Math.round(parseFloat(a('alpha')) * 100) : 100,
+      };
+    }
+    case 'Var': {
+      return {
+        type: 'variable',
+        name: a('name') || '',
+        expression: a('expression') || '',
+        varType: a('type') || '',
+        const: a('const') === 'true',
+        threshold: a('threshold') ? Number(a('threshold')) : undefined,
+        persist: a('persist') === 'true',
+        x: 0, y: 0,
+      };
+    }
+    case 'VariableArray': {
+      var vaItems = [];
+      for (var vi = 0; vi < node.childNodes.length; vi++) {
+        var vn = node.childNodes[vi];
+        if (vn.nodeType === 1 && vn.tagName === 'Item') {
+          vaItems.push({ expression: vn.getAttribute('expression') || '', value: vn.getAttribute('value') || '' });
+        }
+      }
+      return {
+        type: 'variablearray',
+        name: a('name') || '',
+        items: vaItems,
+        x: 0, y: 0,
+      };
+    }
+    case 'Trigger': {
+      return {
+        type: 'trigger',
+        action: a('action') || 'click',
+        children: parseChildren(),
+        x: 0, y: 0,
+      };
+    }
+    case 'VariableCommand': {
+      return {
+        type: 'variablecommand',
+        target: a('target') || '',
+        value: a('value') || '',
+        expression: a('expression') || '',
+        x: 0, y: 0,
+      };
+    }
+    case 'BinderCommand': {
+      return {
+        type: 'bindercommand',
+        target: a('target') || '',
+        value: a('value') || '',
+        x: 0, y: 0,
+      };
+    }
+    case 'MusicCommand': {
+      return {
+        type: 'musiccommand',
+        action: a('action') || 'toggle',
+        x: 0, y: 0,
+      };
+    }
+    case 'FrameRateCommand': {
+      return {
+        type: 'frameratecommand',
+        target: a('target') || '',
+        frameRate: a('frameRate') ? Number(a('frameRate')) : 30,
+        x: 0, y: 0,
+      };
+    }
+    case 'MultiCommand': {
+      return {
+        type: 'multicommand',
+        children: parseChildren(),
+        x: 0, y: 0,
+      };
+    }
+    case 'IfCommand': {
+      return {
+        type: 'ifcommand',
+        condition: a('condition') || '',
+        consequent: parseConditionalChildren('Consequent'),
+        alternate: parseConditionalChildren('Alternate'),
+        x: 0, y: 0,
+      };
+    }
+    case 'VariableBinders': {
+      return {
+        type: 'variablebinders',
+        children: parseChildren(),
+        x: 0, y: 0,
+      };
+    }
+    case 'ContentProviderBinder': {
+      // Convert to contentprovider type
+      var cpChildren = [];
+      for (var cpi = 0; cpi < node.childNodes.length; cpi++) {
+        var cpn = node.childNodes[cpi];
+        if (cpn.nodeType === 1 && cpn.tagName) {
+          if (cpn.tagName === 'Content') {
+            cpChildren.push({
+              type: 'contentbinding',
+              name: cpn.getAttribute('name') || '',
+              column: cpn.getAttribute('column') || '',
+            });
+          } else {
+            var cpp = parseNodeGeneric(cpn);
+            if (cpp) cpChildren.push(cpp);
+          }
+        }
+      }
+      return {
+        type: 'contentprovider',
+        uri: a('uri') || '',
+        projection: a('projection') || '',
+        selection: a('selection') || '',
+        sortOrder: a('sortOrder') || '',
+        name: a('name') || '',
+        children: cpChildren,
+        x: 0, y: 0,
+      };
+    }
+    case 'Content': {
+      return {
+        type: 'contentbinding',
+        name: a('name') || '',
+        column: a('column') || '',
+        x: 0, y: 0,
+      };
+    }
+    case 'Permanence': {
+      return {
+        type: 'permanence',
+        name: a('name') || '',
+        expression: a('expression') || '',
+        default: a('default') || '',
+        x: 0, y: 0,
+      };
+    }
+    case 'FolmeState': {
+      return {
+        type: 'folmestate',
+        name: a('name') || '',
+        children: parseChildren(),
+        x: 0, y: 0,
+      };
+    }
+    case 'FolmeConfig': {
+      return {
+        type: 'folmeconfig',
+        children: parseChildren(),
+        x: 0, y: 0,
+      };
+    }
+    case 'MiPaletteBinder': {
+      return {
+        type: 'mipalettebinder',
+        children: parseChildren(),
+        x: 0, y: 0,
+      };
+    }
+    default: {
+      // Framework tags or unknown — store as _rawXml for round-trip
+      var serializer = new XMLSerializer();
+      return { type: 'framework', tag: tag, _rawXml: serializer.serializeToString(node).replace(/ xmlns="[^"]*"/g, ''), x: 0, y: 0 };
+    }
+  }
+}
+
 export function importMAML(xmlString) {
-  var result = { cardName: '导入的 MAML', bgColor: '#000000', elements: [], updater: '' };
+  var result = { cardName: '导入的 MAML', bgColor: '#000000', elements: [], updater: '', variables: [], variableBinders: [] };
 
   // Extract attributes from Widget tag
   var widgetMatch = xmlString.match(/<Widget\s+([^>]+)>/);
@@ -789,118 +1232,86 @@ export function importMAML(xmlString) {
   var bgMatch = xmlString.match(/<Rectangle\s[^>]*w="#view_width"[^>]*h="#view_height"[^>]*fillColor="(#[0-9a-fA-F]{6})"/);
   if (bgMatch) result.bgColor = bgMatch[1];
 
-  // Parse elements
+  // Parse with DOMParser
   try {
     var parser = new DOMParser();
     var doc = parser.parseFromString(xmlString, 'application/xml');
     var parseError = doc.querySelector('parsererror');
-    if (!parseError) {
-      function parseNode(node) {
-        var tag = node.tagName;
-        if (!tag) return null;
-        var a = function (name) { return node.getAttribute(name) || ''; };
-        var tagLower = tag.toLowerCase();
+    if (parseError) {
+      // Fallback to regex for malformed XML
+      parseXmlFallback(xmlString, result);
+      return result;
+    }
 
-        if (tagLower === 'text') {
-          return {
-            type: 'text', text: a('text') || a('textExp') || '', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
-            size: Number(a('size')) || 24, color: a('color') || '#ffffff',
-            textAlign: a('textAlign') || 'left', bold: a('bold') === 'true',
-            multiLine: a('multiLine') === 'true', w: Number(a('w')) || 200,
-            opacity: a('alpha') ? Math.round(parseFloat(a('alpha')) * 100) : 100,
-            rotation: Number(a('rotation')) || 0,
-            fontFamily: a('fontFamily') || 'default',
-            expression: a('textExp') || '',
-          };
-        } else if (tagLower === 'rectangle') {
-          return {
-            type: 'rectangle', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
-            w: Number(a('w')) || 100, h: Number(a('h')) || 40,
-            color: a('fillColor') || '#333333', radius: Number(a('cornerRadius')) || 0,
-            opacity: a('alpha') ? Math.round(parseFloat(a('alpha')) * 100) : 100,
-            rotation: Number(a('rotation')) || 0, fillColor2: a('fillColor2') || '',
-            blur: Number(a('blur')) || 0,
-          };
-        } else if (tagLower === 'circle') {
-          return {
-            type: 'circle', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
-            r: Number(a('r')) || 30, color: a('fillColor') || '#6c5ce7',
-            opacity: a('alpha') ? Math.round(parseFloat(a('alpha')) * 100) : 100,
-          };
-        } else if (tagLower === 'image') {
-          var imgSrc = (a('src') || '').replace(/^images\//, '');
-          return {
-            type: 'image', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
-            w: Number(a('w')) || 100, h: Number(a('h')) || 100,
-            fileName: imgSrc, src: imgSrc, fit: a('fitMode') || 'cover',
-          };
-        } else if (tagLower === 'video') {
-          var vidSrc = (a('src') || '').replace(/^videos\//, '');
-          return {
-            type: 'video', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
-            w: Number(a('w')) || 240, h: Number(a('h')) || 135,
-            fileName: vidSrc, src: vidSrc,
-          };
-        } else if (tagLower === 'lottie') {
-          return {
-            type: 'lottie', x: Number(a('x')) || 50, y: Number(a('y')) || 50,
-            w: Number(a('w')) || 120, h: Number(a('h')) || 120,
-            src: a('src') || '', name: a('name') || '',
-          };
-        } else if (tagLower === 'group') {
-          var children = [];
-          for (var i = 0; i < node.childNodes.length; i++) {
-            var ch = node.childNodes[i];
-            if (ch.nodeType === 1) { var p = parseNode(ch); if (p) children.push(p); }
-          }
-          return {
-            type: 'group', x: Number(a('x')) || 0, y: Number(a('y')) || 0,
-            w: Number(a('w')) || 200, h: Number(a('h')) || 200,
-            name: a('name') || '', alpha: a('alpha') ? Number(a('alpha')) : 1,
-            visibility: a('visibility') || '', folmeMode: a('folmeMode') === 'true',
-            align: a('align') || '', alignV: a('alignV') || '',
-            children: children,
-          };
-        } else if (tagLower === 'layer') {
-          var lChildren = [];
-          for (var j = 0; j < node.childNodes.length; j++) {
-            var lc = node.childNodes[j];
-            if (lc.nodeType === 1) { var lp = parseNode(lc); if (lp) lChildren.push(lp); }
-          }
-          return {
-            type: 'layer', name: a('name') || '', alpha: a('alpha') ? Number(a('alpha')) : 1,
-            visibility: a('visibility') || '', layerType: a('layerType') || 'bottom',
-            blurRadius: Number(a('blurRadius')) || 0,
-            children: lChildren,
-          };
-        } else if (tagLower === 'musiccontrol') {
-          var mcChildren = [];
-          for (var k = 0; k < node.childNodes.length; k++) {
-            var mcc = node.childNodes[k];
-            if (mcc.nodeType === 1) { var mcp = parseNode(mcc); if (mcp) mcChildren.push(mcp); }
-          }
-          return {
-            type: 'musiccontrol', name: a('name') || 'music_control',
-            w: Number(a('w')) || 0, h: Number(a('h')) || 0,
-            enableLyric: a('enableLyric') === 'true',
-            children: mcChildren,
-          };
-        }
-        return null;
+    var widget = doc.querySelector('Widget');
+    if (!widget) {
+      parseXmlFallback(xmlString, result);
+      return result;
+    }
+
+    // Parse all top-level children of Widget
+    for (var ci = 0; ci < widget.childNodes.length; ci++) {
+      var child = widget.childNodes[ci];
+      if (child.nodeType !== 1 || !child.tagName) continue;
+
+      // Skip background Rectangle (w="#view_width" h="#view_height")
+      if (child.tagName === 'Rectangle' &&
+          child.getAttribute('w') === '#view_width' &&
+          child.getAttribute('h') === '#view_height') {
+        continue;
       }
 
-      var widget = doc.querySelector('Widget');
-      if (widget) {
-        for (var ci = 0; ci < widget.childNodes.length; ci++) {
-          var child = widget.childNodes[ci];
-          if (child.nodeType === 1 && child.tagName) {
-            var parsed = parseNode(child);
-            if (parsed) result.elements.push(parsed);
-          }
-        }
+      // Extract Variables to separate list
+      if (child.tagName === 'Var') {
+        result.variables.push({
+          name: child.getAttribute('name') || '',
+          expression: child.getAttribute('expression') || '',
+          varType: child.getAttribute('type') || '',
+          const: child.getAttribute('const') === 'true',
+          threshold: child.getAttribute('threshold') ? Number(child.getAttribute('threshold')) : undefined,
+          persist: child.getAttribute('persist') === 'true',
+        });
+        continue;
+      }
+
+      // VariableBinders
+      if (child.tagName === 'VariableBinders') {
+        var vbParsed = parseNodeGeneric(child);
+        if (vbParsed) result.variableBinders.push(vbParsed);
+        continue;
+      }
+
+      // Skip auto-detect vars (marginL, scaleX, etc.)
+      if (child.tagName === 'Var') {
+        var vn = child.getAttribute('name') || '';
+        if (['marginL', 'scaleX', 'scaleY', 'safeW'].indexOf(vn) >= 0) continue;
+      }
+
+      var parsed = parseNodeGeneric(child);
+      if (parsed) result.elements.push(parsed);
+    }
+
+    // Flatten top-level Group wrappers that just contain marginL offset
+    // If first element is a Group with x="#marginL" y="0", unwrap its children
+    if (result.elements.length === 1 && result.elements[0].type === 'group' &&
+        result.elements[0].children && result.elements[0].children.length > 0) {
+      var topGroup = result.elements[0];
+      // Only unwrap if it looks like a position wrapper
+      if ((String(topGroup.x).indexOf('marginL') >= 0 || topGroup.x === 0) && topGroup.y === 0) {
+        result.elements = topGroup.children;
       }
     }
-  } catch (e) { /* fallback: empty elements */ }
+
+  } catch (e) {
+    parseXmlFallback(xmlString, result);
+  }
+
+  // Background image detection
+  var bgImgMatch = xmlString.match(/<Image\s+src="([^"]*)"[^>]*x="0"[^>]*y="0"[^>]*w="#view_width"[^>]*h="#view_height"/i) ||
+                    xmlString.match(/<Image\s+[^>]*x="0"[^>]*y="0"[^>]*w="#view_width"[^>]*h="#view_height"[^>]*src="([^"]*)"/i);
+  if (bgImgMatch) {
+    result.bgImageSrc = bgImgMatch[1];
+  }
 
   return result;
 }

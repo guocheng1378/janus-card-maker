@@ -42,6 +42,7 @@ var COMMANDS = [
   { id: 'addMusic', icon: '🎵', label: '添加 MusicControl', shortcut: '', category: '元素', fn: function (c) { c.addElement('musiccontrol'); } },
   { id: 'addSvg', icon: '📐', label: '添加 SVG 矢量图', shortcut: '', category: '元素', fn: function (c) { c.addElement('svg'); } },
   { id: 'addButton', icon: '🔘', label: '添加交互按钮', shortcut: '', category: '元素', fn: function (c) { c.addElement('button'); } },
+  { id: 'importMamlAdvanced', icon: '🔬', label: '高级 MAML 导入', shortcut: '', category: '导入', fn: function (c) { c.showMAMLImportModal(); } },
   { id: 'designTools', icon: '🎨', label: '打开设计工具', shortcut: '', category: '工具', fn: function (c) { c.openDesignTools('palette'); } },
   { id: 'bindingWizard', icon: '🔗', label: '数据绑定向导', shortcut: '', category: '工具', fn: function (c) { c.openBindingWizard(); } },
   { id: 'mamlLint', icon: '✅', label: 'MAML 语法检查', shortcut: '', category: '工具', fn: function (c) { c.runMamlLint(); } },
