@@ -217,6 +217,8 @@ export function renderConfig(getTemplateMAML) {
     '<button class="el-btn" data-add="group"><span class="el-btn-icon">📦</span> Group</button>' +
     '<button class="el-btn" data-add="layer"><span class="el-btn-icon">🎨</span> Layer</button>' +
     '<button class="el-btn" data-add="musiccontrol"><span class="el-btn-icon">🎵</span> Music</button>' +
+    '<button class="el-btn" data-add="svg"><span class="el-btn-icon">📐</span> SVG</button>' +
+    '<button class="el-btn" data-add="button"><span class="el-btn-icon">🔘</span> 按钮</button>' +
     '<button class="el-btn" data-action="importZip"><span class="el-btn-icon">📦</span> 导入ZIP</button>' +
     '<button class="el-btn" data-action="importMAML"><span class="el-btn-icon">📄</span> 导入MAML</button>';
 

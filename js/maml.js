@@ -339,6 +339,25 @@ export function renderEl(el, files, indent, childRenderer) {
     }
 
     // ════════════════════════════════════════
+    //  SVG 矢量图（NEW）
+    // ════════════════════════════════════════
+    case 'svg': {
+      // SVG 在 MAML 中不直接支持，导出为注释 + 图片占位
+      // 用户的 SVG 内容作为原始代码透传到 XML 注释中
+      var svgW = el.w || 100;
+      var svgH = el.h || 100;
+      var svgRot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
+      var svgComment = el.svgContent
+        ? p + '<!-- SVG 矢量图（预览用，实际需导出为图片）\n' + p + '原始SVG:\n' + p + '<svg width="' + svgW + '" height="' + svgH + '" xmlns="http://www.w3.org/2000/svg">\n' + p + '  ' + (el.svgContent || '') + '\n' + p + '</svg>\n' + p + '-->'
+        : '';
+      // 用 Rectangle 占位（用户可导出 SVG 为 PNG 后替换为 Image）
+      var rectXml = p + '<Rectangle x="' + el.x + '" y="' + el.y + '" w="' + svgW + '" h="' + svgH + '" fillColor="transparent"' + alphaAttr(el) + svgRot + ' />';
+      var animXml = renderAnimations(el, files, p);
+      var result = animXml ? rectXml.replace(/ \/>$/, '>\n' + animXml + '\n' + p + '</Rectangle>') : rectXml;
+      return svgComment ? svgComment + '\n' + result : result;
+    }
+
+    // ════════════════════════════════════════
     //  Button 按钮控件（NEW）
     // ════════════════════════════════════════
     case 'button': {
@@ -346,10 +365,63 @@ export function renderEl(el, files, indent, childRenderer) {
       if (el.interceptTouch) btAttrs += ' interceptTouch="true"';
       if (el.touchable) btAttrs += ' touchable="true"';
 
-      var btChildren = (el.children && el.children.length > 0)
-        ? '\n' + renderChildren(el.children, files, p + '  ', cr) + '\n' + p
-        : '';
-      return p + '<Button' + btAttrs + '>' + btChildren + '</Button>';
+      // 构建子元素
+      var btChildren = '';
+
+      // 自动添加 Trigger 子元素（如果配置了 onclick）
+      if (el.onClickAction && el.onClickAction !== 'none') {
+        var triggerXml = '';
+        var triggerAction = el.onClickAction;
+        var triggerChildren = '';
+
+        switch (triggerAction) {
+          case 'toggle_visibility':
+            if (el.onClickTarget) {
+              triggerChildren = p + '    <VariableCommand target="' + escXml(el.onClickTarget) + '" expression="!#' + escXml(el.onClickTarget) + '" />';
+            }
+            break;
+          case 'set_variable':
+            if (el.onClickTarget && el.onClickValue) {
+              triggerChildren = p + '    <VariableCommand target="' + escXml(el.onClickTarget) + '" value="' + escXml(el.onClickValue) + '" />';
+            }
+            break;
+          case 'music_play':
+            triggerChildren = p + '    <MusicCommand action="play" />';
+            break;
+          case 'music_pause':
+            triggerChildren = p + '    <MusicCommand action="pause" />';
+            break;
+          case 'music_toggle':
+            triggerChildren = p + '    <MusicCommand action="toggle" />';
+            break;
+          case 'music_next':
+            triggerChildren = p + '    <MusicCommand action="next" />';
+            break;
+          case 'music_prev':
+            triggerChildren = p + '    <MusicCommand action="prev" />';
+            break;
+          case 'multi':
+            if (el.onClickCommands && el.onClickCommands.length > 0) {
+              el.onClickCommands.forEach(function (cmd) {
+                triggerChildren += p + '    <' + cmd.tag + (cmd.attrs ? ' ' + cmd.attrs : '') + ' />\n';
+              });
+              triggerChildren = triggerChildren.replace(/\n$/, '');
+            }
+            break;
+        }
+
+        if (triggerChildren) {
+          btChildren += '\n' + p + '  <Trigger action="click">\n' + triggerChildren + '\n' + p + '  </Trigger>';
+        }
+      }
+
+      // 添加用户子元素
+      if (el.children && el.children.length > 0) {
+        btChildren += '\n' + renderChildren(el.children, files, p + '  ', cr);
+      }
+
+      var btBody = btChildren ? btChildren + '\n' + p : '';
+      return p + '<Button' + btAttrs + '>' + btBody + '</Button>';
     }
 
     // ════════════════════════════════════════
@@ -766,6 +838,19 @@ export function renderElResponsive(el, files, indent) {
       var niXml = p + '<Number' + niNum + niSrc + ' x="' + respX(el.x) + '" y="' + respY(el.y) + '" w="' + respW(el.w || 30) + '" h="' + respH(el.h || 50) + '"' + (el.space !== undefined ? ' space="' + respW(el.space) + '"' : '') + (el.align ? ' align="' + el.align + '"' : '') + (el.alignV ? ' alignV="' + el.alignV + '"' : '') + alphaAttr(el) + ' />';
       var animXml = renderAnimationsResponsive(el, files, p);
       return animXml ? niXml.replace(/ \/>$/, '>\n' + animXml + '\n' + p + '</Number>') : niXml;
+    }
+
+    case 'svg': {
+      var svgW = respW(el.w || 100);
+      var svgH = respH(el.h || 100);
+      var svgRot = el.rotation ? ' rotation="' + el.rotation + '"' : '';
+      var svgComment = el.svgContent
+        ? p + '<!-- SVG 矢量图（预览用，实际需导出为图片） -->'
+        : '';
+      var rectXml = p + '<Rectangle x="' + respX(el.x) + '" y="' + respY(el.y) + '" w="' + svgW + '" h="' + svgH + '" fillColor="transparent"' + alphaAttr(el) + svgRot + ' />';
+      var animXml = renderAnimationsResponsive(el, files, p);
+      var result = animXml ? rectXml.replace(/ \/>$/, '>\n' + animXml + '\n' + p + '</Rectangle>') : rectXml;
+      return svgComment ? svgComment + '\n' + result : result;
     }
 
     case 'slider':

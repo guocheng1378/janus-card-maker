@@ -419,9 +419,18 @@ PreviewRenderer.prototype.renderElements = function (elements, files, selIdx) {
         var slW = (el.w || 280) * self.scale, slH = (el.h || 60) * self.scale;
         return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + slW + 'px;height:' + slH + 'px;background:rgba(0,150,136,0.1);border:1px dashed rgba(0,150,136,0.4);border-radius:8px;display:flex;align-items:center;justify-content:space-between;padding:0 8px;font-size:10px;color:#009688;' + dc + '">👆<div style="flex:1;height:2px;background:rgba(0,150,136,0.3);margin:0 6px;border-radius:1px"></div>🎯<span style="font-size:8px;opacity:0.7;margin-left:4px">Slider: ' + self.esc(el.name || '') + '</span></div>' + sizeLabel;
       }
+      case 'svg': {
+        var svgW = (el.w || 100) * self.scale, svgH = (el.h || 100) * self.scale;
+        var svgInner = el.svgContent
+          ? '<svg width="' + svgW + '" height="' + svgH + '" viewBox="0 0 ' + (el.w || 100) + ' ' + (el.h || 100) + '" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0">' + el.svgContent + '</svg>'
+          : '';
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + svgW + 'px;height:' + svgH + 'px;background:rgba(156,39,176,0.06);border:1px dashed rgba(156,39,176,0.35);border-radius:4px;overflow:hidden;' + dc + '">' + svgInner + '</div>' + sizeLabel;
+      }
       case 'button': {
         var btW = (el.w || 100) * self.scale, btH = (el.h || 40) * self.scale;
-        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + btW + 'px;height:' + btH + 'px;background:rgba(33,150,243,0.15);border:1px dashed rgba(33,150,243,0.5);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#2196f3;' + dc + '">🔘 Button' + (el.name ? ': ' + self.esc(el.name) : '') + '</div>' + sizeLabel;
+        var btLabel = '🔘 Button';
+        if (el.onClickAction && el.onClickAction !== 'none') btLabel += ' ⚡';
+        return '<div data-el-idx="' + i + '" style="position:absolute;left:' + px + 'px;top:' + py + 'px;width:' + btW + 'px;height:' + btH + 'px;background:rgba(33,150,243,0.15);border:1px dashed rgba(33,150,243,0.5);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#2196f3;' + dc + '">' + btLabel + (el.name ? ': ' + self.esc(el.name) : '') + '</div>' + sizeLabel;
       }
       case 'variable': {
         return '<div data-el-idx="' + i + '" style="position:absolute;left:4px;top:' + py + 'px;font-size:8px;color:rgba(156,39,176,0.6);white-space:nowrap;pointer-events:none">📦 Var: ' + self.esc(el.name || '?') + '</div>';

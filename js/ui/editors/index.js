@@ -3,6 +3,8 @@ import { renderTextEditor } from './text-editor.js';
 import { renderRectangleEditor, renderCircleEditor, renderArcEditor, renderProgressEditor } from './shape-editor.js';
 import { renderImageEditor, renderVideoEditor, renderLottieEditor } from './media-editor.js';
 import { renderGroupEditor, renderLayerEditor, renderMusicControlEditor } from './container-editor.js';
+import { renderSVGEditor } from './svg-editor.js';
+import { renderButtonEditor } from './button-editor.js';
 import {
   fieldHtml, colorFieldHtml, esc, renderColorPresets,
   renderCameraWarning, getElementTypeLabel, LAYER_ICONS
@@ -23,6 +25,8 @@ var EDITORS = {
   group: renderGroupEditor,
   layer: renderLayerEditor,
   musiccontrol: renderMusicControlEditor,
+  svg: renderSVGEditor,
+  button: renderButtonEditor,
 };
 
 // ── 动画选项列表 ──

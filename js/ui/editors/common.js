@@ -38,7 +38,8 @@ export var FONT_OPTIONS = [
 
 export var LAYER_ICONS = {
   text: '🔤', rectangle: '⬜', circle: '⭕', image: '🖼️', video: '🎬',
-  arc: '🌗', progress: '📊', lottie: '✨', group: '📦', layer: '🎨', musiccontrol: '🎵'
+  arc: '🌗', progress: '📊', lottie: '✨', group: '📦', layer: '🎨', musiccontrol: '🎵',
+  svg: '📐', button: '🔘'
 };
 
 export var COLOR_PRESETS = [
@@ -86,7 +87,8 @@ export function getElementTypeLabel(el) {
   var labels = {
     text: '文字', rectangle: '矩形', circle: '圆形', arc: '弧形',
     image: '图片', video: '视频', progress: '进度条', lottie: 'Lottie 动画',
-    group: '容器组', layer: '材质层', musiccontrol: '音乐控件'
+    group: '容器组', layer: '材质层', musiccontrol: '音乐控件',
+    svg: 'SVG 矢量图', button: '交互按钮'
   };
   return labels[el.type] || el.type;
 }

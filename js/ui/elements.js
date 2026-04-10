@@ -15,6 +15,8 @@ export var ElementDefaults = {
   group: function () { return { type: 'group', x: 0, y: 0, w: 200, h: 200, name: 'group_' + Date.now(), alpha: 1, visibility: '', folmeMode: false, align: '', alignV: '', contentDescription: '', children: [], locked: false }; },
   layer: function () { return { type: 'layer', name: 'layer_' + Date.now(), alpha: 1, visibility: '', layerType: 'bottom', blurRadius: 0, blurColors: '', colorModes: 0, frameRate: -1, updatePosition: true, updateSize: true, updateTranslation: true, children: [], locked: false }; },
   musiccontrol: function () { return { type: 'musiccontrol', name: 'music_control', w: 0, h: 0, x: 0, y: 0, autoShow: false, autoRefresh: true, enableLyric: true, updateLyricInterval: 100, children: [], locked: false }; },
+  svg: function () { return { type: 'svg', x: Math.round(device.width * device.cameraZoneRatio) + 10, y: 60, w: 100, h: 100, svgContent: '<path d="M10 80 Q 52.5 10, 95 80" stroke="#6c5ce7" stroke-width="4" fill="none"/>', color: '#6c5ce7', opacity: 100, rotation: 0, locked: false }; },
+  button: function () { return { type: 'button', x: Math.round(device.width * device.cameraZoneRatio) + 10, y: 60, w: 120, h: 48, name: 'btn_action', alpha: 1, visibility: '', align: '', alignV: '', interceptTouch: true, touchable: true, onClickAction: 'none', onClickTarget: '', onClickValue: '', onClickCommands: [], children: [], locked: false }; },
 };
 
 export function getSelectedDevice() {

@@ -1122,6 +1122,137 @@ function setupEvents() {
       }
       return;
     }
+    // ── SVG 预设 ──
+    var svgPresetBtn = e.target.closest('[data-svg-preset]');
+    if (svgPresetBtn) {
+      e.stopPropagation();
+      var spi = Number(svgPresetBtn.dataset.idx);
+      var presetIdx = Number(svgPresetBtn.dataset.svgPreset);
+      if (spi >= 0 && spi < S.elements.length) {
+        var SVG_PRESETS = [
+          { name: '心形', svg: '<path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="#e74c3c"/>' },
+          { name: '星形', svg: '<polygon points="12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9" fill="#f39c12"/>' },
+          { name: '闪电', svg: '<polygon points="13,2 3,14 12,14 11,22 21,10 12,10" fill="#f1c40f"/>' },
+          { name: '箭头', svg: '<path d="M4 12h16m-4-4l4 4-4 4" stroke="#ffffff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' },
+          { name: '对勾', svg: '<path d="M4 12l6 6L20 6" stroke="#2ecc71" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' },
+          { name: '叉号', svg: '<path d="M6 6l12 12M18 6L6 18" stroke="#e74c3c" stroke-width="4" fill="none" stroke-linecap="round"/>' },
+          { name: '圆环', svg: '<circle cx="50" cy="50" r="40" stroke="#6c5ce7" stroke-width="8" fill="none"/>' },
+          { name: '五边形', svg: '<polygon points="50,5 95,38 77,90 23,90 5,38" fill="none" stroke="#00b894" stroke-width="4"/>' },
+          { name: '六边形', svg: '<polygon points="50,2 93,25 93,75 50,98 7,75 7,25" fill="none" stroke="#0984e3" stroke-width="4"/>' },
+          { name: '波浪', svg: '<path d="M0 50 Q25 20 50 50 T100 50" stroke="#48dbfb" stroke-width="4" fill="none"/>' },
+          { name: '三角形', svg: '<polygon points="50,5 95,95 5,95" fill="none" stroke="#e17055" stroke-width="4"/>' },
+          { name: '钻石', svg: '<polygon points="50,5 95,50 50,95 5,50" fill="none" stroke="#a29bfe" stroke-width="4"/>' },
+          { name: '月亮', svg: '<path d="M48 4 A38 38 0 1 0 48 96 A28 28 0 1 1 48 4" fill="#f9ca24"/>' },
+          { name: '播放', svg: '<polygon points="20,10 80,50 20,90" fill="#2ecc71"/>' },
+          { name: '暂停', svg: '<rect x="15" y="10" width="20" height="80" rx="4" fill="#74b9ff"/><rect x="65" y="10" width="20" height="80" rx="4" fill="#74b9ff"/>' },
+        ];
+        if (SVG_PRESETS[presetIdx]) {
+          captureState('应用 SVG 预设');
+          S.elements[spi].svgContent = SVG_PRESETS[presetIdx].svg;
+          S.setDirty(true);
+          renderConfig(getTemplateMAML);
+          _autoPreview();
+          toast('🎨 已应用: ' + SVG_PRESETS[presetIdx].name, 'success');
+        }
+      }
+      return;
+    }
+
+    // ── SVG 导出为 PNG ──
+    var svgExportBtn = e.target.closest('[data-svg-export]');
+    if (svgExportBtn) {
+      e.stopPropagation();
+      var sei = Number(svgExportBtn.dataset.svgExport);
+      if (sei >= 0 && sei < S.elements.length) {
+        var svgEl = S.elements[sei];
+        if (!svgEl.svgContent) return toast('SVG 内容为空', 'warning');
+        var svgStr = '<svg width="' + (svgEl.w || 100) + '" height="' + (svgEl.h || 100) + '" xmlns="http://www.w3.org/2000/svg">' + svgEl.svgContent + '</svg>';
+        var svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+        var url = URL.createObjectURL(svgBlob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'svg_export.png';
+        a.click();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+        toast('📥 SVG 已导出（需要后端转 PNG）', 'info');
+      }
+      return;
+    }
+
+    // ── Button onclick 动作选择 ──
+    var onclickBtn = e.target.closest('.onclick-action-btn');
+    if (onclickBtn) {
+      e.stopPropagation();
+      var oi = Number(onclickBtn.dataset.idx);
+      if (oi >= 0 && oi < S.elements.length) {
+        captureState('设置 onclick');
+        S.elements[oi].onClickAction = onclickBtn.dataset.action;
+        S.setDirty(true);
+        renderConfig(getTemplateMAML);
+        _autoPreview();
+      }
+      return;
+    }
+
+    // ── Button 快捷设置目标变量 ──
+    var targetBtn = e.target.closest('[data-set-target]');
+    if (targetBtn) {
+      e.stopPropagation();
+      var ti = Number(targetBtn.dataset.idx);
+      if (ti >= 0 && ti < S.elements.length) {
+        S.elements[ti].onClickTarget = targetBtn.dataset.setTarget;
+        S.setDirty(true);
+        renderConfig(getTemplateMAML);
+      }
+      return;
+    }
+
+    // ── Button 快捷设置值 ──
+    var valueBtn = e.target.closest('[data-set-value]');
+    if (valueBtn) {
+      e.stopPropagation();
+      var vb_i = Number(valueBtn.dataset.idx);
+      if (vb_i >= 0 && vb_i < S.elements.length) {
+        S.elements[vb_i].onClickValue = valueBtn.dataset.setValue;
+        S.setDirty(true);
+        renderConfig(getTemplateMAML);
+      }
+      return;
+    }
+
+    // ── Button 添加组合命令 ──
+    var addCmdBtn = e.target.closest('[data-add-cmd]');
+    if (addCmdBtn) {
+      e.stopPropagation();
+      var aci = Number(addCmdBtn.dataset.idx);
+      if (aci >= 0 && aci < S.elements.length) {
+        captureState('添加命令');
+        if (!S.elements[aci].onClickCommands) S.elements[aci].onClickCommands = [];
+        S.elements[aci].onClickCommands.push({
+          tag: addCmdBtn.dataset.addCmd,
+          attrs: addCmdBtn.dataset.cmdDefault || ''
+        });
+        S.setDirty(true);
+        renderConfig(getTemplateMAML);
+      }
+      return;
+    }
+
+    // ── Button 删除组合命令 ──
+    var removeCmdBtn = e.target.closest('[data-remove-cmd]');
+    if (removeCmdBtn) {
+      e.stopPropagation();
+      var rci = Number(removeCmdBtn.dataset.idx);
+      var cmdIdx = Number(removeCmdBtn.dataset.removeCmd);
+      if (rci >= 0 && rci < S.elements.length && S.elements[rci].onClickCommands) {
+        captureState('删除命令');
+        S.elements[rci].onClickCommands.splice(cmdIdx, 1);
+        S.setDirty(true);
+        renderConfig(getTemplateMAML);
+      }
+      return;
+    }
+
     // Match size
     var matchBtn = e.target.closest('[data-match-size]');
     if (matchBtn) {
