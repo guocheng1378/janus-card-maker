@@ -16,7 +16,7 @@ var COMMANDS = [
   { id: 'exportZip', icon: '📦', label: '导出 ZIP', shortcut: '', category: '导出', fn: function (c) { c.handleExport(); } },
   { id: 'exportPng', icon: '🖼️', label: '导出 PNG', shortcut: '', category: '导出', fn: function (c) { c.handleExportPNG(); } },
   { id: 'exportSvg', icon: '📐', label: '导出 SVG', shortcut: '', category: '导出', fn: function (c) { c.handleExportSVG(); } },
-  { id: 'batchExport', icon: '📦', label: '批量导出全部机型', shortcut: '', category: '导出', fn: function (c) { c.handleBatchExport(); } },
+  { id: 'batchExport', icon: '📦', label: '导出 ZIP', shortcut: '', category: '导出', fn: function (c) { c.handleExport(); } },
   { id: 'copyXml', icon: '📋', label: '复制 XML', shortcut: '', category: '导出', fn: function (c) { c.copyXML(); } },
   { id: 'formatXml', icon: '🔧', label: '格式化 XML', shortcut: '', category: '编辑', fn: function (c) { c.formatXML(); } },
   { id: 'saveToLib', icon: '📚', label: '保存到卡片库', shortcut: '', category: '库', fn: function (c) { c.saveToLibrary(); } },

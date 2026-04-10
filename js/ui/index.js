@@ -1,7 +1,7 @@
 // ─── UI Index: 页面导航 + 配置渲染 + 事件 ─────────────────────────
 // 拆分后的入口文件，导入子模块并暴露 JCM 全局接口
 import * as S from '../state.js';
-import { getDevice, generateAutoDetectMAML, isAutoDevice, DEVICES } from '../devices.js';
+import { getDevice, generateAutoDetectMAML } from '../devices.js';
 import { generateMAML, validateMAML, renderEl, renderElResponsive } from '../maml.js';
 import { TEMPLATES } from '../templates/index.js';
 import { renderTemplatePreview, PreviewRenderer } from '../live-preview.js';
@@ -117,7 +117,6 @@ function renderPreview() {
   if (!S.tpl) return;
   var device = getSelectedDevice();
   var showCam = document.getElementById('showCamera').checked;
-  var isAuto = isAutoDevice(device);
 
   document.getElementById('deviceLabel').textContent = device.label;
   document.getElementById('previewCamera').style.width = showCam ? (device.cameraZoneRatio * 100) + '%' : '0';
@@ -126,32 +125,20 @@ function renderPreview() {
   var phoneEl = document.querySelector('#page2 .preview-phone');
   if (phoneEl) { phoneEl.classList.remove('device-switching'); void phoneEl.offsetWidth; phoneEl.classList.add('device-switching'); }
 
-  if (isAuto) {
-    // 多机型同时预览
-    renderMultiDevicePreview(showCam);
-  } else {
-    // 单机型预览
-    var renderer = new PreviewRenderer(device, showCam);
-    var html = renderTemplatePreview(device, showCam, S.tpl, S.cfg);
-    html += renderer.renderElements(S.elements, S.uploadedFiles, S.selIdx);
-    if (document.getElementById('showSafeZone').checked) {
-      html += renderer.safeZoneOverlay();
-    }
-    if (S.cfg.bgImage) {
-      html = '<div style="position:absolute;inset:0;background-image:url(\'' + S.cfg.bgImage.replace(/'/g, "\\'") + '\');background-size:cover;background-position:center;z-index:-1"></div>' + html;
-    }
-    requestAnimationFrame(function () {
-      document.getElementById('previewContent').innerHTML = html;
-    });
-    // 恢复单机型视图
-    var wrap = document.querySelector('#page2 .preview-phone-wrap');
-    if (wrap) wrap.classList.remove('multi-device-wrap');
-    var side = document.querySelector('#page2 .preview-side');
-    if (side) side.style.display = '';
+  var renderer = new PreviewRenderer(device, showCam);
+  var html = renderTemplatePreview(device, showCam, S.tpl, S.cfg);
+  html += renderer.renderElements(S.elements, S.uploadedFiles, S.selIdx);
+  if (document.getElementById('showSafeZone').checked) {
+    html += renderer.safeZoneOverlay();
   }
+  if (S.cfg.bgImage) {
+    html = '<div style="position:absolute;inset:0;background-image:url(\'' + S.cfg.bgImage.replace(/'/g, "\\'") + '\');background-size:cover;background-position:center;z-index:-1"></div>' + html;
+  }
+  requestAnimationFrame(function () {
+    document.getElementById('previewContent').innerHTML = html;
+  });
 
-  // Auto 模式用响应式渲染
-  var innerXml = getTemplateMAML(S.tpl, S.cfg, isAuto);
+  var innerXml = getTemplateMAML(S.tpl, S.cfg);
   var maml;
   if (S.tpl.rawXml) {
     maml = innerXml;
@@ -169,39 +156,6 @@ function renderPreview() {
   document.getElementById('codeContent').value = maml;
   updateCodeEditor();
   S.setDirty(false);
-}
-
-function renderMultiDevicePreview(showCam) {
-  var deviceKeys = ['p2', 'q200', 'q100', 'ultra'];
-  var deviceNames = { p2: 'Pro Max', q200: 'Pro', q100: '标准版', ultra: 'Ultra' };
-  var wrap = document.querySelector('#page2 .preview-phone-wrap');
-  var side = document.querySelector('#page2 .preview-side');
-
-  var html = '<div class="multi-device-grid">';
-  deviceKeys.forEach(function (dk) {
-    var dev = DEVICES[dk];
-    var preview = renderTemplatePreview(dev, showCam, S.tpl, S.cfg);
-    preview += new PreviewRenderer(dev, showCam).renderElements(S.elements, S.uploadedFiles, -1);
-    if (S.cfg.bgImage) {
-      preview = '<div style="position:absolute;inset:0;background-image:url(\'' + S.cfg.bgImage.replace(/'/g, "\\'") + '\');background-size:cover;background-position:center;z-index:-1"></div>' + preview;
-    }
-    html += '<div class="multi-device-card">' +
-      '<div class="preview-phone" style="width:' + Math.round(300 * dev.width / 1020) + 'px;height:' + Math.round(300 * dev.height / 1020) + 'px">' +
-      '<div class="preview-screen"><div class="preview-camera" style="width:' + (showCam ? dev.cameraZoneRatio * 100 + '%' : '0') + '"></div>' +
-      '<div class="preview-content">' + preview + '</div></div></div>' +
-      '<div class="multi-device-label">' + deviceNames[dk] + ' <small>' + dev.width + '×' + dev.height + '</small></div></div>';
-  });
-  html += '</div>';
-
-  if (wrap) {
-    wrap.classList.add('multi-device-wrap');
-    wrap.querySelector('.preview-phone').style.display = 'none';
-    var existingGrid = wrap.querySelector('.multi-device-grid');
-    if (existingGrid) existingGrid.remove();
-    wrap.insertAdjacentHTML('beforeend', html);
-  }
-  // 隐藏代码侧边栏，给预览更多空间
-  if (side) side.style.display = 'none';
 }
 
 function renderLivePreview() {
@@ -252,9 +206,7 @@ var stepCallbacks = {
 function handleExport() {
   if (!S.tpl) return toast('请先选择模板', 'error');
   var device = getSelectedDevice();
-  var isAuto = isAutoDevice(device);
-  // Auto 模式用响应式渲染
-  var innerXml = getTemplateMAML(S.tpl, S.cfg, isAuto);
+  var innerXml = getTemplateMAML(S.tpl, S.cfg);
   var maml = S.tpl.rawXml ? innerXml : generateMAML({
     cardName: S.cfg.cardName || S.tpl.name, device: device, innerXml: innerXml,
     updater: S.tpl.updater, extraElements: S.elements, uploadedFiles: S.uploadedFiles, bgImage: S.cfg.bgImage || '',
@@ -266,10 +218,9 @@ function handleExport() {
   var exportBtn = document.querySelector('.btn-export');
   if (exportBtn) exportBtn.classList.add('btn-export-loading');
   var p = toastProgress('正在打包 ZIP...');
-  var suffix = isAuto ? '_auto' : '';
-  exportZip(maml, (S.cfg.cardName || 'card') + suffix, S.elements, S.uploadedFiles, S.tpl.id === 'custom', S.cfg.bgImage || '')
+  exportZip(maml, S.cfg.cardName || 'card', S.elements, S.uploadedFiles, S.tpl.id === 'custom', S.cfg.bgImage || '')
     .then(function () {
-      p.close('✅ ZIP 已导出' + (isAuto ? '（自动适配全部机型）' : ''), 'success');
+      p.close('✅ ZIP 已导出', 'success');
       if (exportBtn) { exportBtn.classList.remove('btn-export-loading'); exportBtn.classList.remove('btn-export-success'); void exportBtn.offsetWidth; exportBtn.classList.add('btn-export-success'); setTimeout(function(){ exportBtn.classList.remove('btn-export-success'); }, 800); }
     })
     .catch(function (e) {
@@ -288,45 +239,6 @@ function handleExportPNG() {
 function handleExportSVG() {
   exportSVG(S.cfg.cardName || 'card', S.cfg, S.elements, S.uploadedFiles, getSelectedDevice)
     .then(function () { toast('✅ SVG 已导出', 'success'); })
-    .catch(function (e) { toast('导出失败: ' + e.message, 'error'); });
-}
-
-function handleBatchExport() {
-  if (!S.tpl) return toast('请先选择模板', 'error');
-  var deviceKeys = ['p2', 'q200', 'q100', 'ultra'];
-  var errors = [];
-  toast('📦 正在批量导出 4 个机型...', 'info');
-  var promises = deviceKeys.map(function (dk) {
-    var device = getDevice(dk);
-    var innerXml = getTemplateMAML(S.tpl, S.cfg, true);
-    var maml = S.tpl.rawXml ? innerXml : generateMAML({
-      cardName: (S.cfg.cardName || S.tpl.name) + '_' + dk, device: device, innerXml: innerXml,
-      updater: S.tpl.updater, extraElements: S.elements, uploadedFiles: S.uploadedFiles, bgImage: S.cfg.bgImage || '',
-    });
-    var validation = validateMAML(maml);
-    if (!validation.valid) { errors.push(device.label + ': ' + validation.errors[0]); return Promise.resolve(); }
-    return exportZip(maml, (S.cfg.cardName || 'card') + '_' + dk, S.elements, S.uploadedFiles, S.tpl.id === 'custom', S.cfg.bgImage || '')
-      .catch(function (e) { errors.push(device.label + ': ' + e.message); });
-  });
-  Promise.all(promises).then(function () {
-    if (errors.length > 0) toast('部分导出失败: ' + errors.join(', '), 'error');
-    else toast('✅ 全部 4 个机型已导出', 'success');
-  }).catch(function (e) { toast('批量导出异常: ' + e.message, 'error'); });
-}
-
-function handleUniversalExport() {
-  if (!S.tpl) return toast('请先选择模板', 'error');
-  var baseDevice = getDevice('p2');
-  // 通用导出始终使用响应式渲染
-  var innerXml = getTemplateMAML(S.tpl, S.cfg, true);
-  var maml = S.tpl.rawXml ? innerXml : generateMAML({
-    cardName: S.cfg.cardName || S.tpl.name, device: baseDevice, innerXml: innerXml,
-    updater: S.tpl.updater, extraElements: S.elements, uploadedFiles: S.uploadedFiles, bgImage: S.cfg.bgImage || '',
-  });
-  var validation = validateMAML(maml);
-  if (!validation.valid) return toast('XML 校验失败: ' + validation.errors[0], 'error');
-  exportZip(maml, (S.cfg.cardName || 'card') + '_auto', S.elements, S.uploadedFiles, S.tpl.id === 'custom', S.cfg.bgImage || '')
-    .then(function () { toast('✅ 通用卡片已导出（自动适配全部机型）', 'success'); })
     .catch(function (e) { toast('导出失败: ' + e.message, 'error'); });
 }
 
@@ -1764,8 +1676,6 @@ Object.assign(window.JCM, {
   handleExport: handleExport,
   handleExportPNG: handleExportPNG,
   handleExportSVG: handleExportSVG,
-  handleBatchExport: handleBatchExport,
-  handleUniversalExport: handleUniversalExport,
   handleImportZip: handleImportZip,
   shareTemplate: shareTemplate,
   triggerBuild: triggerBuild,
@@ -1793,28 +1703,6 @@ Object.assign(window.JCM, {
     // Update language button text
     var langBtn = document.getElementById('langSwitchBtn');
     if (langBtn) langBtn.textContent = next === 'zh' ? 'EN' : '中';
-  },
-  handleBatchTemplateExport: function () {
-    if (!S.tpl) return toast('请先选择模板', 'error');
-    toast('📦 正在批量导出所有机型模板...', 'info');
-    var deviceKeys = ['p2', 'q200', 'q100', 'ultra'];
-    var errors = [];
-    var promises = deviceKeys.map(function (dk) {
-      var device = getDevice(dk);
-      var innerXml = getTemplateMAML(S.tpl, S.cfg, true);
-      var maml = S.tpl.rawXml ? innerXml : generateMAML({
-        cardName: (S.cfg.cardName || S.tpl.name) + '_' + dk, device: device, innerXml: innerXml,
-        updater: S.tpl.updater, extraElements: S.elements, uploadedFiles: S.uploadedFiles, bgImage: S.cfg.bgImage || '',
-      });
-      var validation = validateMAML(maml);
-      if (!validation.valid) { errors.push(device.label + ': ' + validation.errors[0]); return Promise.resolve(); }
-      return exportZip(maml, (S.cfg.cardName || 'card') + '_' + dk, S.elements, S.uploadedFiles, S.tpl.id === 'custom', S.cfg.bgImage || '')
-        .catch(function (e) { errors.push(device.label + ': ' + e.message); });
-    });
-    Promise.all(promises).then(function () {
-      if (errors.length > 0) toast('部分导出失败: ' + errors.join(', '), 'error');
-      else toast('✅ 全部机型模板已导出', 'success');
-    });
   },
   openDesignTools: function (tab) { openDesignTools(tab); },
   openSnippets: function () { openSnippetsModal(stepCallbacks); },

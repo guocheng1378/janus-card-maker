@@ -38,7 +38,7 @@ var translations = {
     'preview.exportZip': '导出 ZIP',
     'preview.exportPng': '导出 PNG',
     'preview.exportSvg': '导出 SVG',
-    'preview.batchExport': '全部机型 ZIP',
+    'preview.batchExport': 'ZIP',
     'preview.universal': '通用卡片',
     'preview.fullscreen': '全屏预览',
     'preview.buildApk': '构建 APK',
@@ -129,9 +129,6 @@ var translations = {
     'draft.discard': '丢弃',
     // Device labels
     'device.p2': 'Pro Max — 976×596',
-    'device.q200': 'Pro — 904×572',
-    'device.q100': '标准版 — 840×520',
-    'device.ultra': 'Ultra — 1020×620',
   },
   en: {
     'app.title': 'REAREye Card Maker',
@@ -242,9 +239,6 @@ var translations = {
     'draft.recover': 'Recover',
     'draft.discard': 'Discard',
     'device.p2': 'Pro Max — 976×596',
-    'device.q200': 'Pro — 904×572',
-    'device.q100': 'Standard — 840×520',
-    'device.ultra': 'Ultra — 1020×620',
   }
 };
 
