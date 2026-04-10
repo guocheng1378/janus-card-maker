@@ -298,7 +298,7 @@ function handleBatchExport() {
   toast('📦 正在批量导出 4 个机型...', 'info');
   var promises = deviceKeys.map(function (dk) {
     var device = getDevice(dk);
-    var innerXml = getTemplateMAML(S.tpl, S.cfg);
+    var innerXml = getTemplateMAML(S.tpl, S.cfg, true);
     var maml = S.tpl.rawXml ? innerXml : generateMAML({
       cardName: (S.cfg.cardName || S.tpl.name) + '_' + dk, device: device, innerXml: innerXml,
       updater: S.tpl.updater, extraElements: S.elements, uploadedFiles: S.uploadedFiles, bgImage: S.cfg.bgImage || '',
@@ -1801,7 +1801,7 @@ Object.assign(window.JCM, {
     var errors = [];
     var promises = deviceKeys.map(function (dk) {
       var device = getDevice(dk);
-      var innerXml = getTemplateMAML(S.tpl, S.cfg);
+      var innerXml = getTemplateMAML(S.tpl, S.cfg, true);
       var maml = S.tpl.rawXml ? innerXml : generateMAML({
         cardName: (S.cfg.cardName || S.tpl.name) + '_' + dk, device: device, innerXml: innerXml,
         updater: S.tpl.updater, extraElements: S.elements, uploadedFiles: S.uploadedFiles, bgImage: S.cfg.bgImage || '',

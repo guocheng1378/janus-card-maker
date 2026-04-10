@@ -75,10 +75,11 @@ function renderAnimations(el, files, indent) {
 }
 
 // ── 渲染子元素（支持 Group/Layer/MusicControl/Slider/Button 嵌套）──
-function renderChildren(children, files, indent) {
+function renderChildren(children, files, indent, renderer) {
+  var fn = renderer || renderEl;
   var lines = [];
   children.forEach(function (child) {
-    lines.push(renderEl(child, files, indent));
+    lines.push(fn(child, files, indent));
   });
   return lines.filter(Boolean).join('\n');
 }
@@ -99,8 +100,9 @@ function containerAttrs(el) {
 }
 
 // ── 渲染单个元素 ──
-export function renderEl(el, files, indent) {
+export function renderEl(el, files, indent, childRenderer) {
   var p = indent || '    ';
+  var cr = childRenderer || renderEl;
 
   // ── 框架标签：从 children 中透传 ──
   if (el._rawXml) {
@@ -116,7 +118,7 @@ export function renderEl(el, files, indent) {
       }
     }
     var rawChildren = (el.children && el.children.length > 0)
-      ? '\n' + renderChildren(el.children, files, p + '  ') + '\n' + p
+      ? '\n' + renderChildren(el.children, files, p + '  ', cr) + '\n' + p
       : '';
     return p + '<' + el.tag + rawAttrs + '>' + rawChildren + '</' + el.tag + '>';
   }
@@ -319,7 +321,7 @@ export function renderEl(el, files, indent) {
       // 起始点
       if (el.startPoint && el.startPoint.length > 0) {
         slChildren.push(p + '  <StartPoint>');
-        slChildren.push(renderChildren(el.startPoint, files, p + '    '));
+        slChildren.push(renderChildren(el.startPoint, files, p + '    ', cr));
         slChildren.push(p + '  </StartPoint>');
       }
       // 目标点
@@ -329,7 +331,7 @@ export function renderEl(el, files, indent) {
       }
       // 触发器
       if (el.triggers && el.triggers.length > 0) {
-        slChildren.push(renderChildren(el.triggers, files, p + '  '));
+        slChildren.push(renderChildren(el.triggers, files, p + '  ', cr));
       }
 
       var slBody = slChildren.length > 0 ? '\n' + slChildren.join('\n') + '\n' + p : '';
@@ -345,7 +347,7 @@ export function renderEl(el, files, indent) {
       if (el.touchable) btAttrs += ' touchable="true"';
 
       var btChildren = (el.children && el.children.length > 0)
-        ? '\n' + renderChildren(el.children, files, p + '  ') + '\n' + p
+        ? '\n' + renderChildren(el.children, files, p + '  ', cr) + '\n' + p
         : '';
       return p + '<Button' + btAttrs + '>' + btChildren + '</Button>';
     }
@@ -362,7 +364,7 @@ export function renderEl(el, files, indent) {
       if (el.frameRate !== undefined) attrs += ' frameRate="' + el.frameRate + '"';
 
       var children = (el.children && el.children.length > 0)
-        ? '\n' + renderChildren(el.children, files, p + '  ') + '\n' + p
+        ? '\n' + renderChildren(el.children, files, p + '  ', cr) + '\n' + p
         : '';
       return p + '<Group' + attrs + '>' + children + '</Group>';
     }
@@ -385,7 +387,7 @@ export function renderEl(el, files, indent) {
       if (el.updateTranslation === false) layerAttrs += ' updateTranslation="false"';
 
       var layerChildren = (el.children && el.children.length > 0)
-        ? '\n' + renderChildren(el.children, files, p + '  ') + '\n' + p
+        ? '\n' + renderChildren(el.children, files, p + '  ', cr) + '\n' + p
         : '';
       return p + '<Layer' + layerAttrs + '>' + layerChildren + '</Layer>';
     }
@@ -406,7 +408,7 @@ export function renderEl(el, files, indent) {
       if (el.updateLyricInterval) mcAttrs += ' updateLyricInterval="' + el.updateLyricInterval + '"';
 
       var mcChildren = (el.children && el.children.length > 0)
-        ? '\n' + renderChildren(el.children, files, p + '  ') + '\n' + p
+        ? '\n' + renderChildren(el.children, files, p + '  ', cr) + '\n' + p
         : '';
       return p + '<MusicControl' + mcAttrs + '>' + mcChildren + '</MusicControl>';
     }
@@ -450,7 +452,7 @@ export function renderEl(el, files, indent) {
     case 'trigger': {
       var trAttrs = el.action ? ' action="' + el.action + '"' : '';
       var trChildren = (el.children && el.children.length > 0)
-        ? '\n' + renderChildren(el.children, files, p + '  ') + '\n' + p
+        ? '\n' + renderChildren(el.children, files, p + '  ', cr) + '\n' + p
         : '';
       return p + '<Trigger' + trAttrs + '>' + trChildren + '</Trigger>';
     }
@@ -484,7 +486,7 @@ export function renderEl(el, files, indent) {
     }
     case 'multicommand': {
       var mcCh = (el.children && el.children.length > 0)
-        ? '\n' + renderChildren(el.children, files, p + '  ') + '\n' + p
+        ? '\n' + renderChildren(el.children, files, p + '  ', cr) + '\n' + p
         : '';
       return p + '<MultiCommand>' + mcCh + '</MultiCommand>';
     }
@@ -497,12 +499,12 @@ export function renderEl(el, files, indent) {
       var ifBody = '';
       if (el.consequent && el.consequent.length > 0) {
         ifBody += '\n' + p + '  <Consequent>\n';
-        ifBody += renderChildren(el.consequent, files, p + '    ') + '\n';
+        ifBody += renderChildren(el.consequent, files, p + '    ', cr) + '\n';
         ifBody += p + '  </Consequent>';
       }
       if (el.alternate && el.alternate.length > 0) {
         ifBody += '\n' + p + '  <Alternate>\n';
-        ifBody += renderChildren(el.alternate, files, p + '    ') + '\n';
+        ifBody += renderChildren(el.alternate, files, p + '    ', cr) + '\n';
         ifBody += p + '  </Alternate>';
       }
       if (ifBody) ifBody += '\n' + p;
@@ -514,7 +516,7 @@ export function renderEl(el, files, indent) {
     // ════════════════════════════════════════
     case 'variablebinders': {
       var vbChildren = (el.children && el.children.length > 0)
-        ? '\n' + renderChildren(el.children, files, p + '  ') + '\n' + p
+        ? '\n' + renderChildren(el.children, files, p + '  ', cr) + '\n' + p
         : '';
       return p + '<VariableBinders>' + vbChildren + '</VariableBinders>';
     }
@@ -525,7 +527,7 @@ export function renderEl(el, files, indent) {
       if (el.selection) cpAttrs += ' selection="' + escXml(el.selection) + '"';
       if (el.sortOrder) cpAttrs += ' sortOrder="' + escXml(el.sortOrder) + '"';
       var cpChildren = (el.children && el.children.length > 0)
-        ? '\n' + renderChildren(el.children, files, p + '  ') + '\n' + p
+        ? '\n' + renderChildren(el.children, files, p + '  ', cr) + '\n' + p
         : '';
       return p + '<ContentProvider' + cpAttrs + '>' + cpChildren + '</ContentProvider>';
     }
@@ -554,13 +556,13 @@ export function renderEl(el, files, indent) {
       var fsAttrs = '';
       if (el.name) fsAttrs += ' name="' + escXml(el.name) + '"';
       var fsChildren = (el.children && el.children.length > 0)
-        ? '\n' + renderChildren(el.children, files, p + '  ') + '\n' + p
+        ? '\n' + renderChildren(el.children, files, p + '  ', cr) + '\n' + p
         : '';
       return p + '<FolmeState' + fsAttrs + '>' + fsChildren + '</FolmeState>';
     }
     case 'folmeconfig': {
       var fcChildren = (el.children && el.children.length > 0)
-        ? '\n' + renderChildren(el.children, files, p + '  ') + '\n' + p
+        ? '\n' + renderChildren(el.children, files, p + '  ', cr) + '\n' + p
         : '';
       return p + '<FolmeConfig>' + fcChildren + '</FolmeConfig>';
     }
@@ -570,7 +572,7 @@ export function renderEl(el, files, indent) {
     // ════════════════════════════════════════
     case 'mipalettebinder': {
       var mpChildren = (el.children && el.children.length > 0)
-        ? '\n' + renderChildren(el.children, files, p + '  ') + '\n' + p
+        ? '\n' + renderChildren(el.children, files, p + '  ', cr) + '\n' + p
         : '';
       return p + '<MiPaletteBinder>' + mpChildren + '</MiPaletteBinder>';
     }
@@ -665,7 +667,7 @@ export function renderElResponsive(el, files, indent) {
 
   // 框架标签透传
   if (el.type === 'framework' && el.tag && FRAMEWORK_TAGS[el.tag]) {
-    return renderEl(el, files, indent);
+    return renderEl(el, files, indent, renderElResponsive);
   }
 
   switch (el.type) {
@@ -791,8 +793,8 @@ export function renderElResponsive(el, files, indent) {
     case 'mask':
     case 'lottie':
     case 'arc':
-      // 非坐标类元素或不需要响应式变换的元素，直接用静态渲染
-      return renderEl(el, files, indent);
+      // 容器类元素需要传递响应式渲染器给子元素
+      return renderEl(el, files, indent, renderElResponsive);
 
     default:
       return '';
