@@ -586,6 +586,27 @@ function setupEvents() {
         S.setDirty(true);
       }
     }
+    // MAML 变量搜索过滤
+    if (t.dataset.mamlSearch !== undefined) {
+      var searchIdx = Number(t.dataset.mamlSearch);
+      var query = t.value.toLowerCase();
+      var list = t.parentElement.querySelector('[data-maml-list]');
+      if (list) {
+        list.querySelectorAll('[data-maml-insert]').forEach(function (chip) {
+          var val = chip.dataset.mamlVal.toLowerCase();
+          var title = (chip.getAttribute('title') || '').toLowerCase();
+          chip.style.display = (val.indexOf(query) >= 0 || title.indexOf(query) >= 0) ? '' : 'none';
+        });
+        list.querySelectorAll('.maml-var-cat').forEach(function (cat) {
+          // 隐藏没有可见子项的分类标题
+          var next = cat.nextElementSibling;
+          var hasVisible = next && next.querySelectorAll('[data-maml-insert]:not([style*="display: none"])').length > 0;
+          cat.style.display = hasVisible ? '' : 'none';
+          if (next) next.style.display = hasVisible ? '' : 'none';
+        });
+      }
+      return;
+    }
     _autoPreview(); autoSave();
   });
 
@@ -821,6 +842,87 @@ function setupEvents() {
         renderConfig(getTemplateMAML);
         toast('🔗 已插入 ' + varBtn.dataset.varInsert, 'info');
       }
+      return;
+    }
+    // MAML 变量面板：点击插入变量到表达式或文字
+    var mamlBtn = e.target.closest('[data-maml-insert]');
+    if (mamlBtn) {
+      e.stopPropagation();
+      var mi = Number(mamlBtn.dataset.mamlInsert);
+      if (mi >= 0 && mi < S.elements.length && S.elements[mi].type === 'text') {
+        captureState('插入变量');
+        var val = mamlBtn.dataset.mamlVal;
+        // 如果有表达式字段，优先插入到表达式；否则插入到文字
+        if (S.elements[mi].expression !== undefined && S.elements[mi].expression !== '') {
+          S.elements[mi].expression = (S.elements[mi].expression || '') + ' ' + val;
+        } else {
+          S.elements[mi].text = (S.elements[mi].text || '') + val;
+        }
+        S.setDirty(true);
+        renderConfig(getTemplateMAML);
+        toast('🔗 已插入 ' + val, 'info');
+      }
+      return;
+    }
+    // 文字自动适配宽度
+    var fitBtn = e.target.closest('[data-autofit]');
+    if (fitBtn) {
+      e.stopPropagation();
+      var fi = Number(fitBtn.dataset.autofit);
+      if (fi >= 0 && fi < S.elements.length && S.elements[fi].type === 'text') {
+        captureState('自动适配字号');
+        var ft = S.elements[fi];
+        var text = ft.text || '';
+        var containerW = ft.w || 200;
+        if (text.length > 0 && containerW > 0) {
+          // 估算：中文约 1em 宽，英文约 0.6em，取保守值 0.7
+          var hasChinese = /[\u4e00-\u9fa5]/.test(text);
+          var charW = hasChinese ? 1.0 : 0.6;
+          var estimated = Math.floor(containerW / (text.length * charW));
+          ft.size = Math.max(8, Math.min(200, estimated));
+          S.setDirty(true);
+          renderConfig(getTemplateMAML);
+          _autoPreview();
+          toast('📐 字号已自动调整为 ' + ft.size, 'success');
+        }
+      }
+      return;
+    }
+    // 自定义字体上传
+    var fontBtn = e.target.closest('[data-upload-font]');
+    if (fontBtn) {
+      e.stopPropagation();
+      var fontInput = document.createElement('input');
+      fontInput.type = 'file';
+      fontInput.accept = '.ttf,.otf,.woff,.woff2';
+      fontInput.onchange = function () {
+        var file = fontInput.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function () {
+          var fontName = file.name.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_');
+          var ext = file.name.split('.').pop().toLowerCase();
+          var mimeMap = { ttf: 'font/ttf', otf: 'font/otf', woff: 'font/woff', woff2: 'font/woff2' };
+          var mime = mimeMap[ext] || 'font/ttf';
+          // 创建 @font-face
+          var fontFace = new FontFace(fontName, 'url(' + reader.result + ')');
+          fontFace.load().then(function (loaded) {
+            document.fonts.add(loaded);
+            var fidx = Number(fontBtn.dataset.uploadFont);
+            if (fidx >= 0 && fidx < S.elements.length) {
+              captureState('应用自定义字体');
+              S.elements[fidx].fontFamily = fontName;
+              S.setDirty(true);
+              renderConfig(getTemplateMAML);
+              toast('🔤 自定义字体已加载: ' + fontName, 'success');
+            }
+          }).catch(function (err) {
+            toast('❌ 字体加载失败: ' + err.message, 'error');
+          });
+        };
+        reader.readAsDataURL(file);
+      };
+      fontInput.click();
       return;
     }
     // Save style preset

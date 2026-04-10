@@ -12,6 +12,51 @@ var GRAD_PRESETS = [
   { name: '玫瑰', c1: '#e84393', c2: '#fd79a8' },
 ];
 
+// ── MAML 变量定义 ──
+var MAML_VARS = {
+  '系统变量': [
+    { v: '#view_width', d: '屏幕宽度' },
+    { v: '#view_height', d: '屏幕高度' },
+    { v: '#marginL', d: '摄像头区宽度' },
+    { v: '#scaleX', d: 'X 缩放比' },
+    { v: '#scaleY', d: 'Y 缩放比' },
+    { v: '#safeW', d: '安全区宽度' },
+  ],
+  '时间日期': [
+    { v: '#time_sys', d: '系统时间 HH:mm' },
+    { v: '#year', d: '年 (2026)' },
+    { v: '#month', d: '月 (04)' },
+    { v: '#date', d: '日 (10)' },
+    { v: '#week', d: '星期 (1-7)' },
+    { v: '#utcNow', d: '时间戳(ms)' },
+  ],
+  '设备数据': [
+    { v: '#battery_level', d: '电量 (0-100)' },
+    { v: '#battery_state', d: '充电状态' },
+    { v: '#step_count', d: '步数' },
+    { v: '#step_distance', d: '距离 (km)' },
+    { v: '#step_calorie', d: '卡路里' },
+    { v: '#heart_rate', d: '心率' },
+    { v: '#blood_oxygen', d: '血氧' },
+    { v: '#sleep_hours', d: '睡眠时长' },
+  ],
+  '天气': [
+    { v: '#weather_temp', d: '温度' },
+    { v: '#weather_desc', d: '天气描述' },
+    { v: '#weather_city', d: '城市' },
+    { v: '#humidity', d: '湿度' },
+    { v: '#wind', d: '风速' },
+  ],
+  '表达式': [
+    { v: 'formatDate(\'HH:mm\', #time_sys)', d: '格式化时间' },
+    { v: 'formatDate(\'MM/dd EEEE\', #time_sys)', d: '格式化日期' },
+    { v: 'formatDate(\'yyyy/MM/dd\', #time_sys)', d: '完整日期' },
+    { v: '#battery_level + "%"', d: '电量带%' },
+    { v: '#step_count + " 步"', d: '步数带单位' },
+    { v: '#weather_temp + "°"', d: '温度带°' },
+  ],
+};
+
 export function renderTextEditor(el, idx) {
   var html = '';
 
@@ -19,13 +64,17 @@ export function renderTextEditor(el, idx) {
   html += fieldHtml('文字', '<input type="text" value="' + esc(el.text || '') + '" data-prop="text" data-idx="' + idx + '">', true);
   html += fieldHtml('表达式', '<input type="text" value="' + esc(el.expression || '') + '" data-prop="expression" data-idx="' + idx + '" placeholder="如 formatDate(\'HH:mm\', #time_sys)" style="font-size:11px"><div style="font-size:10px;color:var(--text3);margin-top:2px">留空使用静态文字，填写后用 textExp 生成</div>', true);
 
+  // ── MAML 变量面板 ──
+  html += renderMamlVarPanel(idx);
+
   // ── 字体 & 大小 ──
-  html += fieldHtml('字号', '<input type="number" value="' + el.size + '" data-prop="size" data-idx="' + idx + '" min="8" max="200">');
+  html += fieldHtml('字号', '<div style="display:flex;gap:4px;align-items:center"><input type="number" value="' + el.size + '" data-prop="size" data-idx="' + idx + '" min="8" max="200" style="flex:1"><button class="el-btn" data-autofit="' + idx + '" title="自动适配宽度" style="padding:4px 8px;font-size:12px">📐</button></div>');
   html += colorFieldHtml('颜色', el.color || '#ffffff', 'color', idx);
   html += '<div class="field"><label>字体</label><select data-prop="fontFamily" data-idx="' + idx + '">' +
     FONT_OPTIONS.map(function (f) {
       return '<option value="' + f.id + '"' + (el.fontFamily === f.id ? ' selected' : '') + '>' + f.name + '</option>';
     }).join('') + '</select></div>';
+  html += '<div style="margin-top:-4px"><button class="el-btn" data-upload-font="' + idx + '" style="font-size:10px;color:var(--text3);padding:2px 6px;width:100%;justify-content:center">📁 上传自定义字体 (.ttf/.otf)</button></div>';
 
   // ── 对齐 ──
   html += '<div class="field"><label>对齐</label><div style="display:flex;gap:2px">' +
@@ -63,6 +112,24 @@ export function renderTextEditor(el, idx) {
     (el.textStroke > 0 ? '<input type="color" value="' + (el.textStrokeColor || '#000000') + '" data-prop="textStrokeColor" data-idx="' + idx + '" style="width:32px;height:28px;padding:2px;border-radius:4px;cursor:pointer;border:1px solid var(--border)">' : '') +
     '</div>');
 
+  return html;
+}
+
+function renderMamlVarPanel(idx) {
+  var html = '<div class="el-editor-section">';
+  html += '<div class="el-editor-section-title" style="cursor:pointer" data-toggle-section="mamlVars">🔗 MAML 变量 <span style="float:right;font-size:10px;opacity:0.5">▾</span></div>';
+  html += '<div class="el-editor-section-body">';
+  html += '<input type="text" class="maml-var-search" placeholder="搜索变量..." style="width:100%;padding:4px 8px;font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);margin-bottom:6px;outline:none" data-maml-search="' + idx + '">';
+  html += '<div class="maml-var-list" data-maml-list="' + idx + '">';
+  Object.keys(MAML_VARS).forEach(function (cat) {
+    html += '<div class="maml-var-cat" style="font-size:10px;font-weight:600;color:var(--accent);margin:6px 0 3px">' + cat + '</div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:3px">';
+    MAML_VARS[cat].forEach(function (item) {
+      html += '<span class="expr-var-chip" data-maml-insert="' + idx + '" data-maml-val="' + esc(item.v) + '" title="' + item.d + '" style="font-size:10px;padding:2px 6px;cursor:pointer">' + esc(item.v) + '</span>';
+    });
+    html += '</div>';
+  });
+  html += '</div></div></div>';
   return html;
 }
 
