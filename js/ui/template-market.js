@@ -235,17 +235,40 @@ export function publishTemplate(name, desc, icon) {
 }
 
 // ─── 导入模板 ───────────────────────────────────────────────
+// 模板市场 ID → 实际模板 ID 的映射（市场用简写，实际模板用全名）
+var MARKET_TPL_MAP = {
+  'clock': 'animated_clock', 'analog_clock': 'animated_clock', 'flip_clock': 'animated_clock',
+  'pixel_clock': 'animated_clock', 'battery': 'smart_battery', 'breathing': 'breathing_light',
+  'pomodoro': 'pomodoro', 'dualclock': 'dual_clock', 'dailyquote': 'daily_quote',
+  'quote': 'daily_quote', 'quote_carousel': 'daily_quote',
+};
+
 function _importTemplate(tpl, stepCallbacks) {
-  var targetTpl = TEMPLATES.find(function (t) { return t.id === tpl.template.tplId; });
-  if (!targetTpl) return toast('找不到对应模板: ' + tpl.template.tplId, 'error');
+  var tplId = MARKET_TPL_MAP[tpl.template.tplId] || tpl.template.tplId;
+  var targetTpl = TEMPLATES.find(function (t) { return t.id === tplId; });
+  var fellBack = false;
+  // 找不到对应模板时降级到自定义模式
+  if (!targetTpl) {
+    targetTpl = TEMPLATES.find(function (t) { return t.id === 'custom'; });
+    tplId = 'custom';
+    fellBack = true;
+  }
+  if (!targetTpl) return toast('模板系统异常', 'error');
 
   S.setTpl(targetTpl);
   var newCfg = {};
-  targetTpl.config.forEach(function (g) {
-    g.fields.forEach(function (f) {
-      newCfg[f.key] = tpl.template.cfg[f.key] !== undefined ? tpl.template.cfg[f.key] : f.default;
+  // 优先从模板配置字段取值；降级到自定义模式时直接用 market 的 cardName + bgColor
+  if (tplId !== 'custom' && targetTpl.config) {
+    targetTpl.config.forEach(function (g) {
+      g.fields.forEach(function (f) {
+        newCfg[f.key] = tpl.template.cfg[f.key] !== undefined ? tpl.template.cfg[f.key] : f.default;
+      });
     });
-  });
+  } else {
+    // 自定义模式：提取可用的基本配置
+    newCfg.cardName = tpl.template.cfg.cardName || tpl.name || '自定义卡片';
+    newCfg.bgColor = tpl.template.cfg.bgColor || tpl.template.cfg.bgColor1 || '#000000';
+  }
   S.setCfg(newCfg);
   S.setElements([]);
   S.setUploadedFiles({});
@@ -254,7 +277,7 @@ function _importTemplate(tpl, stepCallbacks) {
   resetHistory();
   if (stepCallbacks) { stepCallbacks.renderTplGrid(); stepCallbacks.goStep(1); }
   closeMarketModal();
-  toast('✅ 已导入: ' + tpl.name, 'success');
+  toast('✅ 已导入: ' + tpl.name + (fellBack ? '（已转为自定义模式）' : ''), 'success');
 }
 
 // ─── 主渲染 ─────────────────────────────────────────────────
