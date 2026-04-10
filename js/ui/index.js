@@ -635,7 +635,7 @@ function setupEvents() {
       return;
     }
     var del = e.target.closest('.el-item-del');
-    if (del) { e.stopPropagation(); removeElement(Number(del.dataset.del)); renderConfig(getTemplateMAML); return; }
+    if (del) { e.stopPropagation(); var di = Number(del.dataset.del); if (S.elements[di] && S.elements[di].locked) return toast('🔒 元素已锁定', 'warning'); removeElement(di); renderConfig(getTemplateMAML); return; }
     var zBtn = e.target.closest('.el-z-btn');
     if (zBtn) { e.stopPropagation(); moveElementZ(Number(zBtn.dataset.zi), zBtn.dataset.z); renderConfig(getTemplateMAML); return; }
     var visBtn = e.target.closest('[data-vis]');
@@ -1476,7 +1476,7 @@ function setupEvents() {
       else if (S.tpl) { goStep(2, stepCallbacks); setTimeout(function() { handleExport(); }, 400); }
       return;
     }
-    if (e.key === 'Delete' && S.selIdx >= 0) { e.preventDefault(); removeElement(S.selIdx); renderConfig(getTemplateMAML); }
+    if (e.key === 'Delete' && S.selIdx >= 0) { e.preventDefault(); if (S.elements[S.selIdx].locked) return toast('🔒 元素已锁定', 'warning'); removeElement(S.selIdx); renderConfig(getTemplateMAML); }
     if (e.ctrlKey && e.key === 'l') { e.preventDefault(); toggleLayerPanel(); return; }
     if (e.ctrlKey && e.key === 'd' && S.selIdx >= 0) {
       e.preventDefault(); captureState();
@@ -1560,6 +1560,7 @@ function setupEvents() {
           S.elements.push(clone); S.setSelIdx(S.elements.length - 1); S.setDirty(true);
           toast('📋 已复制', 'success'); break;
         case 'delete':
+          if (S.elements[ci].locked) { toast('🔒 元素已锁定', 'warning'); break; }
           removeElement(ci); break;
         case 'lock':
           S.elements[ci].locked = !S.elements[ci].locked;
