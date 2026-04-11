@@ -414,6 +414,7 @@ function showMyPublished(stepCallbacks) {
       navigator.clipboard.writeText(btn.dataset.rsLink).then(function () {
         toast('📋 链接已复制', 'success');
       });
+      .catch(function () { toast('📋 复制失败', 'error'); })
     };
   });
 
@@ -687,35 +688,6 @@ function showTokenInput(callback) {
 }
 
 // ─── Gist 导入 ────────────────────────────────────────────────────
-function importFromGist(gistId, stepCallbacks) {
-  var p = toastProgress('正在从 Gist 导入...');
-  fetch('https://api.github.com/gists/' + gistId)
-    .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then(function (gist) {
-      var cardFile = gist.files && (gist.files['card.json'] || gist.files['card.xml']);
-      if (!cardFile) throw new Error('Gist 中没有找到卡片数据');
-
-      // Try JSON format first
-      if (gist.files['card.json']) {
-        var data = JSON.parse(gist.files['card.json'].content);
-        S.setTpl(TEMPLATES.find(function (t) { return t.id === (data.templateId || 'custom'); }) || TEMPLATES.find(function (t) { return t.id === 'custom'; }));
-        S.setCfg(data.config || { cardName: data.name });
-        S.setElements([]);
-        S.setUploadedFiles({});
-        S.setSelIdx(-1); S.setDirty(true);
-        resetHistory();
-        if (stepCallbacks) { stepCallbacks.renderTplGrid(); stepCallbacks.goStep(1); }
-        closeRearStoreModal();
-        p.close('✅ 已导入: ' + data.name, 'success');
-      } else {
-        // XML format - use MAML import
-        p.close('⚠️ 请使用「导入 MAML XML」功能导入此卡片', 'warning');
-      }
-    })
-    .catch(function (err) { p.close('❌ 导入失败: ' + err.message, 'error'); });
-}
-
-// ─── Proxy Settings ───────────────────────────────────────────────
 function showProxySettings() {
   var existing = document.getElementById('rsProxyModal');
   if (existing) existing.remove();
