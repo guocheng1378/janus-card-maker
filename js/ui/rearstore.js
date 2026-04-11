@@ -11,6 +11,69 @@ var INDEX_BASE = 'https://raw.githubusercontent.com/NekoStash/widgets-index/main
 var _modal = null;
 var _cache = {};
 
+// ─── GitHub Proxy 配置 ────────────────────────────────────────────
+var GITHUB_HOSTS = new Set([
+  'github.com', 'raw.githubusercontent.com', 'objects.githubusercontent.com',
+  'release-assets.githubusercontent.com', 'avatars.githubusercontent.com',
+]);
+
+function _getProxyPrefix() {
+  return localStorage.getItem('jcm-gh-proxy-prefix') || '';
+}
+function _setProxyPrefix(v) {
+  localStorage.setItem('jcm-gh-proxy-prefix', v);
+}
+function _getHostOverride() {
+  return localStorage.getItem('jcm-gh-host-override') || '';
+}
+function _setHostOverride(v) {
+  localStorage.setItem('jcm-gh-host-override', v);
+}
+
+function normalizeProxyPrefix(prefix) {
+  var p = (prefix || '').trim();
+  if (!p) return '';
+  return p.endsWith('/') ? p : p + '/';
+}
+
+function normalizeHostOverride(value) {
+  var v = (value || '').trim();
+  if (!v) return null;
+  try {
+    var url = v.indexOf('://') >= 0 ? new URL(v) : new URL('https://' + v);
+    return { protocol: url.protocol, host: url.host };
+  } catch (e) { return null; }
+}
+
+function withGitHubProxy(inputUrl) {
+  var prefix = normalizeProxyPrefix(_getProxyPrefix());
+  if (!prefix) return inputUrl;
+  if (inputUrl.indexOf(prefix) === 0) return inputUrl;
+  try {
+    var parsed = new URL(inputUrl);
+    if (!GITHUB_HOSTS.has(parsed.hostname)) return inputUrl;
+  } catch (e) { return inputUrl; }
+  return prefix + inputUrl;
+}
+
+function rewriteGitHubHost(inputUrl) {
+  var override = normalizeHostOverride(_getHostOverride());
+  if (!override) return inputUrl;
+  try {
+    var parsed = new URL(inputUrl);
+    if (parsed.hostname !== 'github.com') return inputUrl;
+    parsed.protocol = override.protocol;
+    parsed.host = override.host;
+    return parsed.toString();
+  } catch (e) { return inputUrl; }
+}
+
+function prepareDownloadUrl(inputUrl) {
+  var rewritten = rewriteGitHubHost(inputUrl);
+  if (normalizeHostOverride(_getHostOverride())) return rewritten;
+  return withGitHubProxy(rewritten);
+}
+
 // ─── API ──────────────────────────────────────────────────────────
 function fetchJSON(url) {
   if (_cache[url]) return Promise.resolve(_cache[url]);
@@ -54,8 +117,10 @@ export function openRearStoreModal(stepCallbacks) {
 
   var html = '<div class="modal-header">' +
     '<h3>🛒 RearStore 组件商店</h3>' +
+    '<div style="display:flex;gap:8px;align-items:center">' +
+    '<button class="btn btn-secondary" id="rsProxyBtn" style="font-size:11px;padding:3px 10px" title="GitHub 代理设置">🌐 代理</button>' +
     '<button class="modal-close" id="rsCloseBtn" aria-label="关闭">✕</button>' +
-    '</div>';
+    '</div></div>';
 
   html += '<div style="padding:12px 16px;border-bottom:1px solid var(--border)">' +
     '<input type="text" id="rsSearchInput" placeholder="🔍 搜索组件..." ' +
@@ -73,6 +138,7 @@ export function openRearStoreModal(stepCallbacks) {
   _modal = overlay;
 
   overlay.querySelector('#rsCloseBtn').onclick = function () { closeRearStoreModal(); };
+  overlay.querySelector('#rsProxyBtn').onclick = function () { showProxySettings(); };
 
   var searchInput = overlay.querySelector('#rsSearchInput');
   var searchTimer = null;
@@ -118,7 +184,12 @@ function renderWidgetList(query) {
         return;
       }
 
-      var html = '<div class="rs-widget-list">';
+      var proxyActive = !!_getProxyPrefix() || !!_getHostOverride();
+      var proxyBadge = proxyActive ? '<span style="font-size:11px;color:var(--green);margin-left:8px">🌐 代理已启用</span>' : '';
+
+      var html = '<div class="rs-widget-list">' +
+        '<div style="font-size:11px;color:var(--text3);padding:0 2px;margin-bottom:4px">' +
+        '共 ' + filtered.length + ' 个组件' + proxyBadge + '</div>';
       filtered.forEach(function (w) {
         var summary = summaries.components && summaries.components[w.id];
         var avatarUrl = summary && summary.author && summary.author.avatarUrl;
@@ -127,7 +198,7 @@ function renderWidgetList(query) {
           ? new Date(w.latestReleasePublishedAt).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })
           : '';
 
-        html += '<div class="rs-widget-card" data-rs-id="' + escHtml(w.id) + '">' +
+        html += '<div class="rs-widget-card">' +
           '<div class="rs-widget-header">' +
           (avatarUrl ? '<img class="rs-avatar" src="' + escHtml(avatarUrl) + '" alt="" loading="lazy">'
                      : '<div class="rs-avatar-placeholder">📦</div>') +
@@ -164,6 +235,98 @@ function renderWidgetList(query) {
     });
 }
 
+// ─── Proxy Settings ───────────────────────────────────────────────
+function showProxySettings() {
+  var existing = document.getElementById('rsProxyModal');
+  if (existing) existing.remove();
+
+  var overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'rsProxyModal';
+  overlay.style.display = '';
+  overlay.onclick = function () { overlay.remove(); };
+
+  var modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.maxWidth = '520px';
+  modal.onclick = function (e) { e.stopPropagation(); };
+
+  var curPrefix = _getProxyPrefix();
+  var curHost = _getHostOverride();
+
+  var html = '<div class="modal-header">' +
+    '<h3>🌐 GitHub 代理设置</h3>' +
+    '<button class="modal-close" onclick="document.getElementById(\'rsProxyModal\').remove()">✕</button>' +
+    '</div>' +
+    '<div class="modal-body" style="padding:16px">' +
+
+    '<div style="margin-bottom:16px">' +
+    '<div style="font-size:13px;font-weight:600;margin-bottom:6px">代理前缀 (CDN 加速)</div>' +
+    '<div style="font-size:11px;color:var(--text3);margin-bottom:8px;line-height:1.5">' +
+    '在 GitHub 下载链接前加代理前缀，适用于 Cloudflare Workers、自建加速等。<br>' +
+    '例：<code style="background:var(--surface2);padding:1px 4px;border-radius:3px">https://ghproxy.com/</code></div>' +
+    '<input type="text" id="rsProxyPrefix" value="' + escHtml(curPrefix) + '" placeholder="https://your-proxy.com/" ' +
+    'style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);' +
+    'border-radius:8px;color:var(--text);font-size:13px;outline:none;font-family:monospace">' +
+    '</div>' +
+
+    '<div style="margin-bottom:16px">' +
+    '<div style="font-size:13px;font-weight:600;margin-bottom:6px">Host 覆写</div>' +
+    '<div style="font-size:11px;color:var(--text3);margin-bottom:8px;line-height:1.5">' +
+    '将 <code style="background:var(--surface2);padding:1px 4px;border-radius:3px">github.com</code> 替换为镜像地址，' +
+    '适合有反代的场景。<br>' +
+    '例：<code style="background:var(--surface2);padding:1px 4px;border-radius:3px">github.example.com</code></div>' +
+    '<input type="text" id="rsHostOverride" value="' + escHtml(curHost) + '" placeholder="留空不启用" ' +
+    'style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);' +
+    'border-radius:8px;color:var(--text);font-size:13px;outline:none;font-family:monospace">' +
+    '</div>' +
+
+    '<div style="padding:10px;background:rgba(108,92,231,0.06);border-radius:8px;font-size:11px;color:var(--text3);line-height:1.6;margin-bottom:16px">' +
+    '<div style="font-weight:600;margin-bottom:4px">💡 常用代理服务</div>' +
+    '• <a href="https://gh-proxy.com" target="_blank" style="color:var(--accent)">gh-proxy.com</a> — 免费 GitHub 代理<br>' +
+    '• <a href="https://mirror.ghproxy.com" target="_blank" style="color:var(--accent)">mirror.ghproxy.com</a> — 镜像加速<br>' +
+    '• 自建 Cloudflare Worker — 参考 NekoStash 的 esa-edge-function.js<br>' +
+    '• 两项都填时，Host 覆写优先（代理前缀不生效）' +
+    '</div>' +
+
+    '<div style="display:flex;gap:8px;justify-content:flex-end">' +
+    '<button class="btn btn-secondary" onclick="document.getElementById(\'rsProxyModal\').remove()" style="font-size:12px;padding:6px 14px">取消</button>' +
+    '<button class="btn btn-secondary" id="rsProxyClear" style="font-size:12px;padding:6px 14px;color:var(--err)">🗑️ 清除</button>' +
+    '<button class="btn btn-primary" id="rsProxySave" style="font-size:12px;padding:6px 14px">💾 保存</button>' +
+    '</div>' +
+
+    '</div>';
+
+  modal.innerHTML = html;
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('#rsProxySave').onclick = function () {
+    var prefix = overlay.querySelector('#rsProxyPrefix').value.trim();
+    var host = overlay.querySelector('#rsHostOverride').value.trim();
+    _setProxyPrefix(prefix);
+    _setHostOverride(host);
+    overlay.remove();
+    toast('✅ 代理设置已保存', 'success');
+    // Refresh list to show proxy badge
+    if (_modal) {
+      var q = (_modal.querySelector('#rsSearchInput') || {}).value || '';
+      renderWidgetList(q.trim());
+    }
+  };
+
+  overlay.querySelector('#rsProxyClear').onclick = function () {
+    _setProxyPrefix('');
+    _setHostOverride('');
+    overlay.remove();
+    toast('🗑️ 代理设置已清除', 'success');
+    if (_modal) {
+      var q = (_modal.querySelector('#rsSearchInput') || {}).value || '';
+      renderWidgetList(q.trim());
+    }
+  };
+}
+
 // ─── Install ──────────────────────────────────────────────────────
 function installWidget(id, stepCallbacks) {
   getWidgetReleases(id).then(function (releases) {
@@ -182,9 +345,13 @@ function installWidget(id, stepCallbacks) {
 }
 
 function downloadAndImport(url, fileName, stepCallbacks) {
-  var p = toastProgress('正在下载 ' + fileName + '...');
+  // 应用 GitHub 代理
+  var proxyUrl = prepareDownloadUrl(url);
+  var proxyActive = proxyUrl !== url;
+  var pLabel = proxyActive ? '通过代理下载 ' : '正在下载 ';
+  var p = toastProgress(pLabel + fileName + '...');
 
-  fetch(url)
+  fetch(proxyUrl)
     .then(function (r) {
       if (!r.ok) throw new Error('下载失败 HTTP ' + r.status);
       return r.blob();
@@ -219,7 +386,39 @@ function downloadAndImport(url, fileName, stepCallbacks) {
       p.close('✅ 已下载: ' + fileName, 'success');
     })
     .catch(function (err) {
-      p.close('❌ ' + err.message, 'error');
+      // 代理下载失败，尝试直连
+      if (proxyActive) {
+        p.update('代理失败，尝试直连...');
+        fetch(url)
+          .then(function (r) {
+            if (!r.ok) throw new Error('直连也失败 HTTP ' + r.status);
+            return r.blob();
+          })
+          .then(function (blob) {
+            p.update('正在导入...');
+            var file = new File([blob], fileName, { type: 'application/zip' });
+            if (fileName.endsWith('.zip')) {
+              return importZip(file).then(function (data) {
+                S.setTpl(TEMPLATES.find(function (t) { return t.id === 'custom'; }));
+                S.setCfg({ cardName: data.cardName, bgColor: data.bgColor, bgImage: data.bgImage || '' });
+                S.setElements(data.elements);
+                S.setUploadedFiles(data.files || {});
+                S.setSelIdx(-1); S.setDirty(true);
+                resetHistory();
+                if (stepCallbacks) { stepCallbacks.renderTplGrid(); stepCallbacks.goStep(1); }
+                closeRearStoreModal();
+                p.close('✅ 已导入: ' + fileName + '（直连）', 'success');
+              });
+            }
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob); a.download = fileName; a.click();
+            URL.revokeObjectURL(a.href);
+            p.close('✅ 已下载: ' + fileName + '（直连）', 'success');
+          })
+          .catch(function (e2) { p.close('❌ 代理和直连均失败', 'error'); });
+      } else {
+        p.close('❌ ' + err.message, 'error');
+      }
     });
 }
 
