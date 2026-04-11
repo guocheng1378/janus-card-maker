@@ -552,6 +552,7 @@ function publishCard(name, description, version, stepCallbacks, existingEntry) {
     templateId: S.tpl.id,
     icon: S.tpl.icon || '📱',
     config: S.cfg,
+    elements: S.elements,
     maml: maml,
     publishedAt: new Date().toISOString(),
   };
